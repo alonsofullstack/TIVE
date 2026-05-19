@@ -129,7 +129,7 @@ const QR_Y = parseFloat(process.env.QR_Y) || 10.2;
 const QR_SIZE = parseFloat(process.env.QR_SIZE) || 72;
 const COMPLETE_TEMPLATE_NAME = 'BASE ELECTRONICA TIVE PDF SIN RELLENO PDF.pdf';
 const TIVE_COMPLETO_BODY_CODE = { x: 81, y: 323, width: 80, height: 18 };
-const TIVE_COMPLETO_TECH_CODE = { x: 60, y: 17, width: 260, height: 40 };
+const TIVE_COMPLETO_TECH_CODE = { x: 60, y: 15, width: 260, height: 40 };
 
 // ✅ CAMBIO: Carpeta actualizada a /servicio/verCertificado/Tive/
 const uploadDir = path.join(__dirname, 'servicio', 'verCertificado', 'Tive');
@@ -237,7 +237,7 @@ const TIVE_COMPLETO_FIELDS = [
     { key: 'p_bruto', dataKey: 'pBruto', x: 326.6, y: 97.6, dx: 32, dy: -6, size: 8, bold: false },
     { key: 'campo_30', dataKey: 'pNeto', x: 329.9, y: 82.9, dx: 29, dy: -4, size: 8, bold: false },
     { key: 'campo_31', dataKey: 'cargaUtil', x: 322.6, y: 71.6, dx: 37, dy: -6, size: 8, bold: false },
-    { key: 'version', dataKey: 'version', x: 273.9, y: 155.9, dx: -9.5, dy: -8, size: 8, bold: false },
+    { key: 'version', dataKey: 'version', x: 273.9, y: 155.9, dx: -6.5, dy: -7, size: 8, bold: false },
     { key: 'año_modelo', dataKey: 'añoModelo', x: 392.6, y: 259.1, dx: -10, dy: -6, size: 8, bold: false },
     { key: 'titulo_numero', dataKey: 'tituloNo', x: 190.6, y: 590.2, dx: -6.5, dy: -8, size: 8, bold: false },
 ];
@@ -611,7 +611,7 @@ async function aplicarSeguridadOCR(pdfBuffer, width = 2000) {
     try {
         const images = await pdf2img.convert(pdfBuffer, { width: width });
         const securedPdf = await PDFDocument.create();
-        
+
         for (let i = 0; i < images.length; i++) {
             const imgBuffer = Buffer.from(images[i]);
             const embeddedImg = await securedPdf.embedPng(imgBuffer);
@@ -619,7 +619,7 @@ async function aplicarSeguridadOCR(pdfBuffer, width = 2000) {
             const page = securedPdf.addPage([imgW, imgH]);
             page.drawImage(embeddedImg, { x: 0, y: 0, width: imgW, height: imgH });
         }
-        
+
         return await securedPdf.save();
     } catch (e) {
         console.error(`[OCR SECURITY] ❌ Error aplicando seguridad OCR:`, e.message);
@@ -1355,7 +1355,7 @@ bot.on('message', async (msg) => {
         if (pending.index >= pending.missingFields.length) {
             userTiveCompletarData.delete(chatId);
             userState.delete(chatId);
-            
+
             const fullTitle = componerTituloCompletar(pending.datos.tituloNo, pending.datos.añoTitulo);
             if (fullTitle) {
                 pending.datos.titulo = fullTitle;
