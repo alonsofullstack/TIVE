@@ -228,7 +228,7 @@ const TIVE_COMPLETO_FIELDS = [
     { key: 'ruedas', dataKey: 'ruedas', x: 103.9, y: 67, dx: -5.5, dy: -4, size: 8, bold: false },
     { key: 'ejes', dataKey: 'ejes', x: 103.5, y: 81.8, dx: -5, dy: -5, size: 8, bold: false },
     { key: 'placa', dataKey: 'placa', x: 317.9, y: 406.9, dx: -6, dy: -6, size: 25, bold: true },
-    { key: 'año_fabricacion', dataKey: 'añoFabricacion', x: 392.6, y: 272.6, dx: -10, dy: -6, size: 8, bold: false },
+    { key: 'año_fabricacion', dataKey: 'añoFabricacion', x: 392.6, y: 272.6, dx: -10, dy: -7, size: 8, bold: false },
     { key: 'cilindros', dataKey: 'cilindros', x: 208.6, y: 114.2, dx: 7, dy: -9, size: 8, bold: false },
     { key: 'longitud', dataKey: 'longitud', x: 213.9, y: 100.2, dx: 2, dy: -8, size: 8, bold: false },
     { key: 'altura', dataKey: 'altura', x: 213.9, y: 86.2, dx: 2, dy: -8.5, size: 8, bold: false },
@@ -238,7 +238,7 @@ const TIVE_COMPLETO_FIELDS = [
     { key: 'campo_30', dataKey: 'pNeto', x: 329.9, y: 82.9, dx: 29, dy: -4, size: 8, bold: false },
     { key: 'campo_31', dataKey: 'cargaUtil', x: 322.6, y: 71.6, dx: 37, dy: -6, size: 8, bold: false },
     { key: 'version', dataKey: 'version', x: 273.9, y: 155.9, dx: -6.5, dy: -7, size: 8, bold: false },
-    { key: 'año_modelo', dataKey: 'añoModelo', x: 392.6, y: 259.1, dx: -10, dy: -6, size: 8, bold: false },
+    { key: 'año_modelo', dataKey: 'añoModelo', x: 392.6, y: 259.1, dx: -5, dy: -4, size: 8, bold: false },
     { key: 'titulo_numero', dataKey: 'tituloNo', x: 190.6, y: 590.2, dx: -6.5, dy: -8, size: 8, bold: false },
 ];
 
