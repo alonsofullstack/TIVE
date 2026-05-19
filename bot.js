@@ -238,7 +238,7 @@ const TIVE_COMPLETO_FIELDS = [
     { key: 'campo_30', dataKey: 'pNeto', x: 329.9, y: 82.9, dx: 29, dy: -4, size: 8, bold: false },
     { key: 'campo_31', dataKey: 'cargaUtil', x: 322.6, y: 71.6, dx: 37, dy: -6, size: 8, bold: false },
     { key: 'version', dataKey: 'version', x: 273.9, y: 155.9, dx: -9.5, dy: -8, size: 8, bold: false },
-    { key: 'año_modelo', dataKey: 'añoModelo', x: 396.6, y: 262.9, dx: -6, dy: -9, size: 5.5, bold: false },
+    { key: 'año_modelo', dataKey: 'añoModelo', x: 392.6, y: 259.1, dx: -10, dy: -6, size: 8, bold: false },
     { key: 'titulo_numero', dataKey: 'tituloNo', x: 190.6, y: 590.2, dx: -6.5, dy: -8, size: 8, bold: false },
 ];
 
@@ -1114,6 +1114,9 @@ async function generarTiveCompleto(chatId, datos, qrCustomLink = null, verificat
     const baseDatos = prepararDatosTiveCompleto(datos);
     if (!baseDatos.añoFabricacion && baseDatos.añoModelo) {
         baseDatos.añoFabricacion = baseDatos.añoModelo;
+    }
+    if (!baseDatos.añoModelo && baseDatos.añoFabricacion) {
+        baseDatos.añoModelo = baseDatos.añoFabricacion;
     }
     const datosCompletos = {
         ...baseDatos,
