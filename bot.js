@@ -63,7 +63,7 @@ bot.on('callback_query', async (query) => {
     } else if (data === "use_official") {
         bot.editMessageText(`🧠 *Procesando con IA...*`, { chat_id: chatId, message_id: messageId, parse_mode: 'Markdown' });
         try {
-            const datos = await extraerConIA(buffer);
+            const datos = await extraerConIA(buffer, userPdfNames.get(chatId));
             await generarTIVE(chatId, datos, null, buffer);
         } catch (e) {
             bot.sendMessage(chatId, `❌ Error: ${e.message}`);
@@ -112,6 +112,7 @@ bot.on('callback_query', async (query) => {
 
 // --- PERSISTENCIA EN MEMORIA ---
 const userPdfs = new Map();
+const userPdfNames = new Map();
 const userState = new Map();
 const userAntiguaData = new Map();
 const userTiveCompletoData = new Map();
@@ -420,11 +421,29 @@ function normalizarTextoBusqueda(texto = '') {
         .trim();
 }
 
+function limpiarValorTive(valor = '', etiqueta = '') {
+    let limpio = safe(valor)
+        .replace(/\s+/g, ' ')
+        .replace(/^[\s:;.,\-–—°º#]+/, '')
+        .trim();
+
+    const etiquetaNorm = normalizarTextoBusqueda(etiqueta).toLowerCase();
+    if (etiquetaNorm.includes('partida')) {
+        limpio = limpio.replace(/^registral\s*[:;\-]?\s*/i, '');
+    }
+    if (etiquetaNorm.includes('titulo')) {
+        limpio = limpio.replace(/^n[°ºo]?\s*[:;\-]?\s*/i, '');
+    }
+
+    limpio = limpio.replace(/^[\s:;.,\-–—°º#]+/, '').trim();
+    return /^[°º:;.,\-–—#\s]*$/.test(limpio) ? '' : limpio;
+}
+
 function buscarValorTive(texto, etiqueta) {
     const escaped = etiqueta.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const regex = new RegExp(`${escaped}\\s+([^\\n]+)`, 'i');
     const match = regex.exec(texto);
-    if (match) return safe(match[1]);
+    if (match) return limpiarValorTive(match[1], etiqueta);
 
     const labelNormalizado = normalizarTextoBusqueda(etiqueta)
         .toLowerCase()
@@ -437,13 +456,13 @@ function buscarValorTive(texto, etiqueta) {
         const lineSinDosPuntos = lineNormalizada.replace(/\s*:\s*$/, '');
 
         if (lineSinDosPuntos === labelNormalizado) {
-            return safe(lines[i + 1] || '');
+            return limpiarValorTive(lines[i + 1] || '', etiqueta);
         }
 
         if (lineNormalizada.startsWith(`${labelNormalizado} `) || lineNormalizada.startsWith(`${labelNormalizado}:`)) {
             const value = line.slice(Math.min(line.length, etiqueta.length)).replace(/^[:\s]+/, '');
-            if (safe(value)) return safe(value);
-            return safe(lines[i + 1] || '');
+            if (safe(value)) return limpiarValorTive(value, etiqueta);
+            return limpiarValorTive(lines[i + 1] || '', etiqueta);
         }
     }
 
@@ -468,6 +487,18 @@ function buscarPlacaEnTexto(texto = '') {
 
     const looseMatch = texto.toUpperCase().match(/\b([A-Z]{1,3}\d{3}[A-Z0-9]{0,2}|\d{4}[A-Z0-9]{2}|[A-Z0-9]{3}-[A-Z0-9]{3})\b/);
     return looseMatch ? fmtPlaca(looseMatch[1]) : '';
+}
+
+function buscarPlacaEnNombreArchivo(fileName = '') {
+    const normalized = safe(fileName).toUpperCase();
+    const match = normalized.match(/(?:^|[^A-Z0-9])([A-Z0-9]{3}-?[A-Z0-9]{3}|\d{4}-?[A-Z0-9]{2})(?=$|[^A-Z0-9])/);
+    return match ? fmtPlaca(match[1]) : '';
+}
+
+function validarPlacaExtraida(valor = '') {
+    const placa = fmtPlaca(valor);
+    const clean = placa.replace(/[^A-Z0-9]/gi, '');
+    return clean.length === 6 ? placa : '';
 }
 
 function buscarTituloNumeroTive(texto) {
@@ -524,11 +555,23 @@ function componerTituloCompletar(tituloNo = '', añoTitulo = '') {
     return normalizarTituloDesdeTituloNo(numero);
 }
 
-function extraerDatosTiveDesdeTexto(text, logPrefix = 'TIVE TEXTO') {
+function buscarPrimerValorTive(text, etiquetas = []) {
+    for (const etiqueta of etiquetas) {
+        const valor = buscarValorTive(text, etiqueta);
+        if (valor) return valor;
+    }
+    return '';
+}
+
+function extraerDatosTiveDesdeTexto(text, logPrefix = 'TIVE TEXTO', sourceName = '') {
     const fechaTitulo = buscarValorTive(text, 'Fecha');
     const tituloNo = normalizarTituloDesdeTituloNo(buscarTituloNumeroTive(text));
     const tituloNormalizado = tituloNo || normalizarTituloDesdeTituloNo(buscarTituloNumeroTive(text));
-    const placa = buscarValorTive(text, 'Placa :') || buscarValorTive(text, 'Placa') || buscarPlacaEnTexto(text);
+    const placa = validarPlacaExtraida(
+        buscarPrimerValorTive(text, ['Placa :', 'Placa']) ||
+        buscarPlacaEnTexto(text) ||
+        buscarPlacaEnNombreArchivo(sourceName)
+    );
     const datos = {
         codVerif: '',
         fechaFinal: fechaTitulo,
@@ -542,21 +585,21 @@ function extraerDatosTiveDesdeTexto(text, logPrefix = 'TIVE TEXTO') {
         marca: buscarValorTive(text, 'Marca'),
         modelo: buscarValorTive(text, 'Modelo'),
         color: buscarValorTive(text, 'Color'),
-        vin: buscarValorTive(text, 'Nro. VIN'),
-        serie: buscarValorTive(text, 'Nro. Serie'),
-        motor: buscarValorTive(text, 'Nro. Motor'),
-        carroceria: buscarValorTive(text, 'Tipo Carroceria') || buscarValorTive(text, 'Tipo Carrocería'),
+        vin: buscarPrimerValorTive(text, ['Nro. VIN', 'N° VIN', 'No VIN', 'VIN']),
+        serie: buscarPrimerValorTive(text, ['Nro. Serie', 'N° Serie', 'No Serie', 'Serie']),
+        motor: buscarPrimerValorTive(text, ['Nro. Motor', 'N° Motor', 'No Motor', 'Motor']),
+        carroceria: buscarPrimerValorTive(text, ['Tipo Carroceria', 'Tipo Carrocería', 'Carroceria', 'Carrocería']),
         potencia: buscarValorTive(text, 'Potencia Motor'),
         formRod: buscarValorTive(text, 'Formula Rodante') || buscarValorTive(text, 'Fórmula Rodante'),
         combustible: buscarValorTive(text, 'Tipo Combustible'),
-        asientos: buscarValorTive(text, 'Nro. Asientos'),
-        pasajeros: buscarValorTive(text, 'Nro. Pasajeros'),
-        ruedas: buscarValorTive(text, 'Nro. Ruedas'),
-        ejes: buscarValorTive(text, 'Nro. Ejes'),
+        asientos: buscarPrimerValorTive(text, ['Nro. Asientos', 'N° Asientos', 'No Asientos', 'Asientos']),
+        pasajeros: buscarPrimerValorTive(text, ['Nro. Pasajeros', 'N° Pasajeros', 'No Pasajeros', 'Pasajeros']),
+        ruedas: buscarPrimerValorTive(text, ['Nro. Ruedas', 'N° Ruedas', 'No Ruedas', 'Ruedas']),
+        ejes: buscarPrimerValorTive(text, ['Nro. Ejes', 'N° Ejes', 'No Ejes', 'Ejes']),
         placa,
         placaOriginal: placa,
         añoFabricacion: buscarValorTive(text, 'Año Fabricación') || buscarValorTive(text, 'Ano Fabricacion'),
-        cilindros: buscarValorTive(text, 'Nro. Cilindros'),
+        cilindros: buscarPrimerValorTive(text, ['Nro. Cilindros', 'N° Cilindros', 'No Cilindros', 'Cilindros']),
         longitud: normalizarValorNumerico(buscarValorTive(text, 'Longitud')),
         altura: normalizarValorNumerico(buscarValorTive(text, 'Altura')),
         ancho: normalizarValorNumerico(buscarValorTive(text, 'Ancho')),
@@ -783,9 +826,9 @@ function obtenerCamposFaltantesTiveCompletar(datos) {
     return [...forcedFields, ...standardFields];
 }
 
-function completarDatosExtraidosTive(datos = {}) {
+function completarDatosExtraidosTive(datos = {}, sourceName = '') {
     const prepared = { ...datos };
-    prepared.placa = fmtPlaca(prepared.placa || '');
+    prepared.placa = validarPlacaExtraida(prepared.placa || '') || buscarPlacaEnNombreArchivo(sourceName);
     prepared.placaOriginal = prepared.placaOriginal || prepared.placa;
     prepared.codVerif = safe(prepared.codVerif) || generarCodigoVerificacion();
     prepared.fechaFinal = safe(prepared.fechaFinal) || generarFechaHoraTive();
@@ -832,12 +875,12 @@ async function extraerTextoOCRDesdePdf(pdfBuffer) {
     return text;
 }
 
-async function extraerConOCR(pdfBuffer) {
+async function extraerConOCR(pdfBuffer, sourceName = '') {
     console.log(`[OCR] 🧾 Gemini no respondió; intentando extracción local por texto/OCR...`);
 
     const embeddedText = extraerTextoPdfTive(pdfBuffer) || '';
     if (embeddedText.trim()) {
-        const datosDesdeTexto = completarDatosExtraidosTive(extraerDatosTiveDesdeTexto(embeddedText, 'OCR/TEXTO'));
+        const datosDesdeTexto = completarDatosExtraidosTive(extraerDatosTiveDesdeTexto(embeddedText, 'OCR/TEXTO', sourceName), sourceName);
         if (datosDesdeTexto.placa || datosDesdeTexto.marca || datosDesdeTexto.serie || datosDesdeTexto.vin) {
             console.log(`[OCR] ✅ Extracción desde texto embebido exitosa. Placa: ${datosDesdeTexto.placa || '(vacía)'}`);
             return datosDesdeTexto;
@@ -845,7 +888,8 @@ async function extraerConOCR(pdfBuffer) {
     }
 
     const ocrText = await extraerTextoOCRDesdePdf(pdfBuffer);
-    const datosOCR = completarDatosExtraidosTive(extraerDatosTiveDesdeTexto(ocrText, 'OCR'));
+    console.log(`[OCR] 📝 Texto OCR preview:\n${ocrText.slice(0, 2500)}`);
+    const datosOCR = completarDatosExtraidosTive(extraerDatosTiveDesdeTexto(ocrText, 'OCR', sourceName), sourceName);
     if (datosOCR.placa || datosOCR.marca || datosOCR.serie || datosOCR.vin) {
         console.log(`[OCR] ✅ Extracción OCR exitosa. Placa: ${datosOCR.placa || '(vacía)'}`);
         console.log(`[OCR] 📊 Datos obtenidos:\n`, JSON.stringify(datosOCR, null, 2));
@@ -855,11 +899,11 @@ async function extraerConOCR(pdfBuffer) {
     throw new Error("No se pudo extraer información con IA ni OCR. Asegúrate de que el PDF sea un documento TIVE legible de SUNARP.");
 }
 
-async function extraerConIA(pdfBuffer) {
+async function extraerConIA(pdfBuffer, sourceName = '') {
     console.log(`[IA] 🧠 Iniciando extracción con Gemini (Buffer size: ${pdfBuffer.length} bytes)...`);
     if (API_KEYS.length === 0) {
         console.warn(`[IA] ⚠️ Llaves API no configuradas. Usando OCR local.`);
-        return await extraerConOCR(pdfBuffer);
+        return await extraerConOCR(pdfBuffer, sourceName);
     }
     let lastError = null;
     for (const key of API_KEYS) {
@@ -874,7 +918,7 @@ async function extraerConIA(pdfBuffer) {
 
             const result = await model.generateContent([{ inlineData: { data: pdfBuffer.toString("base64"), mimeType: "application/pdf" } }, { text: prompt }]);
             const rawText = result.response.text();
-            const parsedData = completarDatosExtraidosTive(JSON.parse(rawText.replace(/```json|```/g, "").trim()));
+            const parsedData = completarDatosExtraidosTive(JSON.parse(rawText.replace(/```json|```/g, "").trim()), sourceName);
             console.log(`[IA] ✅ Extracción exitosa. Placa encontrada: ${parsedData.placa}`);
             console.log(`[IA] 📊 Datos obtenidos:\n`, JSON.stringify(parsedData, null, 2));
             return parsedData;
@@ -885,7 +929,7 @@ async function extraerConIA(pdfBuffer) {
     }
     console.error(`[IA] ❌ Todas las API keys fallaron o el documento no es válido.`);
     try {
-        return await extraerConOCR(pdfBuffer);
+        return await extraerConOCR(pdfBuffer, sourceName);
     } catch (ocrError) {
         console.error(`[OCR] ❌ Fallback OCR falló:`, ocrError.message);
         throw ocrError || lastError || new Error("No se pudo extraer información. Asegúrate de que el PDF sea un documento TIVE original de SUNARP.");
@@ -1032,6 +1076,9 @@ async function generarTarjetaAntigua(chatId, datos, originalBuffer = null) {
 
 async function generarTIVE(chatId, datos, qrCustomLink = null, originalBuffer = null) {
     const safe = (val) => (val || '').toString().trim();
+    if (!safe(datos.placa)) {
+        throw new Error("No se detectó la placa. El OCR no pudo leerla; envía un PDF más nítido o usa el nombre del archivo con la placa, por ejemplo TIVE_7061XS.pdf.");
+    }
 
     let zonaLimpia = safe(datos.zona);
     let sedeLimpia = safe(datos.sede);
@@ -1378,6 +1425,7 @@ bot.on('document', async (msg) => {
         const chunks = [];
         for await (const chunk of bot.getFileStream(msg.document.file_id)) { chunks.push(chunk); }
         userPdfs.set(chatId, Buffer.concat(chunks));
+        userPdfNames.set(chatId, msg.document.file_name || '');
         console.log(`[BOT] ✅ Documento descargado en memoria.`);
 
         const menuOptions = {
@@ -1516,7 +1564,7 @@ bot.on('message', async (msg) => {
         userState.delete(chatId);
         bot.sendMessage(chatId, `🧠 Procesando con IA...`);
         try {
-            const datos = await extraerConIA(buffer);
+            const datos = await extraerConIA(buffer, userPdfNames.get(chatId));
             if (!datos.placa) bot.sendMessage(chatId, "⚠️ Advertencia: No se detectó placa.");
             await generarTIVE(chatId, datos, customLink, buffer);
         } catch (e) {
