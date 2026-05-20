@@ -39,13 +39,13 @@ def extract_pdf_text(pdf_path: Path) -> str:
 
 
 def find_value(text: str, label: str) -> str:
-    pattern = re.compile(rf'{re.escape(label)}\s+([^\n]+)', re.I)
+    pattern = re.compile(rf'{re.escape(label)}[^\S\r\n]*:?[^\S\r\n]*([^\n]+)', re.I)
     match = pattern.search(text)
     return match.group(1).strip() if match else ''
 
 
 def find_last_value(text: str, label: str) -> str:
-    pattern = re.compile(rf'{re.escape(label)}\s+([^\n]+)', re.I)
+    pattern = re.compile(rf'{re.escape(label)}[^\S\r\n]*:?[^\S\r\n]*([^\n]+)', re.I)
     matches = pattern.findall(text)
     return matches[-1].strip() if matches else ''
 
