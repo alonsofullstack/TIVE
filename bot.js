@@ -11,6 +11,7 @@ const fontkit = require('@pdf-lib/fontkit');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const pdf2img = require('pdf-img-convert');
 const sharp = require('sharp');
+const { createWorker, PSM } = require('tesseract.js');
 require('dotenv').config();
 
 // Cargar la fuente TTF real una sola vez al iniciar
@@ -455,6 +456,20 @@ function normalizarValorNumerico(valor = '') {
     return match ? match[0] : limpio;
 }
 
+function buscarPlacaEnTexto(texto = '') {
+    const lines = texto.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+    for (let i = 0; i < lines.length; i++) {
+        const normalized = normalizarTextoBusqueda(lines[i]).toLowerCase();
+        if (!normalized.includes('placa')) continue;
+        const nearby = [lines[i], lines[i + 1] || '', lines[i - 1] || ''].join(' ');
+        const match = nearby.toUpperCase().match(/\b([A-Z0-9]{3}-?[A-Z0-9]{3}|\d{4}-?[A-Z0-9]{2})\b/);
+        if (match) return fmtPlaca(match[1]);
+    }
+
+    const looseMatch = texto.toUpperCase().match(/\b([A-Z]{1,3}\d{3}[A-Z0-9]{0,2}|\d{4}[A-Z0-9]{2}|[A-Z0-9]{3}-[A-Z0-9]{3})\b/);
+    return looseMatch ? fmtPlaca(looseMatch[1]) : '';
+}
+
 function buscarTituloNumeroTive(texto) {
     const lines = texto.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
     for (let i = 0; i < lines.length; i++) {
@@ -509,20 +524,18 @@ function componerTituloCompletar(tituloNo = '', añoTitulo = '') {
     return normalizarTituloDesdeTituloNo(numero);
 }
 
-function extraerTiveCompletoConLibreria(pdfBuffer) {
-    console.log(`[TIVE COMPLETO] 📄 Extrayendo con libreria (Buffer size: ${pdfBuffer.length} bytes)...`);
-    const text = extraerTextoPdfTive(pdfBuffer) || '';
-
+function extraerDatosTiveDesdeTexto(text, logPrefix = 'TIVE TEXTO') {
     const fechaTitulo = buscarValorTive(text, 'Fecha');
     const tituloNo = normalizarTituloDesdeTituloNo(buscarTituloNumeroTive(text));
     const tituloNormalizado = tituloNo || normalizarTituloDesdeTituloNo(buscarTituloNumeroTive(text));
+    const placa = buscarValorTive(text, 'Placa :') || buscarValorTive(text, 'Placa') || buscarPlacaEnTexto(text);
     const datos = {
         codVerif: '',
         fechaFinal: fechaTitulo,
-        zona: '',
-        sede: '',
+        zona: buscarValorTive(text, 'Zona Registral') || buscarValorTive(text, 'Zona'),
+        sede: buscarValorTive(text, 'Sede Registral') || buscarValorTive(text, 'Sede'),
         partida: buscarValorTive(text, 'Partida'),
-        dua: '',
+        dua: buscarValorTive(text, 'DUA/DAM') || buscarValorTive(text, 'DUA') || buscarValorTive(text, 'DAM'),
         titulo: tituloNormalizado || buscarTituloValorTive(text),
         fechaTitulo: fechaTitulo ? fechaTitulo.split(/\s+/)[0] : '',
         categoria: buscarValorTive(text, 'Categoria'),
@@ -540,8 +553,8 @@ function extraerTiveCompletoConLibreria(pdfBuffer) {
         pasajeros: buscarValorTive(text, 'Nro. Pasajeros'),
         ruedas: buscarValorTive(text, 'Nro. Ruedas'),
         ejes: buscarValorTive(text, 'Nro. Ejes'),
-        placa: buscarValorTive(text, 'Placa :'),
-        placaOriginal: buscarValorTive(text, 'Placa :'),
+        placa,
+        placaOriginal: placa,
         añoFabricacion: buscarValorTive(text, 'Año Fabricación') || buscarValorTive(text, 'Ano Fabricacion'),
         cilindros: buscarValorTive(text, 'Nro. Cilindros'),
         longitud: normalizarValorNumerico(buscarValorTive(text, 'Longitud')),
@@ -556,8 +569,14 @@ function extraerTiveCompletoConLibreria(pdfBuffer) {
         tituloNo,
     };
 
-    console.log(`[TIVE COMPLETO] ✅ Extracción por librería lista. Placa encontrada: ${datos.placa || '(vacía)'}`);
+    console.log(`[${logPrefix}] ✅ Parseo de texto listo. Placa encontrada: ${datos.placa || '(vacía)'}`);
     return datos;
+}
+
+function extraerTiveCompletoConLibreria(pdfBuffer) {
+    console.log(`[TIVE COMPLETO] 📄 Extrayendo con libreria (Buffer size: ${pdfBuffer.length} bytes)...`);
+    const text = extraerTextoPdfTive(pdfBuffer) || '';
+    return extraerDatosTiveDesdeTexto(text, 'TIVE COMPLETO');
 }
 
 const TIVE_COMPLETO_REQUIRED_FIELDS = [
@@ -764,9 +783,84 @@ function obtenerCamposFaltantesTiveCompletar(datos) {
     return [...forcedFields, ...standardFields];
 }
 
+function completarDatosExtraidosTive(datos = {}) {
+    const prepared = { ...datos };
+    prepared.placa = fmtPlaca(prepared.placa || '');
+    prepared.placaOriginal = prepared.placaOriginal || prepared.placa;
+    prepared.codVerif = safe(prepared.codVerif) || generarCodigoVerificacion();
+    prepared.fechaFinal = safe(prepared.fechaFinal) || generarFechaHoraTive();
+    if (!prepared.tituloNo && prepared.titulo) {
+        prepared.tituloNo = normalizarTituloDesdeTituloNo(prepared.titulo);
+    }
+    return prepared;
+}
+
+async function extraerTextoOCRDesdePdf(pdfBuffer) {
+    console.log(`[OCR] 🔎 Renderizando PDF para OCR (Buffer size: ${pdfBuffer.length} bytes)...`);
+    const images = await pdf2img.convert(pdfBuffer, { width: 2200 });
+    if (!images || images.length === 0) {
+        throw new Error('No se pudo renderizar el PDF para OCR.');
+    }
+
+    const worker = await createWorker('eng');
+    const texts = [];
+
+    try {
+        await worker.setParameters({
+            tessedit_pageseg_mode: PSM.AUTO,
+            preserve_interword_spaces: '1',
+        });
+
+        const pagesToRead = Math.min(images.length, 3);
+        for (let i = 0; i < pagesToRead; i++) {
+            console.log(`[OCR] 📄 Leyendo página ${i + 1}/${pagesToRead}...`);
+            const imageBuffer = await sharp(Buffer.from(images[i]))
+                .grayscale()
+                .normalize()
+                .sharpen()
+                .png()
+                .toBuffer();
+            const result = await worker.recognize(imageBuffer);
+            texts.push(result.data.text || '');
+        }
+    } finally {
+        await worker.terminate().catch(() => { });
+    }
+
+    const text = texts.join('\n');
+    console.log(`[OCR] ✅ Texto OCR obtenido (${text.length} caracteres).`);
+    return text;
+}
+
+async function extraerConOCR(pdfBuffer) {
+    console.log(`[OCR] 🧾 Gemini no respondió; intentando extracción local por texto/OCR...`);
+
+    const embeddedText = extraerTextoPdfTive(pdfBuffer) || '';
+    if (embeddedText.trim()) {
+        const datosDesdeTexto = completarDatosExtraidosTive(extraerDatosTiveDesdeTexto(embeddedText, 'OCR/TEXTO'));
+        if (datosDesdeTexto.placa || datosDesdeTexto.marca || datosDesdeTexto.serie || datosDesdeTexto.vin) {
+            console.log(`[OCR] ✅ Extracción desde texto embebido exitosa. Placa: ${datosDesdeTexto.placa || '(vacía)'}`);
+            return datosDesdeTexto;
+        }
+    }
+
+    const ocrText = await extraerTextoOCRDesdePdf(pdfBuffer);
+    const datosOCR = completarDatosExtraidosTive(extraerDatosTiveDesdeTexto(ocrText, 'OCR'));
+    if (datosOCR.placa || datosOCR.marca || datosOCR.serie || datosOCR.vin) {
+        console.log(`[OCR] ✅ Extracción OCR exitosa. Placa: ${datosOCR.placa || '(vacía)'}`);
+        console.log(`[OCR] 📊 Datos obtenidos:\n`, JSON.stringify(datosOCR, null, 2));
+        return datosOCR;
+    }
+
+    throw new Error("No se pudo extraer información con IA ni OCR. Asegúrate de que el PDF sea un documento TIVE legible de SUNARP.");
+}
+
 async function extraerConIA(pdfBuffer) {
     console.log(`[IA] 🧠 Iniciando extracción con Gemini (Buffer size: ${pdfBuffer.length} bytes)...`);
-    if (API_KEYS.length === 0) throw new Error("Llaves API no configuradas.");
+    if (API_KEYS.length === 0) {
+        console.warn(`[IA] ⚠️ Llaves API no configuradas. Usando OCR local.`);
+        return await extraerConOCR(pdfBuffer);
+    }
     let lastError = null;
     for (const key of API_KEYS) {
         try {
@@ -780,7 +874,7 @@ async function extraerConIA(pdfBuffer) {
 
             const result = await model.generateContent([{ inlineData: { data: pdfBuffer.toString("base64"), mimeType: "application/pdf" } }, { text: prompt }]);
             const rawText = result.response.text();
-            const parsedData = JSON.parse(rawText.replace(/```json|```/g, "").trim());
+            const parsedData = completarDatosExtraidosTive(JSON.parse(rawText.replace(/```json|```/g, "").trim()));
             console.log(`[IA] ✅ Extracción exitosa. Placa encontrada: ${parsedData.placa}`);
             console.log(`[IA] 📊 Datos obtenidos:\n`, JSON.stringify(parsedData, null, 2));
             return parsedData;
@@ -790,7 +884,12 @@ async function extraerConIA(pdfBuffer) {
         }
     }
     console.error(`[IA] ❌ Todas las API keys fallaron o el documento no es válido.`);
-    throw new Error("No se pudo extraer información. Asegúrate de que el PDF sea un documento TIVE original de SUNARP.");
+    try {
+        return await extraerConOCR(pdfBuffer);
+    } catch (ocrError) {
+        console.error(`[OCR] ❌ Fallback OCR falló:`, ocrError.message);
+        throw ocrError || lastError || new Error("No se pudo extraer información. Asegúrate de que el PDF sea un documento TIVE original de SUNARP.");
+    }
 }
 
 async function extraerConIA_Antigua(pdfBuffer) {
