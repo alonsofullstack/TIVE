@@ -1418,7 +1418,7 @@ async function generarTarjetaAntigua(chatId, datos, originalBuffer = null) {
     draw(datos.sede, 225, 147.6, 8);
     draw(datos.reparticion, 169, 164, 8);
     draw(datos.placaSede, 90, 176, 8.5); // Placa Sede
-    draw(datos.placa, 86, 195, 18.5);
+    draw(datos.placa, 92, 195, 18.5);
     // draw(datos.titulo, 202, 178, 9);
     drawSeg(datos.partida, 233, 195, 11, 10, 8);
     draw(datos.apPaterno, 105, 235, 8);
