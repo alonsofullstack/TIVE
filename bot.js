@@ -1538,13 +1538,13 @@ async function generarTIVE(chatId, datos, qrCustomLink = null, originalBuffer = 
     const fontBAnt = await pdfAnt.embedFont(FONT_BYTES);
     const pageA = pdfAnt.getPages()[0];
     const { height: hA } = pageA.getSize();
-    pageA.drawText(zonaLimpia, { x: 74, y: hA - 56.5, size: 5.2, font: fontBAnt, color: gris });
-    pageA.drawText(sedeLimpia, { x: 72, y: hA - 63.5, size: 5.2, font: fontBAnt, color: gris });
+    pageA.drawText(zonaLimpia, { x: 65, y: hA - 56.5, size: 5.2, font: fontBAnt, color: gris });
+    pageA.drawText(sedeLimpia, { x: 65, y: hA - 63.5, size: 5.2, font: fontBAnt, color: gris });
     pageA.drawText(safe(datos.partida), { x: 65, y: hA - 75, size: 6.8, font: fontBAnt, color: negro });
     pageA.drawText(safe(datos.dua), { x: 50, y: hA - 89, size: 6.8, font: fontBAnt, color: negro });
     pageA.drawText(safe(datos.titulo), { x: 34.5, y: hA - 104, size: 6.8, font: fontBAnt, color: negro });
-    pageA.drawText(safe(datos.fechaTitulo), { x: 65, y: hA - 117, size: 6.8, font: fontBAnt, color: negro });
-    pageA.drawText(safe(datos.placa), { x: 157, y: hA - 115, size: 17.9, font: fontBAnt, color: negro });
+    pageA.drawText(safe(datos.fechaTitulo), { x: 62, y: hA - 117, size: 6.8, font: fontBAnt, color: negro });
+    pageA.drawText(safe(datos.placa), { x: 159, y: hA - 115, size: 17.9, font: fontBAnt, color: negro });
     pageA.drawText(safe(datos.codVerif), { x: 213, y: hA - 142, size: 4.5, font: fontBAnt, color: negro });
     pageA.drawText(safe(datos.tituloNo), { x: 183, y: hA - 149.5, size: 4.5, font: fontBAnt, color: negro });
     pageA.drawText(safe(datos.fechaFinal), { x: 177, y: hA - 158, size: 4.5, font: fontBAnt, color: negro });
