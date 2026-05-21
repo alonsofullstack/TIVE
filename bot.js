@@ -1538,8 +1538,8 @@ async function generarTIVE(chatId, datos, qrCustomLink = null, originalBuffer = 
     const fontBAnt = await pdfAnt.embedFont(FONT_BYTES);
     const pageA = pdfAnt.getPages()[0];
     const { height: hA } = pageA.getSize();
-    pageA.drawText(zonaLimpia, { x: 65, y: hA - 56.5, size: 5.2, font: fontBAnt, color: gris });
-    pageA.drawText(sedeLimpia, { x: 65, y: hA - 63.5, size: 5.2, font: fontBAnt, color: gris });
+    pageA.drawText(zonaLimpia, { x: 60, y: hA - 55, size: 5.2, font: fontBAnt, color: gris });
+    pageA.drawText(sedeLimpia, { x: 60, y: hA - 63.5, size: 5.2, font: fontBAnt, color: gris });
     pageA.drawText(safe(datos.partida), { x: 65, y: hA - 75, size: 6.8, font: fontBAnt, color: negro });
     pageA.drawText(safe(datos.dua), { x: 50, y: hA - 89, size: 6.8, font: fontBAnt, color: negro });
     pageA.drawText(safe(datos.titulo), { x: 34.5, y: hA - 104, size: 6.8, font: fontBAnt, color: negro });
@@ -1572,9 +1572,9 @@ async function generarTIVE(chatId, datos, qrCustomLink = null, originalBuffer = 
     const dR = (t, x, y, size = 4.5) => pageR.drawText(safe(t), { x, y: hR - y, size, font: fontBRev, color: negro });
     dR(datos.categoria, 37, 40.5); dR(datos.marca, 37, 47.5); dR(datos.modelo, 37, 54.5);
     dR(datos.color, 37, 61.5); dR(datos.vin, 59, 69.5); dR(datos.serie, 59, 76.5);
-    dR(datos.motor, 59, 83.5); dR(datos.carroceria, 59, 90.5); dR(datos.potencia, 45, 97.5);
-    dR(datos.formRod, 45, 104.5); dR(datos.combustible, 50, 111.5);
-    dR(datos.añoModelo, 225, 39); dR(datos.version, 151, 100);
+    dR(datos.motor, 61, 83.5); dR(datos.carroceria, 59, 90.5); dR(datos.potencia, 45, 97.5);
+    dR(datos.formRod, 45, 104.5); dR(datos.combustible, 48, 111.5);
+    dR(datos.añoModelo, 225, 39); dR(datos.version, 148, 100);
     dR(datos.asientos, 45, 122); dR(datos.pasajeros, 45, 129);
     dR(datos.ruedas, 45, 134.9); dR(datos.ejes, 45, 141.9);
     dR(datos.cilindros, 115, 121); dR(datos.longitud, 115, 127.8);
