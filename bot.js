@@ -1477,15 +1477,15 @@ async function generarTarjetaAntigua(chatId, datos, originalBuffer = null) {
     };
 
     // draw(datos.controlReverso, 480, 118, 19, rgb(0.8, 0.1, 0.1), fontFina);
-    draw(datos.clase, 325, 149, 10);
-    draw(datos.marca, 425, 149, 11);
+    draw(datos.clase, 323, 149, 10);
+    draw(datos.marca, 420, 149, 11);
     draw(datos.añoFab, 510, 145, 11);
     draw(datos.modelo, 337, 173, 11);
     draw(datos.combustible, 485, 176, 11);
     draw(datos.carroceria, 337, 198, 11);
     draw(datos.ejes, 535, 198, 11);
     draw(datos.color, 337, 220, 11);
-    draw(datos.cilindros, 533, 245, 11);
+    draw(datos.cilindros, 531, 245, 11);
     draw(datos.motor, 335, 243, 11);
     draw(datos.ruedas, 531, 268, 11);
     draw(datos.serie, 335, 267, 11);
