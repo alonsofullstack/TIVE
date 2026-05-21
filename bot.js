@@ -378,6 +378,41 @@ function limpiarPotencia(valor = '') {
     return limpio;
 }
 
+function limpiarCategoria(valor = '') {
+    let limpio = safe(valor).trim().toUpperCase();
+    if (!limpio) return '';
+
+    // Si coincide con L1, L2, L3, L4, L5, M1, M2, M3, N1, N2, N3, O1, O2, O3, O4 directamente, devolverlo en mayúsculas
+    if (/^[LMNOP]\d$/i.test(limpio)) {
+        return limpio;
+    }
+
+    // Limpiar caracteres comunes que se leen en lugar de 'L' o '1' al principio, convirtiéndolos en '1'
+    let temp = limpio.replace(/^[|I1Lli!íì]/i, '1');
+
+    // Si tiene exactamente dos caracteres y empieza con '1' (que originalmente era L, 1, I, etc.)
+    if (temp.length === 2 && temp.startsWith('1')) {
+        const rest = temp.substring(1);
+        if (rest === '1' || rest === 'I' || rest === 'L') return 'L1';
+        if (rest === '2' || rest === 'Z') return 'L2';
+        if (rest === '3' || rest === 'E' || rest === 'e') return 'L3';
+        if (rest === '4' || rest === 'A') return 'L4';
+        if (rest === '5' || rest === 'S') return 'L5';
+    }
+
+    // Si es del tipo 'L' seguido de distorsiones de dígitos
+    if (limpio.startsWith('L')) {
+        const rest = limpio.substring(1);
+        if (rest === 'E' || rest === '3') return 'L3';
+        if (rest === 'S' || rest === '5') return 'L5';
+        if (rest === 'Z' || rest === '2') return 'L2';
+        if (rest === 'A' || rest === '4') return 'L4';
+        if (rest === 'I' || rest === '1') return 'L1';
+    }
+
+    return limpio;
+}
+
 
 const fmtPlaca = (p) => {
     if (!p) return "";
@@ -964,7 +999,7 @@ function extraerDatosTiveDesdeTexto(text, logPrefix = 'TIVE TEXTO', sourceName =
         dua: buscarValorTive(cleanText, 'DUA/DAM') || buscarValorTive(cleanText, 'DUA') || buscarValorTive(cleanText, 'DAM'),
         titulo: tituloNormalizado || buscarTituloValorTive(cleanText),
         fechaTitulo: fechaTitulo ? fechaTitulo.split(/\s+/)[0] : '',
-        categoria: buscarValorTive(cleanText, 'Categoría') || buscarValorTive(cleanText, 'Categoria'),
+        categoria: limpiarCategoria(buscarValorTive(cleanText, 'Categoría') || buscarValorTive(cleanText, 'Categoria')),
         marca: buscarValorTive(cleanText, 'Marca'),
         modelo: buscarValorTive(cleanText, 'Modelo'),
         color: buscarValorTive(cleanText, 'Color'),
@@ -1418,7 +1453,7 @@ async function generarTarjetaAntigua(chatId, datos, originalBuffer = null) {
     draw(datos.sede, 225, 147.6, 8);
     draw(datos.reparticion, 169, 164, 8);
     draw(datos.placaSede, 90, 176, 8.5); // Placa Sede
-    draw(datos.placa, 92, 195, 18.5);
+    draw(datos.placa, 80, 195, 18.5);
     // draw(datos.titulo, 202, 178, 9);
     drawSeg(datos.partida, 233, 195, 11, 10, 8);
     draw(datos.apPaterno, 105, 235, 8);
