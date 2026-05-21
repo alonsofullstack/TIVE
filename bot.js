@@ -165,6 +165,220 @@ const escapeMarkdown = (text) => {
 
 const safe = (t) => t ? String(t).trim() : '';
 
+const SEDE_TO_ZONA = {
+    'piura': 'I',
+    'sullana': 'I',
+    'talara': 'I',
+    'tumbes': 'I',
+    'paita': 'I',
+    'chulucanas': 'I',
+    
+    'chiclayo': 'II',
+    'cajamarca': 'II',
+    'chachapoyas': 'II',
+    'bagua': 'II',
+    'jaen': 'II',
+    'lambayeque': 'II',
+    'jaén': 'II',
+    
+    'moyobamba': 'III',
+    'tarapoto': 'III',
+    'taraporo': 'III',
+    'juanjui': 'III',
+    'juanjuí': 'III',
+    'yurimaguas': 'III',
+    'rioja': 'III',
+    'tocache': 'III',
+    
+    'iquitos': 'IV',
+    
+    'trujillo': 'V',
+    'chepen': 'V',
+    'chepén': 'V',
+    'huamachuco': 'V',
+    'otuzco': 'V',
+    'pacasmayo': 'V',
+    
+    'pucallpa': 'VI',
+    'pucullpa': 'VI',
+    
+    'huaraz': 'VII',
+    'chimbote': 'VII',
+    'casma': 'VII',
+    'huarmey': 'VII',
+    
+    'huancayo': 'VIII',
+    'huanuco': 'VIII',
+    'huánuco': 'VIII',
+    'cerro de pasco': 'VIII',
+    'tarma': 'VIII',
+    'satipo': 'VIII',
+    'tingo maria': 'VIII',
+    'tingo maría': 'VIII',
+    
+    'lima': 'IX',
+    'callao': 'IX',
+    'canete': 'IX',
+    'cañete': 'IX',
+    'barranca': 'IX',
+    'huaral': 'IX',
+    'huacho': 'IX',
+    
+    'cusco': 'X',
+    'abancay': 'X',
+    'tambopata': 'X',
+    'sicuani': 'X',
+    'quillabamba': 'X',
+    'madre de dios': 'X',
+    'puerto maldonado': 'X',
+    
+    'ica': 'XI',
+    'chincha': 'XI',
+    'nazca': 'XI',
+    'nasca': 'XI',
+    'pisco': 'XI',
+    'ayacucho': 'XIV',
+    'huancavelica': 'XI',
+    'puquio': 'XI',
+    
+    'arequipa': 'XII',
+    'camana': 'XII',
+    'camaná': 'XII',
+    'mollendo': 'XII',
+    'islay': 'XII',
+    
+    'tacna': 'XIII',
+    'puno': 'XIII',
+    'moquegua': 'XIII',
+    'juliaca': 'XIII',
+    'ilo': 'XIII'
+};
+
+function normalizarZonaRomana(zonaStr) {
+    if (!zonaStr) return '';
+    let txt = safe(zonaStr).toUpperCase();
+    
+    // Remover etiquetas comunes de zona
+    const labels = [
+        "ZONA REGISTRAL N°", "ZONA REGISTRAL Nº", "ZONA REGISTRAL N", "ZONA REGISTRAL", "ZONA"
+    ];
+    labels.forEach(lbl => {
+        const regex = new RegExp(`^${lbl}\\s*[:\\-]*\\s*`, 'i');
+        txt = txt.replace(regex, '');
+    });
+    
+    // Quitar prefijos tipo N°, N*, No, Nº, N
+    txt = txt.replace(/^N[°º*O]?\*?\s*[:\-;\.]*\s*/i, '');
+    
+    // Limpiar espacios y caracteres residuales
+    txt = txt.trim();
+
+    const map = [
+        { arabigo: 14, romano: 'XIV' },
+        { arabigo: 13, romano: 'XIII' },
+        { arabigo: 12, romano: 'XII' },
+        { arabigo: 11, romano: 'XI' },
+        { arabigo: 10, romano: 'X' },
+        { arabigo: 9, romano: 'IX' },
+        { arabigo: 8, romano: 'VIII' },
+        { arabigo: 7, romano: 'VII' },
+        { arabigo: 6, romano: 'VI' },
+        { arabigo: 5, romano: 'V' },
+        { arabigo: 4, romano: 'IV' },
+        { arabigo: 3, romano: 'III' },
+        { arabigo: 2, romano: 'II' },
+        { arabigo: 1, romano: 'I' }
+    ];
+
+    // Primero intentamos match exacto con número arábigo
+    const arabigoMatch = txt.match(/\b\d+\b/);
+    if (arabigoMatch) {
+        const num = parseInt(arabigoMatch[0], 10);
+        const found = map.find(item => item.arabigo === num);
+        if (found) return found.romano;
+    }
+
+    // Si no hay match arábigo exacto, buscar si el texto contiene el número arábigo
+    for (const item of map) {
+        if (txt === String(item.arabigo) || txt.includes(` ${item.arabigo}`) || txt.includes(`${item.arabigo} `)) {
+            return item.romano;
+        }
+    }
+
+    // Buscar coincidencia exacta o contenida con el número romano
+    for (const item of map) {
+        const regRomano = new RegExp(`\\b${item.romano}\\b`, 'i');
+        if (regRomano.test(txt)) {
+            return item.romano;
+        }
+    }
+
+    // Fallback: si el texto es solo dígitos o caracteres residuales, limpiar y mapear
+    const soloNumeros = txt.replace(/[^\d]/g, '');
+    if (soloNumeros) {
+        const num = parseInt(soloNumeros, 10);
+        const found = map.find(item => item.arabigo === num);
+        if (found) return found.romano;
+    }
+
+    return txt;
+}
+
+function obtenerZonaNormalizada(zonaInput = '', sedeInput = '') {
+    const cleanSede = safe(sedeInput).toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove accents
+        .replace(/[^a-z0-9\s]/g, '') // keep letters, numbers, spaces
+        .trim();
+
+    // 1. Intentar mapear por Sede primero, ya que la sede es mucho más confiable en el OCR
+    if (cleanSede) {
+        for (const [key, value] of Object.entries(SEDE_TO_ZONA)) {
+            const keyClean = key.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+            if (cleanSede === keyClean || cleanSede.includes(keyClean) || keyClean.includes(cleanSede)) {
+                console.log(`[ZONA] 📌 Zona asignada por Sede '${sedeInput}' -> Romanos: ${value}`);
+                return value;
+            }
+        }
+    }
+
+    // 2. Si no coincide por Sede, normalizar el texto de Zona
+    return normalizarZonaRomana(zonaInput);
+}
+
+function limpiarPotencia(valor = '') {
+    let limpio = safe(valor).trim();
+    if (!limpio) return '';
+
+    // Reemplazar variaciones de OCR para el símbolo '@'
+    // El OCR suele leer '@' como '(0', '(O', '(o', '(', '©', '®', ' @ ', ' @'
+    // Por ejemplo: '14,16(010500' -> '14,16@10500'
+    // Por ejemplo: '11,80(07500' -> '11,80@7500'
+    const regexDistorsion = /(\d+[\.,]\d+)\s*(?:\(0|\(O|\(o|\(|©|®|@)\s*(\d+)/i;
+    const match = limpio.match(regexDistorsion);
+    
+    if (match) {
+        let potencia = match[1];
+        let rpm = match[2];
+        
+        // Si el RPM capturado tiene un '0' extra debido a que la distorsión '(0' se juntó,
+        // ej. '(07500' -> RPM real '7500'.
+        // Si empieza con '1' (como en '10500' en '(010500'), no empieza con '0', se queda como '10500'.
+        if (rpm.startsWith('0') && rpm.length > 1) {
+            rpm = rpm.substring(1);
+        }
+        
+        return `${potencia}@${rpm}`;
+    }
+    
+    // Quitar KW/RPM u otros sufijos comunes al final
+    limpio = limpio.replace(/\s*KW\/RPM\s*$/i, '');
+    limpio = limpio.replace(/\s*KW\s*$/i, '');
+    limpio = limpio.replace(/\s*RPM\s*$/i, '');
+
+    return limpio;
+}
+
+
 const fmtPlaca = (p) => {
     if (!p) return "";
     let normalized = p.trim().toUpperCase();
@@ -763,7 +977,7 @@ function extraerDatosTiveDesdeTexto(text, logPrefix = 'TIVE TEXTO', sourceName =
             // Ej: "TRIMOTO PASAJEROS" → "TRIMOTO"
             return (_c || '').replace(/\s+(DE\s+)?(PASAJEROS|CARGA|MIXTO|ESCOLAR)$/i, '').trim();
         })(),
-        potencia: buscarValorTive(cleanText, 'Potencia Motor') || buscarValorTive(cleanText, 'Potencia'),
+        potencia: limpiarPotencia(buscarValorTive(cleanText, 'Potencia Motor') || buscarValorTive(cleanText, 'Potencia')),
         formRod: buscarValorTive(cleanText, 'Formula Rodante') || buscarValorTive(cleanText, 'Fórmula Rodante'),
         combustible: buscarValorTive(cleanText, 'Tipo Combustible') || buscarValorTive(cleanText, 'Combustible'),
         asientos: buscarPrimerValorTive(cleanText, ['Nro. Asientos', 'N° Asientos', 'No Asientos', 'Asientos']),
@@ -1204,7 +1418,7 @@ async function generarTarjetaAntigua(chatId, datos, originalBuffer = null) {
     draw(datos.sede, 225, 147.6, 8);
     draw(datos.reparticion, 169, 164, 8);
     draw(datos.placaSede, 90, 176, 8.5); // Placa Sede
-    draw(datos.placa, 83, 195, 18.5);
+    draw(datos.placa, 86, 195, 18.5);
     // draw(datos.titulo, 202, 178, 9);
     drawSeg(datos.partida, 233, 195, 11, 10, 8);
     draw(datos.apPaterno, 105, 235, 8);
@@ -1266,19 +1480,18 @@ async function generarTIVE(chatId, datos, qrCustomLink = null, originalBuffer = 
         throw new Error("No se detectó la placa. El OCR no pudo leerla; envía un PDF más nítido o usa el nombre del archivo con la placa, por ejemplo TIVE_7061XS.pdf.");
     }
 
-    let zonaLimpia = safe(datos.zona);
+    let zonaLimpia = obtenerZonaNormalizada(datos.zona, datos.sede);
     let sedeLimpia = safe(datos.sede);
 
     const labelsToRemove = [
-        "ZONA REGISTRAL N°", "ZONA REGISTRAL Nº", "ZONA REGISTRAL N", "ZONA REGISTRAL",
         "SEDE REGISTRAL -", "SEDE REGISTRAL-", "SEDE REGISTRAL", "SEDE"
     ];
 
     labelsToRemove.forEach(label => {
         const regex = new RegExp(`^${label}\\s*[:\\-]*\\s*`, 'i');
-        zonaLimpia = zonaLimpia.replace(regex, '');
         sedeLimpia = sedeLimpia.replace(regex, '');
     });
+    sedeLimpia = sedeLimpia.trim();
 
     console.log(`[TIVE] 🎨 Generando tarjeta para: ${safe(datos.placa)}`);
     const gris = rgb(0.6, 0.6, 0.6);
@@ -1452,7 +1665,7 @@ async function generarTiveCompleto(chatId, datos, qrCustomLink = null, verificat
     }
     const datosCompletos = {
         ...baseDatos,
-        zonaLimpia: limpiarEtiquetaRegistral(baseDatos.zona),
+        zonaLimpia: obtenerZonaNormalizada(baseDatos.zona, baseDatos.sede),
         sedeLimpia: limpiarEtiquetaRegistral(baseDatos.sede),
     };
     const pdfDisplayName = `TIVE_${safe(datosCompletos.placa) || 'DOC'}`;
