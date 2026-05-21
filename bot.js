@@ -413,6 +413,18 @@ function limpiarCategoria(valor = '') {
     return limpio;
 }
 
+function limpiarVersion(valor = '') {
+    let limpio = safe(valor).trim().toUpperCase();
+    if (!limpio) return '';
+
+    // El OCR suele leer el símbolo '&' como '8:', '8', 'B:', 'B' entre palabras clave de versión.
+    // Ej: 'SPOKE / DISC 8: DRUM' -> 'SPOKE / DISC & DRUM'
+    // Ej: 'SPOKE / DISC B DRUM'  -> 'SPOKE / DISC & DRUM'
+    limpio = limpio.replace(/(DISC|DRUM|SPOKE)\s+(?:8\s*:|8\b|B\s*:|B\b)\s+(DRUM|DISC|SPOKE)/g, '$1 & $2');
+
+    return limpio;
+}
+
 
 const fmtPlaca = (p) => {
     if (!p) return "";
@@ -1030,7 +1042,7 @@ function extraerDatosTiveDesdeTexto(text, logPrefix = 'TIVE TEXTO', sourceName =
         pBruto: normalizarValorNumerico(buscarValorTive(cleanText, 'Peso Bruto')),
         pNeto: normalizarValorNumerico(buscarValorTive(cleanText, 'Peso Neto')),
         cargaUtil: normalizarValorNumerico(buscarValorTive(cleanText, 'Carga Util')),
-        version: buscarValorTive(cleanText, 'Nro. Version') || buscarValorTive(cleanText, 'Nro. Versión') || buscarValorTive(cleanText, 'Versión'),
+        version: limpiarVersion(buscarValorTive(cleanText, 'Nro. Version') || buscarValorTive(cleanText, 'Nro. Versión') || buscarValorTive(cleanText, 'Versión')),
         añoModelo: buscarValorTive(cleanText, 'Año Modelo') || buscarValorTive(cleanText, 'Ano Modelo'),
         tituloNo,
     };
@@ -1540,8 +1552,8 @@ async function generarTIVE(chatId, datos, qrCustomLink = null, originalBuffer = 
     const { height: hA } = pageA.getSize();
     pageA.drawText(zonaLimpia, { x: 60, y: hA - 55, size: 5.2, font: fontBAnt, color: gris });
     pageA.drawText(sedeLimpia, { x: 60, y: hA - 63.5, size: 5.2, font: fontBAnt, color: gris });
-    pageA.drawText(safe(datos.partida), { x: 65, y: hA - 75, size: 6.8, font: fontBAnt, color: negro });
-    pageA.drawText(safe(datos.dua), { x: 50, y: hA - 89, size: 6.8, font: fontBAnt, color: negro });
+    pageA.drawText(safe(datos.partida), { x: 62.5, y: hA - 75, size: 6.8, font: fontBAnt, color: negro });
+    pageA.drawText(safe(datos.dua), { x: 47, y: hA - 89, size: 6.8, font: fontBAnt, color: negro });
     pageA.drawText(safe(datos.titulo), { x: 34.5, y: hA - 104, size: 6.8, font: fontBAnt, color: negro });
     pageA.drawText(safe(datos.fechaTitulo), { x: 62, y: hA - 117, size: 6.8, font: fontBAnt, color: negro });
     pageA.drawText(safe(datos.placa), { x: 159, y: hA - 115, size: 17.9, font: fontBAnt, color: negro });
