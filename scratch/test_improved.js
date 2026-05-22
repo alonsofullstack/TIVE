@@ -103,6 +103,10 @@ function buscarValorTive(texto, etiqueta) {
     const regex = new RegExp(`${wholeWordEscaped}[^\\S\\r\\n]*:?[^\\S\\r\\n]*([^\\n]+)`, 'i');
     const match = regex.exec(texto);
     if (match) {
+        const rawCaptured = match[1].replace(/^[:\s]+/, '');
+        if (['carga util', 'carga útil', 'carga'].includes(etiqueta.toLowerCase()) && rawCaptured.startsWith('-')) {
+            return '';
+        }
         return limpiarValorTive(match[1], etiqueta);
     }
 
@@ -117,6 +121,10 @@ function buscarValorTive(texto, etiqueta) {
         const lineSinDosPuntos = lineNormalizada.replace(/\s*:\s*$/, '');
 
         if (lineSinDosPuntos === labelNormalizado) {
+            const rawCaptured = (lines[i + 1] || '').replace(/^[:\s]+/, '');
+            if (['carga util', 'carga útil', 'carga'].includes(etiqueta.toLowerCase()) && rawCaptured.startsWith('-')) {
+                return '';
+            }
             return limpiarValorTive(lines[i + 1] || '', etiqueta);
         }
 
@@ -125,6 +133,9 @@ function buscarValorTive(texto, etiqueta) {
         const startsWithLabelPattern = new RegExp('^' + wholeWordEscapedLoop + '(?:\\s+|:|$)', 'i');
         if (startsWithLabelPattern.test(lineNormalizada)) {
             const value = line.slice(Math.min(line.length, etiqueta.length)).replace(/^[:\s]+/, '');
+            if (['carga util', 'carga útil', 'carga'].includes(etiqueta.toLowerCase()) && value.startsWith('-')) {
+                return '';
+            }
             return safe(value) ? limpiarValorTive(value, etiqueta) : limpiarValorTive(lines[i + 1] || '', etiqueta);
         }
     }
@@ -242,19 +253,26 @@ function extraerDatos(text) {
         serie: buscarPrimerValorTive(cleanText, ['Nro. Serie', 'N° Serie', 'No Serie', 'Serie']),
         motor: buscarPrimerValorTive(cleanText, ['Nro. Motor', 'N° Motor', 'No Motor', 'Motor']),
         carroceria: buscarPrimerValorTive(cleanText, ['Tipo Carroceria', 'Tipo Carrocería', 'Carroceria', 'Carrocería']),
-        potencia: buscarPrimerValorTive(cleanText, ['Potencia Motor', 'Potencia']),
+        potencia: buscarPrimerValorTive(cleanText, ['Potencia Motor', 'Pot. Motor', 'Potencia', 'Pot.']),
+        formRod: buscarPrimerValorTive(cleanText, ['Formula Rodante', 'Fórmula Rodante', 'Form. Rod.', 'Form. Rodan.', 'Formula Rodan.']),
+        combustible: buscarPrimerValorTive(cleanText, ['Tipo Combustible', 'Tipo Combus', 'Combustible', 'Combus']),
         asientos: buscarPrimerValorTive(cleanText, ['Nro. Asientos', 'N° Asientos', 'No Asientos', 'Asientos']),
+        pasajeros: buscarPrimerValorTive(cleanText, ['Nro. Pasajeros', 'N° Pasajeros', 'No Pasajeros', 'Pasajeros', 'N° Pasajer.', 'Nro. Pasajer.', 'Pasajer.']),
         ruedas: buscarPrimerValorTive(cleanText, ['Nro. Ruedas', 'N° Ruedas', 'No Ruedas', 'Ruedas']),
         ejes: buscarPrimerValorTive(cleanText, ['Nro. Ejes', 'N° Ejes', 'No Ejes', 'Ejes']),
+        añoFabricacion: buscarPrimerValorTive(cleanText, ['Año Fabricación', 'Ano Fabricacion', 'Año Fab', 'Ano Fab']),
         longitud: normalizarValorNumerico(buscarPrimerValorTive(cleanText, ['Longitud'])),
         altura: normalizarValorNumerico(buscarPrimerValorTive(cleanText, ['Altura'])),
         ancho: normalizarValorNumerico(buscarPrimerValorTive(cleanText, ['Ancho'])),
         cilindrada: normalizarValorNumerico(buscarPrimerValorTive(cleanText, ['Cilindrada'])),
         pBruto: normalizarValorNumerico(buscarPrimerValorTive(cleanText, ['Peso Bruto'])),
         pNeto: normalizarValorNumerico(buscarPrimerValorTive(cleanText, ['Peso Neto'])),
-        cargaUtil: normalizarValorNumerico(buscarPrimerValorTive(cleanText, ['Carga Util'])),
-        version: buscarPrimerValorTive(cleanText, ['Nro. Version', 'Nro. Versión', 'Versión']),
-        añoModelo: buscarPrimerValorTive(cleanText, ['Año Modelo', 'Ano Modelo']),
+        cargaUtil: (() => {
+            const raw = buscarPrimerValorTive(cleanText, ['Carga Util', 'Carga Útil', 'Carga']);
+            return (raw && raw.trim().startsWith('-')) ? '' : normalizarValorNumerico(raw);
+        })(),
+        version: buscarPrimerValorTive(cleanText, ['Nro. Version', 'Nro. Versión', 'Versión', 'Version', 'N° Versión', 'N° Version']),
+        añoModelo: buscarPrimerValorTive(cleanText, ['Año Modelo', 'Ano Modelo', 'Año Mod', 'Ano Mod']),
         tituloNo,
     };
 }

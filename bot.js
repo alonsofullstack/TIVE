@@ -858,6 +858,10 @@ function buscarValorTive(texto, etiqueta) {
     const regex = new RegExp(`${wholeWordEscaped}[^\\S\\r\\n]*:?[^\\S\\r\\n]*([^\\n]+)`, 'i');
     const match = regex.exec(texto);
     if (match) {
+        const rawCaptured = match[1].replace(/^[:\s]+/, '');
+        if (['carga util', 'carga útil', 'carga'].includes(etiqueta.toLowerCase()) && rawCaptured.startsWith('-')) {
+            return '';
+        }
         return limpiarValorTive(match[1], etiqueta);
     }
 
@@ -872,6 +876,10 @@ function buscarValorTive(texto, etiqueta) {
         const lineSinDosPuntos = lineNormalizada.replace(/\s*:\s*$/, '');
 
         if (lineSinDosPuntos === labelNormalizado) {
+            const rawCaptured = (lines[i + 1] || '').replace(/^[:\s]+/, '');
+            if (['carga util', 'carga útil', 'carga'].includes(etiqueta.toLowerCase()) && rawCaptured.startsWith('-')) {
+                return '';
+            }
             return limpiarValorTive(lines[i + 1] || '', etiqueta);
         }
 
@@ -880,6 +888,9 @@ function buscarValorTive(texto, etiqueta) {
         const startsWithLabelPattern = new RegExp('^' + wholeWordEscapedLoop + '(?:\\s+|:|$)', 'i');
         if (startsWithLabelPattern.test(lineNormalizada)) {
             const value = line.slice(Math.min(line.length, etiqueta.length)).replace(/^[:\s]+/, '');
+            if (['carga util', 'carga útil', 'carga'].includes(etiqueta.toLowerCase()) && value.startsWith('-')) {
+                return '';
+            }
             return safe(value) ? limpiarValorTive(value, etiqueta) : limpiarValorTive(lines[i + 1] || '', etiqueta);
         }
     }
@@ -1073,16 +1084,16 @@ function extraerDatosTiveDesdeTexto(text, logPrefix = 'TIVE TEXTO', sourceName =
             // Ej: "TRIMOTO PASAJEROS" → "TRIMOTO"
             return (_c || '').replace(/\s+(DE\s+)?(PASAJEROS|CARGA|MIXTO|ESCOLAR)$/i, '').trim();
         })(),
-        potencia: limpiarPotencia(buscarPrimerValorTive(cleanText, ['Potencia Motor', 'Potencia'])),
-        formRod: buscarPrimerValorTive(cleanText, ['Formula Rodante', 'Fórmula Rodante', 'Form. Rod.']),
-        combustible: buscarPrimerValorTive(cleanText, ['Tipo Combustible', 'Combustible']),
+        potencia: limpiarPotencia(buscarPrimerValorTive(cleanText, ['Potencia Motor', 'Pot. Motor', 'Potencia', 'Pot.'])),
+        formRod: buscarPrimerValorTive(cleanText, ['Formula Rodante', 'Fórmula Rodante', 'Form. Rod.', 'Form. Rodan.', 'Formula Rodan.']),
+        combustible: buscarPrimerValorTive(cleanText, ['Tipo Combustible', 'Tipo Combus', 'Combustible', 'Combus']),
         asientos: buscarPrimerValorTive(cleanText, ['Nro. Asientos', 'N° Asientos', 'No Asientos', 'Asientos']),
-        pasajeros: buscarPrimerValorTive(cleanText, ['Nro. Pasajeros', 'N° Pasajeros', 'No Pasajeros', 'Pasajeros']),
+        pasajeros: buscarPrimerValorTive(cleanText, ['Nro. Pasajeros', 'N° Pasajeros', 'No Pasajeros', 'Pasajeros', 'N° Pasajer.', 'Nro. Pasajer.', 'Pasajer.']),
         ruedas: buscarPrimerValorTive(cleanText, ['Nro. Ruedas', 'N° Ruedas', 'No Ruedas', 'Ruedas']),
         ejes: buscarPrimerValorTive(cleanText, ['Nro. Ejes', 'N° Ejes', 'No Ejes', 'Ejes']),
         placa,
         placaOriginal: placa,
-        añoFabricacion: buscarPrimerValorTive(cleanText, ['Año Fabricación', 'Ano Fabricacion']),
+        añoFabricacion: buscarPrimerValorTive(cleanText, ['Año Fabricación', 'Ano Fabricacion', 'Año Fab', 'Ano Fab']),
         cilindros: buscarPrimerValorTive(cleanText, ['Nro. Cilindros', 'N° Cilindros', 'No Cilindros', 'Cilindros']),
         longitud: normalizarValorNumerico(buscarPrimerValorTive(cleanText, ['Longitud'])),
         altura: normalizarValorNumerico(buscarPrimerValorTive(cleanText, ['Altura'])),
@@ -1090,9 +1101,12 @@ function extraerDatosTiveDesdeTexto(text, logPrefix = 'TIVE TEXTO', sourceName =
         cilindrada: normalizarValorNumerico(buscarPrimerValorTive(cleanText, ['Cilindrada'])),
         pBruto: normalizarValorNumerico(buscarPrimerValorTive(cleanText, ['Peso Bruto'])),
         pNeto: normalizarValorNumerico(buscarPrimerValorTive(cleanText, ['Peso Neto'])),
-        cargaUtil: normalizarValorNumerico(buscarPrimerValorTive(cleanText, ['Carga Util'])),
-        version: limpiarVersion(buscarPrimerValorTive(cleanText, ['Nro. Version', 'Nro. Versión', 'Versión'])),
-        añoModelo: buscarPrimerValorTive(cleanText, ['Año Modelo', 'Ano Modelo']),
+        cargaUtil: (() => {
+            const raw = buscarPrimerValorTive(cleanText, ['Carga Util', 'Carga Útil', 'Carga']);
+            return (raw && raw.trim().startsWith('-')) ? '' : normalizarValorNumerico(raw);
+        })(),
+        version: limpiarVersion(buscarPrimerValorTive(cleanText, ['Nro. Version', 'Nro. Versión', 'Versión', 'Version', 'N° Versión', 'N° Version'])),
+        añoModelo: buscarPrimerValorTive(cleanText, ['Año Modelo', 'Ano Modelo', 'Año Mod', 'Ano Mod']),
         tituloNo,
     };
 
@@ -1121,6 +1135,15 @@ const TIVE_COMPLETO_REQUIRED_FIELDS = [
     { key: 'vin', label: 'VIN' },
     { key: 'serie', label: 'NÚMERO DE SERIE' },
     { key: 'motor', label: 'NÚMERO DE MOTOR' },
+    { key: 'añoFabricacion', label: 'AÑO DE FABRICACIÓN' },
+    { key: 'añoModelo', label: 'AÑO DE MODELO' },
+    { key: 'potencia', label: 'POTENCIA' },
+    { key: 'formRod', label: 'FÓRMULA RODANTE' },
+    { key: 'combustible', label: 'TIPO COMBUSTIBLE' },
+    { key: 'pasajeros', label: 'NRO. PASAJEROS' },
+    { key: 'cargaUtil', label: 'CARGA ÚTIL' },
+    { key: 'version', label: 'VERSIÓN' },
+    { key: 'tituloNo', label: 'TÍTULO N° (solo número o completo)' },
 ];
 
 function generarCodigoVerificacion() {
@@ -1182,6 +1205,9 @@ function prepararDatosTiveCompleto(datos) {
     prepared.añoFabricacion = safe(prepared.añoFabricacion);
     prepared.añoModelo = safe(prepared.añoModelo);
     prepared.potencia = limpiarPotencia(prepared.potencia || '');
+    if (prepared.cargaUtil && String(prepared.cargaUtil).trim().startsWith('-')) {
+        prepared.cargaUtil = '';
+    }
     return prepared;
 }
 
@@ -1323,6 +1349,9 @@ function completarDatosExtraidosTive(datos = {}, sourceName = '') {
     prepared.fechaFinal = safe(prepared.fechaFinal) || generarFechaHoraTive();
     if (!prepared.tituloNo && prepared.titulo) {
         prepared.tituloNo = normalizarTituloDesdeTituloNo(prepared.titulo);
+    }
+    if (prepared.cargaUtil && String(prepared.cargaUtil).trim().startsWith('-')) {
+        prepared.cargaUtil = '';
     }
     return prepared;
 }
