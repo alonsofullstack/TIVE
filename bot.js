@@ -165,6 +165,267 @@ const escapeMarkdown = (text) => {
 
 const safe = (t) => t ? String(t).trim() : '';
 
+const SEDE_TO_ZONA = {
+    'piura': 'I',
+    'sullana': 'I',
+    'talara': 'I',
+    'tumbes': 'I',
+    'paita': 'I',
+    'chulucanas': 'I',
+    
+    'chiclayo': 'II',
+    'cajamarca': 'II',
+    'chachapoyas': 'II',
+    'bagua': 'II',
+    'jaen': 'II',
+    'lambayeque': 'II',
+    'jaén': 'II',
+    
+    'moyobamba': 'III',
+    'tarapoto': 'III',
+    'taraporo': 'III',
+    'juanjui': 'III',
+    'juanjuí': 'III',
+    'yurimaguas': 'III',
+    'rioja': 'III',
+    'tocache': 'III',
+    
+    'iquitos': 'IV',
+    
+    'trujillo': 'V',
+    'chepen': 'V',
+    'chepén': 'V',
+    'huamachuco': 'V',
+    'otuzco': 'V',
+    'pacasmayo': 'V',
+    
+    'pucallpa': 'VI',
+    'pucullpa': 'VI',
+    
+    'huaraz': 'VII',
+    'chimbote': 'VII',
+    'casma': 'VII',
+    'huarmey': 'VII',
+    
+    'huancayo': 'VIII',
+    'huanuco': 'VIII',
+    'huánuco': 'VIII',
+    'cerro de pasco': 'VIII',
+    'tarma': 'VIII',
+    'satipo': 'VIII',
+    'tingo maria': 'VIII',
+    'tingo maría': 'VIII',
+    
+    'lima': 'IX',
+    'callao': 'IX',
+    'canete': 'IX',
+    'cañete': 'IX',
+    'barranca': 'IX',
+    'huaral': 'IX',
+    'huacho': 'IX',
+    
+    'cusco': 'X',
+    'abancay': 'X',
+    'tambopata': 'X',
+    'sicuani': 'X',
+    'quillabamba': 'X',
+    'madre de dios': 'X',
+    'puerto maldonado': 'X',
+    
+    'ica': 'XI',
+    'chincha': 'XI',
+    'nazca': 'XI',
+    'nasca': 'XI',
+    'pisco': 'XI',
+    'ayacucho': 'XIV',
+    'huancavelica': 'XI',
+    'puquio': 'XI',
+    
+    'arequipa': 'XII',
+    'camana': 'XII',
+    'camaná': 'XII',
+    'mollendo': 'XII',
+    'islay': 'XII',
+    
+    'tacna': 'XIII',
+    'puno': 'XIII',
+    'moquegua': 'XIII',
+    'juliaca': 'XIII',
+    'ilo': 'XIII'
+};
+
+function normalizarZonaRomana(zonaStr) {
+    if (!zonaStr) return '';
+    let txt = safe(zonaStr).toUpperCase();
+    
+    // Remover etiquetas comunes de zona
+    const labels = [
+        "ZONA REGISTRAL N°", "ZONA REGISTRAL Nº", "ZONA REGISTRAL N", "ZONA REGISTRAL", "ZONA"
+    ];
+    labels.forEach(lbl => {
+        const regex = new RegExp(`^${lbl}\\s*[:\\-]*\\s*`, 'i');
+        txt = txt.replace(regex, '');
+    });
+    
+    // Quitar prefijos tipo N°, N*, No, Nº, N
+    txt = txt.replace(/^N[°º*O]?\*?\s*[:\-;\.]*\s*/i, '');
+    
+    // Limpiar espacios y caracteres residuales
+    txt = txt.trim();
+
+    const map = [
+        { arabigo: 14, romano: 'XIV' },
+        { arabigo: 13, romano: 'XIII' },
+        { arabigo: 12, romano: 'XII' },
+        { arabigo: 11, romano: 'XI' },
+        { arabigo: 10, romano: 'X' },
+        { arabigo: 9, romano: 'IX' },
+        { arabigo: 8, romano: 'VIII' },
+        { arabigo: 7, romano: 'VII' },
+        { arabigo: 6, romano: 'VI' },
+        { arabigo: 5, romano: 'V' },
+        { arabigo: 4, romano: 'IV' },
+        { arabigo: 3, romano: 'III' },
+        { arabigo: 2, romano: 'II' },
+        { arabigo: 1, romano: 'I' }
+    ];
+
+    // Primero intentamos match exacto con número arábigo
+    const arabigoMatch = txt.match(/\b\d+\b/);
+    if (arabigoMatch) {
+        const num = parseInt(arabigoMatch[0], 10);
+        const found = map.find(item => item.arabigo === num);
+        if (found) return found.romano;
+    }
+
+    // Si no hay match arábigo exacto, buscar si el texto contiene el número arábigo
+    for (const item of map) {
+        if (txt === String(item.arabigo) || txt.includes(` ${item.arabigo}`) || txt.includes(`${item.arabigo} `)) {
+            return item.romano;
+        }
+    }
+
+    // Buscar coincidencia exacta o contenida con el número romano
+    for (const item of map) {
+        const regRomano = new RegExp(`\\b${item.romano}\\b`, 'i');
+        if (regRomano.test(txt)) {
+            return item.romano;
+        }
+    }
+
+    // Fallback: si el texto es solo dígitos o caracteres residuales, limpiar y mapear
+    const soloNumeros = txt.replace(/[^\d]/g, '');
+    if (soloNumeros) {
+        const num = parseInt(soloNumeros, 10);
+        const found = map.find(item => item.arabigo === num);
+        if (found) return found.romano;
+    }
+
+    return txt;
+}
+
+function obtenerZonaNormalizada(zonaInput = '', sedeInput = '') {
+    const cleanSede = safe(sedeInput).toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove accents
+        .replace(/[^a-z0-9\s]/g, '') // keep letters, numbers, spaces
+        .trim();
+
+    // 1. Intentar mapear por Sede primero, ya que la sede es mucho más confiable en el OCR
+    if (cleanSede) {
+        for (const [key, value] of Object.entries(SEDE_TO_ZONA)) {
+            const keyClean = key.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+            if (cleanSede === keyClean || cleanSede.includes(keyClean) || keyClean.includes(cleanSede)) {
+                console.log(`[ZONA] 📌 Zona asignada por Sede '${sedeInput}' -> Romanos: ${value}`);
+                return value;
+            }
+        }
+    }
+
+    // 2. Si no coincide por Sede, normalizar el texto de Zona
+    return normalizarZonaRomana(zonaInput);
+}
+
+function limpiarPotencia(valor = '') {
+    let limpio = safe(valor).trim();
+    if (!limpio) return '';
+
+    // Reemplazar variaciones de OCR para el símbolo '@'
+    // El OCR suele leer '@' como '(0', '(O', '(o', '(', '©', '®', ' @ ', ' @'
+    // Por ejemplo: '14,16(010500' -> '14,16@10500'
+    // Por ejemplo: '11,80(07500' -> '11,80@7500'
+    const regexDistorsion = /(\d+[\.,]\d+)\s*(?:\(0|\(O|\(o|\(|©|®|@)\s*(\d+)/i;
+    const match = limpio.match(regexDistorsion);
+    
+    if (match) {
+        let potencia = match[1];
+        let rpm = match[2];
+        
+        // Si el RPM capturado tiene un '0' extra debido a que la distorsión '(0' se juntó,
+        // ej. '(07500' -> RPM real '7500'.
+        // Si empieza con '1' (como en '10500' en '(010500'), no empieza con '0', se queda como '10500'.
+        if (rpm.startsWith('0') && rpm.length > 1) {
+            rpm = rpm.substring(1);
+        }
+        
+        return `${potencia}@${rpm}`;
+    }
+    
+    // Quitar KW/RPM u otros sufijos comunes al final
+    limpio = limpio.replace(/\s*KW\/RPM\s*$/i, '');
+    limpio = limpio.replace(/\s*KW\s*$/i, '');
+    limpio = limpio.replace(/\s*RPM\s*$/i, '');
+
+    return limpio;
+}
+
+function limpiarCategoria(valor = '') {
+    let limpio = safe(valor).trim().toUpperCase();
+    if (!limpio) return '';
+
+    // Si coincide con L1, L2, L3, L4, L5, M1, M2, M3, N1, N2, N3, O1, O2, O3, O4 directamente, devolverlo en mayúsculas
+    if (/^[LMNOP]\d$/i.test(limpio)) {
+        return limpio;
+    }
+
+    // Limpiar caracteres comunes que se leen en lugar de 'L' o '1' al principio, convirtiéndolos en '1'
+    let temp = limpio.replace(/^[|I1Lli!íì]/i, '1');
+
+    // Si tiene exactamente dos caracteres y empieza con '1' (que originalmente era L, 1, I, etc.)
+    if (temp.length === 2 && temp.startsWith('1')) {
+        const rest = temp.substring(1);
+        if (rest === '1' || rest === 'I' || rest === 'L') return 'L1';
+        if (rest === '2' || rest === 'Z') return 'L2';
+        if (rest === '3' || rest === 'E' || rest === 'e') return 'L3';
+        if (rest === '4' || rest === 'A') return 'L4';
+        if (rest === '5' || rest === 'S') return 'L5';
+    }
+
+    // Si es del tipo 'L' seguido de distorsiones de dígitos
+    if (limpio.startsWith('L')) {
+        const rest = limpio.substring(1);
+        if (rest === 'E' || rest === '3') return 'L3';
+        if (rest === 'S' || rest === '5') return 'L5';
+        if (rest === 'Z' || rest === '2') return 'L2';
+        if (rest === 'A' || rest === '4') return 'L4';
+        if (rest === 'I' || rest === '1') return 'L1';
+    }
+
+    return limpio;
+}
+
+function limpiarVersion(valor = '') {
+    let limpio = safe(valor).trim().toUpperCase();
+    if (!limpio) return '';
+
+    // El OCR suele leer el símbolo '&' como '8:', '8', 'B:', 'B' entre palabras clave de versión.
+    // Ej: 'SPOKE / DISC 8: DRUM' -> 'SPOKE / DISC & DRUM'
+    // Ej: 'SPOKE / DISC B DRUM'  -> 'SPOKE / DISC & DRUM'
+    limpio = limpio.replace(/(DISC|DRUM|SPOKE)\s+(?:8\s*:|8\b|B\s*:|B\b)\s+(DRUM|DISC|SPOKE)/g, '$1 & $2');
+
+    return limpio;
+}
+
+
 const fmtPlaca = (p) => {
     if (!p) return "";
     let normalized = p.trim().toUpperCase();
@@ -747,7 +1008,7 @@ function extraerDatosTiveDesdeTexto(text, logPrefix = 'TIVE TEXTO', sourceName =
         dua: buscarValorTive(cleanText, 'DUA/DAM') || buscarValorTive(cleanText, 'DUA') || buscarValorTive(cleanText, 'DAM'),
         titulo: tituloNormalizado || buscarTituloValorTive(cleanText),
         fechaTitulo: fechaTitulo ? fechaTitulo.split(/\s+/)[0] : '',
-        categoria: buscarValorTive(cleanText, 'Categoría') || buscarValorTive(cleanText, 'Categoria'),
+        categoria: limpiarCategoria(buscarValorTive(cleanText, 'Categoría') || buscarValorTive(cleanText, 'Categoria')),
         marca: buscarValorTive(cleanText, 'Marca'),
         modelo: buscarValorTive(cleanText, 'Modelo'),
         color: buscarValorTive(cleanText, 'Color'),
@@ -760,11 +1021,7 @@ function extraerDatosTiveDesdeTexto(text, logPrefix = 'TIVE TEXTO', sourceName =
             // Ej: "TRIMOTO PASAJEROS" → "TRIMOTO"
             return (_c || '').replace(/\s+(DE\s+)?(PASAJEROS|CARGA|MIXTO|ESCOLAR)$/i, '').trim();
         })(),
-        potencia: (() => {
-            const _p = buscarValorTive(cleanText, 'Potencia Motor') || buscarValorTive(cleanText, 'Potencia');
-            // OCR lee "(0" del PDF → convertir a "@"  ej: "11,80(07500KW/RPM" → "11,80@7500KW/RPM"
-            return (_p || '').replace(/\(0(?=\d)/g, '@').trim();
-        })(),
+        potencia: buscarValorTive(cleanText, 'Potencia Motor') || buscarValorTive(cleanText, 'Potencia'),
         formRod: buscarValorTive(cleanText, 'Formula Rodante') || buscarValorTive(cleanText, 'Fórmula Rodante'),
         combustible: buscarValorTive(cleanText, 'Tipo Combustible') || buscarValorTive(cleanText, 'Combustible'),
         asientos: buscarPrimerValorTive(cleanText, ['Nro. Asientos', 'N° Asientos', 'No Asientos', 'Asientos']),
@@ -782,7 +1039,7 @@ function extraerDatosTiveDesdeTexto(text, logPrefix = 'TIVE TEXTO', sourceName =
         pBruto: normalizarValorNumerico(buscarValorTive(cleanText, 'Peso Bruto')),
         pNeto: normalizarValorNumerico(buscarValorTive(cleanText, 'Peso Neto')),
         cargaUtil: normalizarValorNumerico(buscarValorTive(cleanText, 'Carga Util')),
-        version: buscarValorTive(cleanText, 'Nro. Version') || buscarValorTive(cleanText, 'Nro. Versión') || buscarValorTive(cleanText, 'Versión'),
+        version: limpiarVersion(buscarValorTive(cleanText, 'Nro. Version') || buscarValorTive(cleanText, 'Nro. Versión') || buscarValorTive(cleanText, 'Versión')),
         añoModelo: buscarValorTive(cleanText, 'Año Modelo') || buscarValorTive(cleanText, 'Ano Modelo'),
         tituloNo,
     };
@@ -1229,15 +1486,15 @@ async function generarTarjetaAntigua(chatId, datos, originalBuffer = null) {
     };
 
     // draw(datos.controlReverso, 480, 118, 19, rgb(0.8, 0.1, 0.1), fontFina);
-    draw(datos.clase, 325, 149, 10);
-    draw(datos.marca, 425, 149, 11);
+    draw(datos.clase, 323, 149, 10);
+    draw(datos.marca, 420, 149, 11);
     draw(datos.añoFab, 510, 145, 11);
     draw(datos.modelo, 337, 173, 11);
     draw(datos.combustible, 485, 176, 11);
     draw(datos.carroceria, 337, 198, 11);
     draw(datos.ejes, 535, 198, 11);
     draw(datos.color, 337, 220, 11);
-    draw(datos.cilindros, 533, 245, 11);
+    draw(datos.cilindros, 531, 245, 11);
     draw(datos.motor, 335, 243, 11);
     draw(datos.ruedas, 531, 268, 11);
     draw(datos.serie, 335, 267, 11);
@@ -1267,23 +1524,17 @@ async function generarTIVE(chatId, datos, qrCustomLink = null, originalBuffer = 
         throw new Error("No se detectó la placa. El OCR no pudo leerla; envía un PDF más nítido o usa el nombre del archivo con la placa, por ejemplo TIVE_7061XS.pdf.");
     }
 
-    let zonaLimpia = safe(datos.zona);
+    let zonaLimpia = obtenerZonaNormalizada(datos.zona, datos.sede);
     let sedeLimpia = safe(datos.sede);
 
     const labelsToRemove = [
-        "ZONA REGISTRAL N°", "ZONA REGISTRAL Nº", "ZONA REGISTRAL N", "ZONA REGISTRAL",
         "SEDE REGISTRAL -", "SEDE REGISTRAL-", "SEDE REGISTRAL", "SEDE"
     ];
 
     labelsToRemove.forEach(label => {
         const regex = new RegExp(`^${label}\\s*[:\\-]*\\s*`, 'i');
-        zonaLimpia = zonaLimpia.replace(regex, '');
         sedeLimpia = sedeLimpia.replace(regex, '');
     });
-
-    // Solo conservar el número romano/dígito limpio (la plantilla ya imprime "N°")
-    // Ej OCR: "N' III" → "III" | "N° IX" → "IX" | "III" → "III"
-    zonaLimpia = zonaLimpia.replace(/^N\s*[°º'`*o]?\s*/i, '').trim();
 
     console.log(`[TIVE] 🎨 Generando tarjeta para: ${safe(datos.placa)}`);
     const gris = rgb(0.6, 0.6, 0.6);
@@ -1295,13 +1546,13 @@ async function generarTIVE(chatId, datos, qrCustomLink = null, originalBuffer = 
     const fontBAnt = await pdfAnt.embedFont(FONT_BYTES);
     const pageA = pdfAnt.getPages()[0];
     const { height: hA } = pageA.getSize();
-    pageA.drawText(zonaLimpia, { x: 58, y: hA - 55.5, size: 5.2, font: fontBAnt, color: gris });
-    pageA.drawText(sedeLimpia, { x: 52, y: hA - 63.5, size: 5.2, font: fontBAnt, color: gris });
+    pageA.drawText(zonaLimpia, { x: 74, y: hA - 56.5, size: 5.2, font: fontBAnt, color: gris });
+    pageA.drawText(sedeLimpia, { x: 72, y: hA - 63.5, size: 5.2, font: fontBAnt, color: gris });
     pageA.drawText(safe(datos.partida), { x: 65, y: hA - 75, size: 6.8, font: fontBAnt, color: negro });
     pageA.drawText(safe(datos.dua), { x: 50, y: hA - 89, size: 6.8, font: fontBAnt, color: negro });
     pageA.drawText(safe(datos.titulo), { x: 34.5, y: hA - 104, size: 6.8, font: fontBAnt, color: negro });
-    pageA.drawText(safe(datos.fechaTitulo), { x: 65, y: hA - 117, size: 6.8, font: fontBAnt, color: negro });
-    pageA.drawText(safe(datos.placa), { x: 157, y: hA - 115, size: 17.9, font: fontBAnt, color: negro });
+    pageA.drawText(safe(datos.fechaTitulo), { x: 62, y: hA - 117, size: 6.8, font: fontBAnt, color: negro });
+    pageA.drawText(safe(datos.placa), { x: 159, y: hA - 115, size: 17.9, font: fontBAnt, color: negro });
     pageA.drawText(safe(datos.codVerif), { x: 213, y: hA - 142, size: 4.5, font: fontBAnt, color: negro });
     pageA.drawText(safe(datos.tituloNo), { x: 183, y: hA - 149.5, size: 4.5, font: fontBAnt, color: negro });
     pageA.drawText(safe(datos.fechaFinal), { x: 177, y: hA - 158, size: 4.5, font: fontBAnt, color: negro });
@@ -1329,9 +1580,9 @@ async function generarTIVE(chatId, datos, qrCustomLink = null, originalBuffer = 
     const dR = (t, x, y, size = 4.5) => pageR.drawText(safe(t), { x, y: hR - y, size, font: fontBRev, color: negro });
     dR(datos.categoria, 37, 40.5); dR(datos.marca, 37, 47.5); dR(datos.modelo, 37, 54.5);
     dR(datos.color, 37, 61.5); dR(datos.vin, 59, 69.5); dR(datos.serie, 59, 76.5);
-    dR(datos.motor, 59, 83.5); dR(datos.carroceria, 59, 90.5); dR(datos.potencia, 45, 97.5);
-    dR(datos.formRod, 45, 104.5); dR(datos.combustible, 50, 111.5);
-    dR(datos.añoModelo, 225, 39); dR(datos.version, 151, 100);
+    dR(datos.motor, 61, 83.5); dR(datos.carroceria, 59, 90.5); dR(datos.potencia, 45, 97.5);
+    dR(datos.formRod, 45, 104.5); dR(datos.combustible, 48, 111.5);
+    dR(datos.añoModelo, 225, 39); dR(datos.version, 148, 100);
     dR(datos.asientos, 45, 122); dR(datos.pasajeros, 45, 129);
     dR(datos.ruedas, 45, 134.9); dR(datos.ejes, 45, 141.9);
     dR(datos.cilindros, 115, 121); dR(datos.longitud, 115, 127.8);
@@ -1457,12 +1708,7 @@ async function generarTiveCompleto(chatId, datos, qrCustomLink = null, verificat
     }
     const datosCompletos = {
         ...baseDatos,
-        zonaLimpia: (() => {
-            let z = limpiarEtiquetaRegistral(baseDatos.zona);
-            // Solo el número romano — la plantilla ya imprime "N°"
-            z = z.replace(/^N\s*[°º'`*o]?\s*/i, '').trim();
-            return z;
-        })(),
+        zonaLimpia: limpiarEtiquetaRegistral(baseDatos.zona),
         sedeLimpia: limpiarEtiquetaRegistral(baseDatos.sede),
     };
     const pdfDisplayName = `TIVE_${safe(datosCompletos.placa) || 'DOC'}`;
