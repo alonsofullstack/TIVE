@@ -519,7 +519,7 @@ const TIVE_COMPLETO_FIELDS = [
     { key: 'ruedas', dataKey: 'ruedas', x: 103.9, y: 67, dx: -5.5, dy: -4, size: 8, bold: false },
     { key: 'ejes', dataKey: 'ejes', x: 103.5, y: 81.8, dx: -5, dy: -5, size: 8, bold: false },
     { key: 'placa', dataKey: 'placa', x: 317.9, y: 406.9, dx: -6, dy: -6, size: 25, bold: true },
-    { key: 'año_fabricacion', dataKey: 'añoFabricacion', x: 392.6, y: 272.6, dx: -10, dy: -7, size: 8, bold: false },
+    { key: 'año_fabricacion', dataKey: 'añoFabricacion', x: 392.6, y: 272.6, dx: -10, dy: -6, size: 8, bold: false },
     { key: 'cilindros', dataKey: 'cilindros', x: 208.6, y: 114.2, dx: 7, dy: -9, size: 8, bold: false },
     { key: 'longitud', dataKey: 'longitud', x: 213.9, y: 100.2, dx: 2, dy: -8, size: 8, bold: false },
     { key: 'altura', dataKey: 'altura', x: 213.9, y: 86.2, dx: 2, dy: -8.5, size: 8, bold: false },
@@ -528,7 +528,7 @@ const TIVE_COMPLETO_FIELDS = [
     { key: 'p_bruto', dataKey: 'pBruto', x: 326.6, y: 97.6, dx: 32, dy: -6, size: 8, bold: false },
     { key: 'campo_30', dataKey: 'pNeto', x: 329.9, y: 82.9, dx: 29, dy: -4, size: 8, bold: false },
     { key: 'campo_31', dataKey: 'cargaUtil', x: 322.6, y: 71.6, dx: 37, dy: -6, size: 8, bold: false },
-    { key: 'version', dataKey: 'version', x: 273.9, y: 155.9, dx: -6.5, dy: -7, size: 8, bold: false },
+    { key: 'version', dataKey: 'version', x: 273.4, y: 155.9, dx: -6.5, dy: -8, size: 8, bold: false },
     { key: 'año_modelo', dataKey: 'añoModelo', x: 392.6, y: 259.1, dx: -5, dy: -4, size: 8, bold: false },
     { key: 'titulo_numero', dataKey: 'tituloNo', x: 190.6, y: 590.2, dx: -6.5, dy: -8, size: 8, bold: false },
 ];
@@ -1189,7 +1189,7 @@ function obtenerCamposFaltantesTiveCompleto(datos) {
     return TIVE_COMPLETO_REQUIRED_FIELDS.filter(field => {
         if (field.key === 'placa') return placaRequiereConfirmacion(datos.placaOriginal);
         const val = safe(datos[field.key]);
-        if (field.key === 'dua' && val === '0') return true; // Preguntar si DUA es 0
+        if (field.key === 'dua' && (val === '0' || !val.includes('-'))) return true; // Preguntar si DUA es 0 o no tiene guiones
         return !val;
     });
 }
@@ -1298,7 +1298,7 @@ function obtenerCamposFaltantesTiveCompletar(datos) {
         }
         if (field.key === 'placa') return placaRequiereConfirmacion(datos.placaOriginal);
         const val = safe(datos[field.key]);
-        if (field.key === 'dua' && val === '0') return true; // Preguntar si DUA es 0
+        if (field.key === 'dua' && (val === '0' || !val.includes('-'))) return true; // Preguntar si DUA es 0 o no tiene guiones
         return !val;
     });
 
@@ -1743,16 +1743,12 @@ async function generarTiveCompleto(chatId, datos, qrCustomLink = null, verificat
     const templatePath = getTemplatePath(COMPLETE_TEMPLATE_NAME);
     const templateBytes = fs.readFileSync(templatePath);
     const templateDoc = await PDFDocument.load(templateBytes);
-    const templatePage = templateDoc.getPages()[0];
-    const { width, height } = templatePage.getSize();
+    templateDoc.registerFontkit(fontkit);
+    const page = templateDoc.getPages()[0];
+    const { width, height } = page.getSize();
 
-    const pdfDoc = await PDFDocument.create();
-    const [templateBackground] = await pdfDoc.embedPdf(templateBytes, [0]);
-    const page = pdfDoc.addPage([width, height]);
-    page.drawPage(templateBackground, { x: 0, y: 0, width, height });
-
-    const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const fontRegular = await templateDoc.embedFont(StandardFonts.Helvetica);
+    const fontBold = await templateDoc.embedFont(StandardFonts.HelveticaBold);
     const negro = rgb(0, 0, 0);
     const gris = rgb(0.6, 0.6, 0.6);
 
@@ -1769,11 +1765,11 @@ async function generarTiveCompleto(chatId, datos, qrCustomLink = null, verificat
         sedeLimpia: limpiarEtiquetaRegistral(baseDatos.sede),
     };
     const pdfDisplayName = `TIVE_${safe(datosCompletos.placa) || 'DOC'}`;
-    pdfDoc.setTitle(pdfDisplayName);
-    pdfDoc.setSubject('Tarjeta de Identificacion Vehicular Electronica');
-    pdfDoc.setAuthor('SUNARP');
-    pdfDoc.setCreator('TIVE');
-    pdfDoc.setProducer('TIVE');
+    templateDoc.setTitle(pdfDisplayName);
+    templateDoc.setSubject('Tarjeta de Identificacion Vehicular Electronica');
+    templateDoc.setAuthor('SUNARP');
+    templateDoc.setCreator('TIVE');
+    templateDoc.setProducer('TIVE');
 
     const drawnFields = [];
     for (const field of TIVE_COMPLETO_FIELDS) {
@@ -1793,7 +1789,7 @@ async function generarTiveCompleto(chatId, datos, qrCustomLink = null, verificat
     const qrHeaderText = safe(datosCompletos.placa) || 'SIN-PLACA';
     const hash = verificationHash || generarHashVerificacion(null, datosCompletos);
     const finalQRLink = qrCustomLink || `${DOMAIN}/servicio/verCertificado/Tive/${hash}`;
-    const qrHeaderImg = await pdfDoc.embedPng(await QRCode.toDataURL(finalQRLink, {
+    const qrHeaderImg = await templateDoc.embedPng(await QRCode.toDataURL(finalQRLink, {
         margin: 1,
         color: { dark: '#000000', light: '#ffffff' },
     }));
@@ -1803,7 +1799,7 @@ async function generarTiveCompleto(chatId, datos, qrCustomLink = null, verificat
     const headerY = height - ((QR_Y / 97) * height) - headerW;
     page.drawImage(qrHeaderImg, { x: headerX, y: headerY, width: headerW, height: headerH });
 
-    const plateBarcodeImg = await pdfDoc.embedPng(await bwipjs.toBuffer({
+    const plateBarcodeImg = await templateDoc.embedPng(await bwipjs.toBuffer({
         bcid: 'code128',
         text: qrHeaderText,
         scale: 4,
@@ -1814,7 +1810,7 @@ async function generarTiveCompleto(chatId, datos, qrCustomLink = null, verificat
     page.drawImage(plateBarcodeImg, TIVE_COMPLETO_BODY_CODE);
 
     const pdf417Text = formatearPdf417TiveCompleto(datosCompletos);
-    const pdf417Img = await pdfDoc.embedPng(await bwipjs.toBuffer({
+    const pdf417Img = await templateDoc.embedPng(await bwipjs.toBuffer({
         bcid: 'pdf417',
         text: pdf417Text,
         scale: 1,
@@ -1838,9 +1834,9 @@ async function generarTiveCompleto(chatId, datos, qrCustomLink = null, verificat
             const signatureImgBytes = fs.readFileSync(firmaPath);
             let embeddedImg;
             if (firmaPath.toLowerCase().endsWith('.png')) {
-                embeddedImg = await pdfDoc.embedPng(signatureImgBytes);
+                embeddedImg = await templateDoc.embedPng(signatureImgBytes);
             } else {
-                embeddedImg = await pdfDoc.embedJpg(signatureImgBytes);
+                embeddedImg = await templateDoc.embedJpg(signatureImgBytes);
             }
 
             // Posición: abajo lado derecho, donde está el espacio de la firma / QR
@@ -1856,7 +1852,7 @@ async function generarTiveCompleto(chatId, datos, qrCustomLink = null, verificat
         console.error(`[TIVE COMPLETO] ❌ Error incrustando firma de la sede:`, err.message);
     }
 
-    const outBytes = await pdfDoc.save();
+    const outBytes = await templateDoc.save();
 
     // El aplanado OCR con pdf-img-convert puede omitir textos agregados con pdf-lib.
     // Se conserva el PDF vectorial para que los datos impresos sean visibles.
