@@ -1546,8 +1546,8 @@ async function generarTIVE(chatId, datos, qrCustomLink = null, originalBuffer = 
     const fontBAnt = await pdfAnt.embedFont(FONT_BYTES);
     const pageA = pdfAnt.getPages()[0];
     const { height: hA } = pageA.getSize();
-    pageA.drawText(zonaLimpia, { x: 74, y: hA - 56.5, size: 5.2, font: fontBAnt, color: gris });
-    pageA.drawText(sedeLimpia, { x: 72, y: hA - 63.5, size: 5.2, font: fontBAnt, color: gris });
+    pageA.drawText(zonaLimpia, { x: 58, y: hA - 56.5, size: 5.2, font: fontBAnt, color: gris });
+    pageA.drawText(sedeLimpia, { x: 56, y: hA - 63.5, size: 5.2, font: fontBAnt, color: gris });
     pageA.drawText(safe(datos.partida), { x: 65, y: hA - 75, size: 6.8, font: fontBAnt, color: negro });
     pageA.drawText(safe(datos.dua), { x: 50, y: hA - 89, size: 6.8, font: fontBAnt, color: negro });
     pageA.drawText(safe(datos.titulo), { x: 34.5, y: hA - 104, size: 6.8, font: fontBAnt, color: negro });
