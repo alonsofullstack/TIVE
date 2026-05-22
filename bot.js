@@ -787,10 +787,31 @@ function truncarValorEnSiguienteEtiqueta(valor = '', etiquetaBusqueda = '') {
         { name: 'neto', regex: /Peso\s*Net/i },
         { name: 'ancho', regex: /Ancho/i },
         { name: 'cargautil', regex: /Carga\s*U/i },
-        { name: 'cargautil', regex: /Car\s*g\s*a/i }
+        { name: 'cargautil', regex: /Car\s*g\s*a/i },
+        { name: 'partida', regex: /Partida/i },
+        { name: 'color', regex: /Color/i },
+        { name: 'motor', regex: /Motor/i },
+        { name: 'ejes', regex: /Ejes/i },
+        { name: 'combustible', regex: /Combus/i },
+        { name: 'ruedas', regex: /Ruedas/i },
+        { name: 'potencia', regex: /Pot/i },
+        { name: 'inmatriculacion', regex: /Inmatriculac/i },
+        { name: 'propiedad', regex: /Prop/i },
+        { name: 'asientos', regex: /Asientos/i },
+        { name: 'condicion', regex: /Condic/i },
+        { name: 'pasajeros', regex: /Pasajer/i }
     ];
     
     let limpio = valor;
+    
+    // First, apply generic label-like pattern truncation:
+    // Matches " Word :" or " Word:" ensuring it's not a time like 11:26:23 (contains letters and colon not followed by digit)
+    const dynamicLabelRegex = /\s+(?![0-9\s]+:)(?=.*[A-Za-zñÑáéíóúÁÉÍÓÚ])([A-Za-zñÑáéíóúÁÉÍÓÚ°º0-9\.\/]{2,}(?:\s+[A-Za-zñÑáéíóúÁÉÍÓÚ°º0-9\.\/]+)*)\s*:(?!\d)/;
+    const dynamicMatch = dynamicLabelRegex.exec(limpio);
+    if (dynamicMatch) {
+        limpio = limpio.substring(0, dynamicMatch.index);
+    }
+
     for (const item of etiquetasADerecha) {
         if (etiquetaNorm.includes(item.name)) continue;
         
@@ -809,14 +830,15 @@ function limpiarValorTive(valor = '', etiqueta = '') {
         .replace(/^[\s:;.,\-–—°º#]+/, '')
         .trim();
 
+    // Strip leading number prefix like "1 :", "2 -", "3:"
+    limpio = limpio.replace(/^\d+\s*[:\-–—]\s*/, '').trim();
+
     const etiquetaNorm = normalizarTextoBusqueda(etiqueta).toLowerCase();
     if (etiquetaNorm.includes('partida')) {
         limpio = limpio.replace(/^registral\s*[:;\-]?\s*/i, '');
     }
     if (etiquetaNorm.includes('titulo')) {
-        // Limpiar prefijos del estilo "N° :", "N* :", "No :" que anteceden al número del título
-        limpio = limpio.replace(/^n[°º*o]?\*?\s*[:;\-]?\s*/i, '');
-        // Limpiar cualquier asterisco o símbolo residual al inicio
+        limpio = limpio.replace(/^n(?:ro|[°º*o])\*?\s*[:;\-]?\s*/i, '');
         limpio = limpio.replace(/^[*\s:;\-–—°º]+/, '').trim();
     }
 
@@ -829,9 +851,15 @@ function buscarValorTive(texto, etiqueta) {
     if (etiqueta.toLowerCase() === 'modelo') {
         escaped = '(?<!Año\\s+|Ano\\s+|Año\\s*|Ano\\s*)' + escaped;
     }
-    const regex = new RegExp(`${escaped}[^\\S\\r\\n]*:?[^\\S\\r\\n]*([^\\n]+)`, 'i');
+    
+    // Whole word Spanish boundary lookaround
+    const wholeWordEscaped = '(?<![A-Za-z0-9ñÑáéíóúÁÉÍÓÚ°º])' + escaped + '(?![A-Za-z0-9ñÑáéíóúÁÉÍÓÚ°º])';
+    
+    const regex = new RegExp(`${wholeWordEscaped}[^\\S\\r\\n]*:?[^\\S\\r\\n]*([^\\n]+)`, 'i');
     const match = regex.exec(texto);
-    if (match) return limpiarValorTive(match[1], etiqueta);
+    if (match) {
+        return limpiarValorTive(match[1], etiqueta);
+    }
 
     const labelNormalizado = normalizarTextoBusqueda(etiqueta)
         .toLowerCase()
@@ -847,14 +875,16 @@ function buscarValorTive(texto, etiqueta) {
             return limpiarValorTive(lines[i + 1] || '', etiqueta);
         }
 
-        if (lineNormalizada.startsWith(`${labelNormalizado} `) || lineNormalizada.startsWith(`${labelNormalizado}:`)) {
+        const escapedLabelNormalizado = labelNormalizado.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const wholeWordEscapedLoop = '(?<![A-Za-z0-9ñÑáéíóúÁÉÍÓÚ°º])' + escapedLabelNormalizado + '(?![A-Za-z0-9ñÑáéíóúÁÉÍÓÚ°º])';
+        const startsWithLabelPattern = new RegExp('^' + wholeWordEscapedLoop + '(?:\\s+|:|$)', 'i');
+        if (startsWithLabelPattern.test(lineNormalizada)) {
             const value = line.slice(Math.min(line.length, etiqueta.length)).replace(/^[:\s]+/, '');
-            if (safe(value)) return limpiarValorTive(value, etiqueta);
-            return limpiarValorTive(lines[i + 1] || '', etiqueta);
+            return safe(value) ? limpiarValorTive(value, etiqueta) : limpiarValorTive(lines[i + 1] || '', etiqueta);
         }
     }
 
-    return '';
+    return null; // Return null if not found
 }
 
 function normalizarValorNumerico(valor = '') {
@@ -893,10 +923,14 @@ function buscarTituloNumeroTive(texto) {
     const lines = texto.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
     for (let i = 0; i < lines.length; i++) {
         if (normalizarTextoBusqueda(lines[i]).toLowerCase() === 'titulo nro' && i > 0) {
-            return safe(lines[i - 1]);
+            // Validate that it looks like a title number (YYYY-NNNNNN or similar)
+            const val = safe(lines[i - 1]);
+            if (/^\d{4}\s*-\s*\d+$/.test(val) || /^\d+\s*-\s*\d{4}$/.test(val)) {
+                return val;
+            }
         }
     }
-    return '';
+    return null;
 }
 
 function buscarTituloValorTive(texto) {
@@ -904,6 +938,8 @@ function buscarTituloValorTive(texto) {
     for (const line of lines) {
         const normalized = normalizarTextoBusqueda(line).toLowerCase();
         if (normalized.startsWith('titulo ') && normalized !== 'titulo nro') {
+            const match = line.match(/\b(\d{4})-(\d{3,})\b/) || line.match(/\b(\d{3,})-(\d{4})\b/);
+            if (match) return match[0];
             return safe(line.split(/\s+/, 2)[1]);
         }
     }
@@ -913,20 +949,13 @@ function buscarTituloValorTive(texto) {
 function normalizarTituloDesdeTituloNo(tituloNo = '') {
     const raw = safe(tituloNo).trim();
     if (!raw) return '';
-
-    // Primero intentar extraer solo el patrón numérico NNNNN-NNNNN
-    // (p.ej. "2191370-2025 su na rp E" → "2191370-2025")
-    const extractedMatch = raw.match(/\b(\d{3,}-\d{3,})\b/);
+    const extractedMatch = raw.match(/\b(\d{3,}-\d{3,})\b/) || raw.match(/(\d+-\d+)/);
     const limpio = extractedMatch ? extractedMatch[1] : raw.replace(/\s+/g, '');
     if (!limpio) return '';
-
-    // Formato YYYY-NNNNNN → convertir a NNNNNN-YYYY
     const dateNumberMatch = limpio.match(/^(\d{4})-(\d+)$/);
     if (dateNumberMatch) {
         return `${dateNumberMatch[2]}-${dateNumberMatch[1]}`;
     }
-
-    // Formato NNNNNN-YYYY o NNNN-NNNN → devolver tal cual
     const match = limpio.match(/^(\d+)-(\d+)$/);
     if (!match) return limpio;
     return `${match[1]}-${match[2]}`;
@@ -951,7 +980,7 @@ function componerTituloCompletar(tituloNo = '', añoTitulo = '') {
 function buscarPrimerValorTive(text, etiquetas = []) {
     for (const etiqueta of etiquetas) {
         const valor = buscarValorTive(text, etiqueta);
-        if (valor) return valor;
+        if (valor !== null && valor !== undefined) return valor;
     }
     return '';
 }
@@ -999,14 +1028,22 @@ function extraerDatosTiveDesdeTexto(text, logPrefix = 'TIVE TEXTO', sourceName =
         .replace(/Car\s*g\s*a\s*U\s*l/gi, 'Carga Util');
 
     // fechaTitulo: truncar al formato real DD/MM/YYYY HH:MM:SS descartando ruido OCR posterior
-    const _fechaTituloRaw = buscarValorTive(cleanText, 'Fecha');
+    const _fechaTituloRaw = buscarPrimerValorTive(cleanText, ['Fecha']);
     const _fechaTituloMatch = (_fechaTituloRaw || '').match(/(\d{1,2}\/\d{1,2}\/\d{4}(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?)/);
-    const fechaTitulo = _fechaTituloMatch ? _fechaTituloMatch[1].trim() : (_fechaTituloRaw || '').split(/\s{2,}/)[0].trim();
+    const fechaTitulo = _fechaTituloMatch ? _fechaTituloMatch[1].trim() : '';
 
     // titulo: intentar extracción directa por etiqueta 'Título', con fallback al buscador antiguo
-    const _tituloDesdeEtiqueta = buscarValorTive(cleanText, 'Título') || buscarValorTive(cleanText, 'Titulo');
-    const tituloNo = normalizarTituloDesdeTituloNo(buscarTituloNumeroTive(cleanText)) ||
-                     normalizarTituloDesdeTituloNo(_tituloDesdeEtiqueta);
+    const _tituloDesdeEtiqueta = buscarPrimerValorTive(cleanText, ['Título', 'Titulo']);
+    const rawTituloNumeroTive = buscarTituloNumeroTive(cleanText);
+    
+    // Validar el formato del título: debe lucir como un número de título real (con dígitos)
+    let validatedTitulo = '';
+    const rawTitulo = rawTituloNumeroTive || _tituloDesdeEtiqueta;
+    if (rawTitulo && /\d+/.test(rawTitulo)) {
+        validatedTitulo = normalizarTituloDesdeTituloNo(rawTitulo);
+    }
+    
+    const tituloNo = validatedTitulo;
     const tituloNormalizado = tituloNo;
     const placa = validarPlacaExtraida(
         buscarPrimerValorTive(cleanText, ['Placa :', 'Placa']) ||
@@ -1015,18 +1052,18 @@ function extraerDatosTiveDesdeTexto(text, logPrefix = 'TIVE TEXTO', sourceName =
     );
     const datos = {
         // codVerif es siempre un número puro: descartar cualquier letra/símbolo que filtre el OCR
-        codVerif: (buscarValorTive(cleanText, 'Código de Verificación') || '').replace(/[^\d]/g, ''),
+        codVerif: (buscarPrimerValorTive(cleanText, ['Código de Verificación', 'Codigo de Verificacion']) || '').replace(/[^\d]/g, ''),
         fechaFinal: fechaTitulo,
-        zona: buscarValorTive(cleanText, 'Zona Registral') || buscarValorTive(cleanText, 'Zona'),
-        sede: buscarValorTive(cleanText, 'Sede Registral') || buscarValorTive(cleanText, 'Sede'),
-        partida: buscarValorTive(cleanText, 'Partida Registral') || buscarValorTive(cleanText, 'Partida'),
-        dua: buscarValorTive(cleanText, 'DUA/DAM') || buscarValorTive(cleanText, 'DUA') || buscarValorTive(cleanText, 'DAM'),
+        zona: buscarPrimerValorTive(cleanText, ['Zona Registral', 'Zona']),
+        sede: buscarPrimerValorTive(cleanText, ['Sede Registral', 'Sede']),
+        partida: buscarPrimerValorTive(cleanText, ['Partida Registral', 'Partida']),
+        dua: buscarPrimerValorTive(cleanText, ['DUA/DAM', 'DUA', 'DAM']),
         titulo: tituloNormalizado || buscarTituloValorTive(cleanText),
         fechaTitulo: fechaTitulo ? fechaTitulo.split(/\s+/)[0] : '',
-        categoria: limpiarCategoria(buscarValorTive(cleanText, 'Categoría') || buscarValorTive(cleanText, 'Categoria')),
-        marca: buscarValorTive(cleanText, 'Marca'),
-        modelo: buscarValorTive(cleanText, 'Modelo'),
-        color: buscarValorTive(cleanText, 'Color'),
+        categoria: limpiarCategoria(buscarPrimerValorTive(cleanText, ['Categoría', 'Categoria'])),
+        marca: buscarPrimerValorTive(cleanText, ['Marca']),
+        modelo: buscarPrimerValorTive(cleanText, ['Modelo']),
+        color: buscarPrimerValorTive(cleanText, ['Color 1', 'Color', 'Color 2', 'Color 3']),
         vin: buscarPrimerValorTive(cleanText, ['Nro. VIN', 'N° VIN', 'No VIN', 'VIN']),
         serie: buscarPrimerValorTive(cleanText, ['Nro. Serie', 'N° Serie', 'No Serie', 'Serie']),
         motor: buscarPrimerValorTive(cleanText, ['Nro. Motor', 'N° Motor', 'No Motor', 'Motor']),
@@ -1036,26 +1073,26 @@ function extraerDatosTiveDesdeTexto(text, logPrefix = 'TIVE TEXTO', sourceName =
             // Ej: "TRIMOTO PASAJEROS" → "TRIMOTO"
             return (_c || '').replace(/\s+(DE\s+)?(PASAJEROS|CARGA|MIXTO|ESCOLAR)$/i, '').trim();
         })(),
-        potencia: limpiarPotencia(buscarValorTive(cleanText, 'Potencia Motor') || buscarValorTive(cleanText, 'Potencia')),
-        formRod: buscarValorTive(cleanText, 'Formula Rodante') || buscarValorTive(cleanText, 'Fórmula Rodante'),
-        combustible: buscarValorTive(cleanText, 'Tipo Combustible') || buscarValorTive(cleanText, 'Combustible'),
+        potencia: limpiarPotencia(buscarPrimerValorTive(cleanText, ['Potencia Motor', 'Potencia'])),
+        formRod: buscarPrimerValorTive(cleanText, ['Formula Rodante', 'Fórmula Rodante', 'Form. Rod.']),
+        combustible: buscarPrimerValorTive(cleanText, ['Tipo Combustible', 'Combustible']),
         asientos: buscarPrimerValorTive(cleanText, ['Nro. Asientos', 'N° Asientos', 'No Asientos', 'Asientos']),
         pasajeros: buscarPrimerValorTive(cleanText, ['Nro. Pasajeros', 'N° Pasajeros', 'No Pasajeros', 'Pasajeros']),
         ruedas: buscarPrimerValorTive(cleanText, ['Nro. Ruedas', 'N° Ruedas', 'No Ruedas', 'Ruedas']),
         ejes: buscarPrimerValorTive(cleanText, ['Nro. Ejes', 'N° Ejes', 'No Ejes', 'Ejes']),
         placa,
         placaOriginal: placa,
-        añoFabricacion: buscarValorTive(cleanText, 'Año Fabricación') || buscarValorTive(cleanText, 'Ano Fabricacion'),
+        añoFabricacion: buscarPrimerValorTive(cleanText, ['Año Fabricación', 'Ano Fabricacion']),
         cilindros: buscarPrimerValorTive(cleanText, ['Nro. Cilindros', 'N° Cilindros', 'No Cilindros', 'Cilindros']),
-        longitud: normalizarValorNumerico(buscarValorTive(cleanText, 'Longitud')),
-        altura: normalizarValorNumerico(buscarValorTive(cleanText, 'Altura')),
-        ancho: normalizarValorNumerico(buscarValorTive(cleanText, 'Ancho')),
-        cilindrada: normalizarValorNumerico(buscarValorTive(cleanText, 'Cilindrada')),
-        pBruto: normalizarValorNumerico(buscarValorTive(cleanText, 'Peso Bruto')),
-        pNeto: normalizarValorNumerico(buscarValorTive(cleanText, 'Peso Neto')),
-        cargaUtil: normalizarValorNumerico(buscarValorTive(cleanText, 'Carga Util')),
-        version: limpiarVersion(buscarValorTive(cleanText, 'Nro. Version') || buscarValorTive(cleanText, 'Nro. Versión') || buscarValorTive(cleanText, 'Versión')),
-        añoModelo: buscarValorTive(cleanText, 'Año Modelo') || buscarValorTive(cleanText, 'Ano Modelo'),
+        longitud: normalizarValorNumerico(buscarPrimerValorTive(cleanText, ['Longitud'])),
+        altura: normalizarValorNumerico(buscarPrimerValorTive(cleanText, ['Altura'])),
+        ancho: normalizarValorNumerico(buscarPrimerValorTive(cleanText, ['Ancho'])),
+        cilindrada: normalizarValorNumerico(buscarPrimerValorTive(cleanText, ['Cilindrada'])),
+        pBruto: normalizarValorNumerico(buscarPrimerValorTive(cleanText, ['Peso Bruto'])),
+        pNeto: normalizarValorNumerico(buscarPrimerValorTive(cleanText, ['Peso Neto'])),
+        cargaUtil: normalizarValorNumerico(buscarPrimerValorTive(cleanText, ['Carga Util'])),
+        version: limpiarVersion(buscarPrimerValorTive(cleanText, ['Nro. Version', 'Nro. Versión', 'Versión'])),
+        añoModelo: buscarPrimerValorTive(cleanText, ['Año Modelo', 'Ano Modelo']),
         tituloNo,
     };
 
@@ -1151,7 +1188,9 @@ function prepararDatosTiveCompleto(datos) {
 function obtenerCamposFaltantesTiveCompleto(datos) {
     return TIVE_COMPLETO_REQUIRED_FIELDS.filter(field => {
         if (field.key === 'placa') return placaRequiereConfirmacion(datos.placaOriginal);
-        return !safe(datos[field.key]);
+        const val = safe(datos[field.key]);
+        if (field.key === 'dua' && val === '0') return true; // Preguntar si DUA es 0
+        return !val;
     });
 }
 
@@ -1258,7 +1297,9 @@ function obtenerCamposFaltantesTiveCompletar(datos) {
             return false;
         }
         if (field.key === 'placa') return placaRequiereConfirmacion(datos.placaOriginal);
-        return !safe(datos[field.key]);
+        const val = safe(datos[field.key]);
+        if (field.key === 'dua' && val === '0') return true; // Preguntar si DUA es 0
+        return !val;
     });
 
     // Los 5 campos forzados/prioritarios SI O SI (se encuentre o no en la extracción)
