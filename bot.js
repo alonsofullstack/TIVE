@@ -367,13 +367,28 @@ function limpiarPotencia(valor = '') {
             rpm = rpm.substring(1);
         }
         
-        return `${potencia}@${rpm}`;
+        return `${potencia}@${rpm}KW/RPM`;
     }
     
+    if (limpio.includes('@')) {
+        let [potencia, rpm] = limpio.split('@');
+        potencia = (potencia || '').trim();
+        rpm = (rpm || '').trim()
+            .replace(/\s*KW\/RPM\s*$/i, '')
+            .replace(/\s*KW\s*$/i, '')
+            .replace(/\s*RPM\s*$/i, '')
+            .trim();
+        return `${potencia}@${rpm}KW/RPM`;
+    }
+
     // Quitar KW/RPM u otros sufijos comunes al final
     limpio = limpio.replace(/\s*KW\/RPM\s*$/i, '');
     limpio = limpio.replace(/\s*KW\s*$/i, '');
     limpio = limpio.replace(/\s*RPM\s*$/i, '');
+
+    if (limpio && !limpio.toUpperCase().endsWith('KW/RPM')) {
+        return `${limpio}KW/RPM`;
+    }
 
     return limpio;
 }
@@ -1021,7 +1036,7 @@ function extraerDatosTiveDesdeTexto(text, logPrefix = 'TIVE TEXTO', sourceName =
             // Ej: "TRIMOTO PASAJEROS" → "TRIMOTO"
             return (_c || '').replace(/\s+(DE\s+)?(PASAJEROS|CARGA|MIXTO|ESCOLAR)$/i, '').trim();
         })(),
-        potencia: buscarValorTive(cleanText, 'Potencia Motor') || buscarValorTive(cleanText, 'Potencia'),
+        potencia: limpiarPotencia(buscarValorTive(cleanText, 'Potencia Motor') || buscarValorTive(cleanText, 'Potencia')),
         formRod: buscarValorTive(cleanText, 'Formula Rodante') || buscarValorTive(cleanText, 'Fórmula Rodante'),
         combustible: buscarValorTive(cleanText, 'Tipo Combustible') || buscarValorTive(cleanText, 'Combustible'),
         asientos: buscarPrimerValorTive(cleanText, ['Nro. Asientos', 'N° Asientos', 'No Asientos', 'Asientos']),
@@ -1129,6 +1144,7 @@ function prepararDatosTiveCompleto(datos) {
     prepared.fechaFinal = generarFechaHoraTive();
     prepared.añoFabricacion = safe(prepared.añoFabricacion);
     prepared.añoModelo = safe(prepared.añoModelo);
+    prepared.potencia = limpiarPotencia(prepared.potencia || '');
     return prepared;
 }
 
@@ -1546,8 +1562,8 @@ async function generarTIVE(chatId, datos, qrCustomLink = null, originalBuffer = 
     const fontBAnt = await pdfAnt.embedFont(FONT_BYTES);
     const pageA = pdfAnt.getPages()[0];
     const { height: hA } = pageA.getSize();
-    pageA.drawText(zonaLimpia, { x: 58, y: hA - 56.5, size: 5.2, font: fontBAnt, color: gris });
-    pageA.drawText(sedeLimpia, { x: 56, y: hA - 63.5, size: 5.2, font: fontBAnt, color: gris });
+    pageA.drawText(zonaLimpia, { x: 58, y: hA - 55.5, size: 5.2, font: fontBAnt, color: gris });
+    pageA.drawText(sedeLimpia, { x: 53, y: hA - 63.5, size: 5.2, font: fontBAnt, color: gris });
     pageA.drawText(safe(datos.partida), { x: 65, y: hA - 75, size: 6.8, font: fontBAnt, color: negro });
     pageA.drawText(safe(datos.dua), { x: 50, y: hA - 89, size: 6.8, font: fontBAnt, color: negro });
     pageA.drawText(safe(datos.titulo), { x: 34.5, y: hA - 104, size: 6.8, font: fontBAnt, color: negro });
@@ -1708,7 +1724,7 @@ async function generarTiveCompleto(chatId, datos, qrCustomLink = null, verificat
     }
     const datosCompletos = {
         ...baseDatos,
-        zonaLimpia: limpiarEtiquetaRegistral(baseDatos.zona),
+        zonaLimpia: obtenerZonaNormalizada(baseDatos.zona, baseDatos.sede),
         sedeLimpia: limpiarEtiquetaRegistral(baseDatos.sede),
     };
     const pdfDisplayName = `TIVE_${safe(datosCompletos.placa) || 'DOC'}`;
