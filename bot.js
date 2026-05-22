@@ -349,27 +349,26 @@ function limpiarPotencia(valor = '') {
     let limpio = safe(valor).trim();
     if (!limpio) return '';
 
-    // Reemplazar variaciones de OCR para el símbolo '@'
-    // El OCR suele leer '@' como '(0', '(O', '(o', '(', '©', '®', ' @ ', ' @'
-    // Por ejemplo: '14,16(010500' -> '14,16@10500'
-    // Por ejemplo: '11,80(07500' -> '11,80@7500'
+    // Normalizar espacios internos
+    limpio = limpio.replace(/\s+/g, ' ');
+
+    // Detectar variaciones de OCR: '(0', '(O', '(o', '(', '©', '®', '@' entre potencia y RPM
+    // Ej: '9,10(007250' → potencia=9,10  rpm=7250
+    // Ej: '11,80(07500' → potencia=11,80 rpm=7500
     const regexDistorsion = /(\d+[\.,]\d+)\s*(?:\(0|\(O|\(o|\(|©|®|@)\s*(\d+)/i;
-    const match = limpio.match(regexDistorsion);
-    
-    if (match) {
-        let potencia = match[1];
-        let rpm = match[2];
-        
-        // Si el RPM capturado tiene un '0' extra debido a que la distorsión '(0' se juntó,
-        // ej. '(07500' -> RPM real '7500'.
-        // Si empieza con '1' (como en '10500' en '(010500'), no empieza con '0', se queda como '10500'.
+    const matchDistorsion = limpio.match(regexDistorsion);
+
+    if (matchDistorsion) {
+        let potencia = matchDistorsion[1];
+        let rpm = matchDistorsion[2];
+        // Si el '(0' pegó un '0' al inicio del RPM, quitarlo (ej: '007250' -> '7250')
         if (rpm.startsWith('0') && rpm.length > 1) {
             rpm = rpm.substring(1);
         }
-        
-        return `${potencia}@${rpm}KW/RPM`;
+        return `${potencia}@${rpm}`;
     }
-    
+
+    // Si ya viene con '@', limpiar sufijos sobrantes KW/RPM etc.
     if (limpio.includes('@')) {
         let [potencia, rpm] = limpio.split('@');
         potencia = (potencia || '').trim();
@@ -378,18 +377,45 @@ function limpiarPotencia(valor = '') {
             .replace(/\s*KW\s*$/i, '')
             .replace(/\s*RPM\s*$/i, '')
             .trim();
-        return `${potencia}@${rpm}KW/RPM`;
+        return `${potencia}@${rpm}`;
     }
 
-    // Quitar KW/RPM u otros sufijos comunes al final
-    limpio = limpio.replace(/\s*KW\/RPM\s*$/i, '');
-    limpio = limpio.replace(/\s*KW\s*$/i, '');
-    limpio = limpio.replace(/\s*RPM\s*$/i, '');
+    // Quitar sufijos KW/RPM sobrantes
+    limpio = limpio
+        .replace(/\s*KW\/RPM\s*$/i, '')
+        .replace(/\s*KW\s*$/i, '')
+        .replace(/\s*RPM\s*$/i, '')
+        .trim();
 
-    if (limpio && !limpio.toUpperCase().endsWith('KW/RPM')) {
-        return `${limpio}KW/RPM`;
+    return limpio;
+}
+
+// Elimina prefijos basura del código de barras en el DUA/DAM
+function limpiarDua(valor = '') {
+    let limpio = safe(valor).trim();
+    if (!limpio) return '';
+    // Solo normalizar espacios y guiones, preservando el prefijo completo de la aduana (ej: 118-)
+    limpio = limpio.replace(/\s+/g, '').replace(/[–—]/g, '-');
+    return limpio;
+}
+
+// Corrige el 10º carácter del VIN/Serie de '5' a 'S' cuando el año modelo es 2025
+// (Año 2025 → código VIN = 'S'; el OCR confunde 'S' con '5')
+// También elimina caracteres extra si el OCR leyó 18 en lugar de 17.
+function corregirVinPorAño(valor = '', añoModelo = '') {
+    let limpio = safe(valor).trim().toUpperCase();
+    // Si el OCR leyó un carácter de más (18 chars), intentar limpiar el duplicado
+    if (limpio.length === 18 && String(añoModelo).trim() === '2025') {
+        // El error común es que el 10º se lee como '55', '59', 'S9' etc. (S + carácter extra)
+        // Colapsar los dos caracteres en posición 9-10 a una sola 'S'
+        const fixed = limpio.replace(/^(.{9})[5S][0-9S](.{7})$/, '$1S$2');
+        if (fixed.length === 17) limpio = fixed;
     }
-
+    if (limpio.length === 17 && String(añoModelo).trim() === '2025') {
+        if (limpio[9] === '5') {
+            limpio = limpio.substring(0, 9) + 'S' + limpio.substring(10);
+        }
+    }
     return limpio;
 }
 
@@ -463,7 +489,7 @@ const fmtPlaca = (p) => {
 };
 
 // --- FUNCIONES TÉCNICAS ---
-const C128_PATTERNS = { '0': '11011001100', '1': '11001101100', '2': '11001100110', '3': '10001101100', '4': '10001100110', '5': '10110000110', '6': '10110000110', '7': '10110110000', '8': '10110011011', '9': '11001011000', 'A': '11000101100', 'B': '11000100110', 'C': '11011000100', 'D': '11011000010', 'E': '11011011000', 'F': '11011001101', 'G': '11011011011', 'H': '11001101101', 'I': '11001101111', 'J': '11011110110', 'K': '11011111011', 'L': '11110110110', 'M': '11110110111', 'N': '11110111101', 'O': '11110111111', 'P': '11001101101', 'Q': '11001101111', 'R': '11011110110', 'S': '11011111011', 'T': '11110110110', 'U': '11110110111', 'V': '11110111101', 'W': '11110111111', 'X': '11001101101', 'Y': '11001101111', 'Z': '11011110110', '-': '11000111010', '.': '11011011110', ' ': '11011011011', ':': '11011111010' };
+const C128_PATTERNS = { '0': '11011001100', '1': '11001101100', '2': '11001100110', '3': '10001101100', '4': '10001100110', '5': '10110001100', '6': '10110000110', '7': '10110110000', '8': '10110011011', '9': '11001011000', 'A': '11000101100', 'B': '11000100110', 'C': '11011000100', 'D': '11011000010', 'E': '11011011000', 'F': '11011001101', 'G': '11011011011', 'H': '11001101101', 'I': '11001101111', 'J': '11011110110', 'K': '11011111011', 'L': '11110110110', 'M': '11110110111', 'N': '11110111101', 'O': '11110111111', 'P': '11001101101', 'Q': '11001101111', 'R': '11011110110', 'S': '11011111011', 'T': '11110110110', 'U': '11110110111', 'V': '11110111101', 'W': '11110111111', 'X': '11001101101', 'Y': '11001101111', 'Z': '11011110110', '-': '11000111010', '.': '11011011110', ' ': '11011011011', ':': '11011111010' };
 
 function drawRealBarcode(page, text, x, y, width, height) {
     const startCode = '11010010000'; const stopCode = '1100011101011';
@@ -495,31 +521,31 @@ function getTemplatePath(name) {
 }
 
 const TIVE_COMPLETO_FIELDS = [
-    { key: 'codigo_de_verificacion', dataKey: 'codVerif', x: 231, y: 602, dx: -3, dy: -7, size: 8, bold: false },
-    { key: 'fecha', dataKey: 'fechaFinal', x: 180.8, y: 577.5, dx: -8, dy: -7, size: 8, bold: false },
-    { key: 'zona_registral', dataKey: 'zonaLimpia', x: 144.0, y: 482.0, dx: -14, dy: 6, size: 9, bold: true },
-    { key: 'sede_registral', dataKey: 'sedeLimpia', x: 141.0, y: 467.0, dx: -20, dy: 10.5, size: 9, bold: true },
-    { key: 'parda_registral', dataKey: 'partida', x: 120.9, y: 452.9, dx: -3, dy: -7, size: 8, bold: false },
-    { key: 'duadam', dataKey: 'dua', x: 103.1, y: 438, dx: -5.5, dy: -7, size: 8, bold: false },
-    { key: 'titulo', dataKey: 'titulo', x: 89.3, y: 422.3, dx: -8, dy: -7, size: 8, bold: false },
-    { key: 'fecha_del_titulo', dataKey: 'fechaTitulo', x: 126.3, y: 406.6, dx: -7.5, dy: -7, size: 8, bold: false },
-    { key: 'categoria', dataKey: 'categoria', x: 105.1, y: 274.4, dx: -11, dy: -6.5, size: 8, bold: false },
-    { key: 'marca', dataKey: 'marca', x: 89.9, y: 261.1, dx: -6, dy: -7, size: 8, bold: false },
-    { key: 'modelo', dataKey: 'modelo', x: 96.8, y: 246.8, dx: -7, dy: -6, size: 8, bold: false },
-    { key: 'color', dataKey: 'color', x: 88.4, y: 233.2, dx: -5, dy: -6, size: 8, bold: false },
-    { key: 'numero_de_vin', dataKey: 'vin', x: 120.5, y: 220.2, dx: -5, dy: -7, size: 8, bold: false },
-    { key: 'numero_de_serie', dataKey: 'serie', x: 128.3, y: 206.2, dx: -9, dy: -7, size: 8, bold: false },
-    { key: 'numero_motor', dataKey: 'motor', x: 118, y: 191.9, dx: -5, dy: -7, size: 8, bold: false },
-    { key: 'carroceria', dataKey: 'carroceria', x: 104.5, y: 178.6, dx: -4, dy: -7, size: 8, bold: false },
-    { key: 'potencia', dataKey: 'potencia', x: 99.6, y: 164, dx: -8, dy: -7, size: 8, bold: false },
-    { key: 'form_rod', dataKey: 'formRod', x: 107.6, y: 150.7, dx: -6, dy: -6, size: 8, bold: false },
-    { key: 'combusble', dataKey: 'combustible', x: 108.6, y: 138.4, dx: -3, dy: -8, size: 8, bold: false },
-    { key: 'asientos', dataKey: 'asientos', x: 104.1, y: 108.5, dx: -6, dy: -4, size: 8, bold: false },
-    { key: 'pasajeros', dataKey: 'pasajeros', x: 103.1, y: 96.4, dx: -5, dy: -6, size: 8, bold: false },
-    { key: 'ruedas', dataKey: 'ruedas', x: 103.9, y: 67, dx: -5.5, dy: -4, size: 8, bold: false },
-    { key: 'ejes', dataKey: 'ejes', x: 103.5, y: 81.8, dx: -5, dy: -5, size: 8, bold: false },
+    { key: 'codigo_de_verificacion', dataKey: 'codVerif', x: 231, y: 615, dx: -7.3, dy: -10.3, size: 8, bold: false },
+    { key: 'fecha', dataKey: 'fechaFinal', x: 180.8, y: 579.5, dx: -13, dy: 1, size: 8, bold: false },
+    { key: 'zona_registral', dataKey: 'zonaLimpia', x: 144.0, y: 482.0, dx: -16, dy: 6, size: 9, bold: true },
+    { key: 'sede_registral', dataKey: 'sedeLimpia', x: 141.0, y: 467.0, dx: -22.5, dy: 7.5, size: 9, bold: true },
+    { key: 'parda_registral', dataKey: 'partida', x: 120.9, y: 452.9, dx: -6, dy: -5.5, size: 8, bold: false },
+    { key: 'duadam', dataKey: 'dua', x: 103.1, y: 438, dx: -10.5, dy: -7, size: 8, bold: false },
+    { key: 'titulo', dataKey: 'titulo', x: 89.3, y: 422.3, dx: -13, dy: -7, size: 8, bold: false },
+    { key: 'fecha_del_titulo', dataKey: 'fechaTitulo', x: 126.3, y: 406.6, dx: -14.5, dy: -7, size: 8, bold: false },
+    { key: 'categoria', dataKey: 'categoria', x: 105.1, y: 274.4, dx: -16, dy: -6.5, size: 8, bold: false },
+    { key: 'marca', dataKey: 'marca', x: 89.9, y: 261.1, dx: -8, dy: -7, size: 8, bold: false },
+    { key: 'modelo', dataKey: 'modelo', x: 96.8, y: 246.8, dx: -12.5, dy: -6, size: 8, bold: false },
+    { key: 'color', dataKey: 'color', x: 88.4, y: 233.2, dx: -12, dy: -6, size: 8, bold: false },
+    { key: 'numero_de_vin', dataKey: 'vin', x: 120.5, y: 220.2, dx: -8.5, dy: -7, size: 8, bold: false },
+    { key: 'numero_de_serie', dataKey: 'serie', x: 128.3, y: 206.2, dx: -11, dy: -7, size: 8, bold: false },
+    { key: 'numero_motor', dataKey: 'motor', x: 118, y: 191.9, dx: -11, dy: -7, size: 8, bold: false },
+    { key: 'carroceria', dataKey: 'carroceria', x: 104.5, y: 178.6, dx: -8.5, dy: -7, size: 8, bold: false },
+    { key: 'potencia', dataKey: 'potencia', x: 99.6, y: 164, dx: -10, dy: -7, size: 8, bold: false },
+    { key: 'form_rod', dataKey: 'formRod', x: 107.6, y: 150.7, dx: -10, dy: -6, size: 8, bold: false },
+    { key: 'combusble', dataKey: 'combustible', x: 108.6, y: 138.4, dx: -6.5, dy: -8, size: 8, bold: false },
+    { key: 'asientos', dataKey: 'asientos', x: 104.1, y: 108.5, dx: -7, dy: -4, size: 8, bold: false },
+    { key: 'pasajeros', dataKey: 'pasajeros', x: 103.1, y: 96.4, dx: -7, dy: -6, size: 8, bold: false },
+    { key: 'ruedas', dataKey: 'ruedas', x: 103.9, y: 67, dx: -7.5, dy: -4, size: 8, bold: false },
+    { key: 'ejes', dataKey: 'ejes', x: 103.5, y: 81.8, dx: -7, dy: -5, size: 8, bold: false },
     { key: 'placa', dataKey: 'placa', x: 317.9, y: 406.9, dx: -6, dy: -6, size: 25, bold: true },
-    { key: 'año_fabricacion', dataKey: 'añoFabricacion', x: 392.6, y: 272.6, dx: -10, dy: -6, size: 8, bold: false },
+    { key: 'año_fabricacion', dataKey: 'añoFabricacion', x: 392.6, y: 272.6, dx: -9, dy: -6, size: 8, bold: false },
     { key: 'cilindros', dataKey: 'cilindros', x: 208.6, y: 114.2, dx: 7, dy: -9, size: 8, bold: false },
     { key: 'longitud', dataKey: 'longitud', x: 213.9, y: 100.2, dx: 2, dy: -8, size: 8, bold: false },
     { key: 'altura', dataKey: 'altura', x: 213.9, y: 86.2, dx: 2, dy: -8.5, size: 8, bold: false },
@@ -529,8 +555,8 @@ const TIVE_COMPLETO_FIELDS = [
     { key: 'campo_30', dataKey: 'pNeto', x: 329.9, y: 82.9, dx: 29, dy: -4, size: 8, bold: false },
     { key: 'campo_31', dataKey: 'cargaUtil', x: 322.6, y: 71.6, dx: 37, dy: -6, size: 8, bold: false },
     { key: 'version', dataKey: 'version', x: 273.4, y: 155.9, dx: -6.5, dy: -8, size: 8, bold: false },
-    { key: 'año_modelo', dataKey: 'añoModelo', x: 392.6, y: 259.1, dx: -5, dy: -4, size: 8, bold: false },
-    { key: 'titulo_numero', dataKey: 'tituloNo', x: 190.6, y: 590.2, dx: -6.5, dy: -8, size: 8, bold: false },
+    { key: 'año_modelo', dataKey: 'añoModelo', x: 392.6, y: 259.1, dx: -2.5, dy: -3, size: 8, bold: false },
+    { key: 'titulo_numero', dataKey: 'tituloNo', x: 190.6, y: 590.2, dx: -13, dy: 2.5, size: 8, bold: false },
 ];
 
 function limpiarEtiquetaRegistral(valor = '') {
@@ -830,10 +856,11 @@ function limpiarValorTive(valor = '', etiqueta = '') {
         .replace(/^[\s:;.,\-–—°º#]+/, '')
         .trim();
 
-    // Strip leading number prefix like "1 :", "2 -", "3:"
-    limpio = limpio.replace(/^\d+\s*[:\-–—]\s*/, '').trim();
-
+    // Strip leading number prefix like "1 :", "2 -", "3:" (except for DUA/DAM fields which start with a customs code)
     const etiquetaNorm = normalizarTextoBusqueda(etiqueta).toLowerCase();
+    if (!etiquetaNorm.includes('dua') && !etiquetaNorm.includes('dam')) {
+        limpio = limpio.replace(/^\d+\s*[:\-–—]\s*/, '').trim();
+    }
     if (etiquetaNorm.includes('partida')) {
         limpio = limpio.replace(/^registral\s*[:;\-]?\s*/i, '');
     }
@@ -905,17 +932,76 @@ function normalizarValorNumerico(valor = '') {
 }
 
 function buscarPlacaEnTexto(texto = '') {
-    const lines = texto.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
-    for (let i = 0; i < lines.length; i++) {
-        const normalized = normalizarTextoBusqueda(lines[i]).toLowerCase();
-        if (!normalized.includes('placa')) continue;
-        const nearby = [lines[i], lines[i + 1] || '', lines[i - 1] || ''].join(' ');
-        const match = nearby.toUpperCase().match(/\b([A-Z0-9]{3}-?[A-Z0-9]{3}|\d{4}-?[A-Z0-9]{2})\b/);
-        if (match) return fmtPlaca(match[1]);
+    const cleanText = texto.toUpperCase();
+    
+    // Primero, busquemos coincidencias exactas o estándar
+    const regexesEstandar = [
+        /\b([A-Z]{3}-\d{3})\b/g,
+        /\b([A-Z]{3}\d{3})\b/g,
+        /\b(\d{4}-[A-Z]{2})\b/g,
+        /\b(\d{4}[A-Z]{2})\b/g,
+        /\b([A-Z]{2}-\d{4})\b/g,
+        /\b([A-Z]{2}\d{4})\b/g,
+        /\b(\d{5}-[A-Z])\b/g,
+        /\b(\d{5}[A-Z])\b/g,
+        /\b([A-Z]\d-\d{4})\b/g,
+        /\b([A-Z]\d\d{4})\b/g,
+        /\b(\d{4}-\d[A-Z])\b/g,
+        /\b(\d{4}\d[A-Z])\b/g
+    ];
+
+    for (const regex of regexesEstandar) {
+        let match;
+        while ((match = regex.exec(cleanText)) !== null) {
+            // Evitar falsos positivos con la etiqueta "DUA/DAM"
+            const startIdx = match.index;
+            const prefix = cleanText.substring(Math.max(0, startIdx - 15), startIdx);
+            if (prefix.includes('DUA') || prefix.includes('DAM')) {
+                continue;
+            }
+            const placa = fmtPlaca(match[1]);
+            if (validarPlacaExtraida(placa)) {
+                return placa;
+            }
+        }
     }
 
-    const looseMatch = texto.toUpperCase().match(/\b([A-Z]{1,3}\d{3}[A-Z0-9]{0,2}|\d{4}[A-Z0-9]{2}|[A-Z0-9]{3}-[A-Z0-9]{3})\b/);
-    return looseMatch ? fmtPlaca(looseMatch[1]) : '';
+    // Si no se encuentra una limpia, busquemos con más tolerancia al ruido OCR
+    // (espacios, guiones, paréntesis como en "4379 -D) L" o "1 274-U P")
+    const regexesRuido = [
+        // 4 dígitos (con espacios opcionales) + 2 letras: e.g. "1 274-U P" o "4379 -D) L"
+        /\b(\d\s?\d\s?\d\s?\d)[^A-Z0-9]{1,5}([A-Z])[^A-Z0-9]{0,3}([A-Z])\b/g,
+        // 3 letras (con espacios opcionales) + 3 dígitos: e.g. "ABC - 123"
+        /\b([A-Z]\s?[A-Z]\s?[A-Z])[^A-Z0-9]{1,5}(\d\s?\d\s?\d)\b/g,
+        // 2 letras + 4 dígitos: e.g. "DI - 4898"
+        /\b([A-Z]\s?[A-Z])[^A-Z0-9]{1,5}(\d\s?\d\s?\d\s?\d)\b/g,
+        // 5 dígitos + 1 letra: e.g. "20677 L"
+        /\b(\d\s?\d\s?\d\s?\d\s?\d)[^A-Z0-9]{1,5}([A-Z])\b/g,
+        // 1 letra + 1 dígito + 4 dígitos: e.g. "A1 - 2345"
+        /\b([A-Z]\s?\d)[^A-Z0-9]{1,5}(\d\s?\d\s?\d\s?\d)\b/g
+    ];
+
+    for (const regex of regexesRuido) {
+        let match;
+        while ((match = regex.exec(cleanText)) !== null) {
+            // Evitar falsos positivos con la etiqueta "DUA/DAM"
+            const startIdx = match.index;
+            const prefix = cleanText.substring(Math.max(0, startIdx - 15), startIdx);
+            if (prefix.includes('DUA') || prefix.includes('DAM')) {
+                continue;
+            }
+            const cleanPart1 = match[1].replace(/\s+/g, '');
+            const cleanPart2 = match[2].replace(/\s+/g, '');
+            const cleanPart3 = (match[3] || '').replace(/\s+/g, '');
+            const placaCandidata = cleanPart1 + cleanPart2 + cleanPart3;
+            const placa = fmtPlaca(placaCandidata);
+            if (validarPlacaExtraida(placa)) {
+                return placa;
+            }
+        }
+    }
+
+    return '';
 }
 
 function buscarPlacaEnNombreArchivo(fileName = '') {
@@ -1056,11 +1142,12 @@ function extraerDatosTiveDesdeTexto(text, logPrefix = 'TIVE TEXTO', sourceName =
     
     const tituloNo = validatedTitulo;
     const tituloNormalizado = tituloNo;
-    const placa = validarPlacaExtraida(
-        buscarPrimerValorTive(cleanText, ['Placa :', 'Placa']) ||
-        buscarPlacaEnTexto(cleanText) ||
-        buscarPlacaEnNombreArchivo(sourceName)
-    );
+    // Cada fallback se valida individualmente: si uno falla (devuelve basura),
+    // se prueba el siguiente en lugar de bloquear la cadena.
+    const placa =
+        validarPlacaExtraida(buscarPrimerValorTive(cleanText, ['Placa :', 'Placa'])) ||
+        validarPlacaExtraida(buscarPlacaEnTexto(cleanText)) ||
+        validarPlacaExtraida(buscarPlacaEnNombreArchivo(sourceName));
     const datos = {
         // codVerif es siempre un número puro: descartar cualquier letra/símbolo que filtre el OCR
         codVerif: (buscarPrimerValorTive(cleanText, ['Código de Verificación', 'Codigo de Verificacion']) || '').replace(/[^\d]/g, ''),
@@ -1068,7 +1155,7 @@ function extraerDatosTiveDesdeTexto(text, logPrefix = 'TIVE TEXTO', sourceName =
         zona: buscarPrimerValorTive(cleanText, ['Zona Registral', 'Zona']),
         sede: buscarPrimerValorTive(cleanText, ['Sede Registral', 'Sede']),
         partida: buscarPrimerValorTive(cleanText, ['Partida Registral', 'Partida']),
-        dua: buscarPrimerValorTive(cleanText, ['DUA/DAM', 'DUA', 'DAM']),
+        dua: limpiarDua(buscarPrimerValorTive(cleanText, ['DUA/DAM', 'DUA', 'DAM'])),
         titulo: tituloNormalizado || buscarTituloValorTive(cleanText),
         fechaTitulo: fechaTitulo ? fechaTitulo.split(/\s+/)[0] : '',
         categoria: limpiarCategoria(buscarPrimerValorTive(cleanText, ['Categoría', 'Categoria'])),
@@ -1109,6 +1196,10 @@ function extraerDatosTiveDesdeTexto(text, logPrefix = 'TIVE TEXTO', sourceName =
         añoModelo: buscarPrimerValorTive(cleanText, ['Año Modelo', 'Ano Modelo', 'Año Mod', 'Ano Mod']),
         tituloNo,
     };
+
+    // Corregir VIN/Serie: el OCR lee 'S' del año 2025 como '5'
+    datos.vin  = corregirVinPorAño(datos.vin,  datos.añoModelo);
+    datos.serie = corregirVinPorAño(datos.serie, datos.añoModelo);
 
     console.log(`[${logPrefix}] ✅ Parseo de texto listo. Placa encontrada: ${datos.placa || '(vacía)'}`);
     return datos;
@@ -1201,7 +1292,7 @@ function prepararDatosTiveCompleto(datos) {
     prepared.placaOriginal = safe(prepared.placaOriginal || prepared.placa);
     prepared.placa = fmtPlaca(prepared.placa || '');
     prepared.codVerif = safe(prepared.codVerif) || generarCodigoVerificacion();
-    prepared.fechaFinal = generarFechaHoraTive();
+    prepared.fechaFinal = safe(prepared.fechaFinal) || generarFechaHoraTive();
     prepared.añoFabricacion = safe(prepared.añoFabricacion);
     prepared.añoModelo = safe(prepared.añoModelo);
     prepared.potencia = limpiarPotencia(prepared.potencia || '');
@@ -1376,57 +1467,69 @@ async function extraerTextoOCRDesdePdf(pdfBuffer) {
         const pagesToRead = Math.min(images.length, 3);
         for (let i = 0; i < pagesToRead; i++) {
             console.log(`[OCR] 📄 Leyendo página ${i + 1}/${pagesToRead}...`);
-            
             const imageBuffer = Buffer.from(images[i]);
-            const sharpImg = sharp(imageBuffer);
-            const metadata = await sharpImg.metadata();
-            const width = metadata.width || 2200;
-            const height = metadata.height || 1550;
-            const halfWidth = Math.floor(width / 2);
-            
-            // Dividir verticalmente: el encabezado registral ocupa el 40% superior (se procesa a ancho completo para evitar partir el código de verificación)
-            // La tabla técnica de especificaciones ocupa el 60% inferior (se parte en 2 columnas para no mezclar datos)
-            const topHeight = Math.floor(height * 0.40);
-            const bottomHeight = height - topHeight;
 
-            console.log(`[OCR] 🔎 Cortando y procesando sección superior (full-width)...`);
-            const topImage = await sharp(imageBuffer)
-                .extract({ left: 0, top: 0, width: width, height: topHeight })
-                .grayscale()
-                .normalize()
-                .sharpen()
-                .png()
-                .toBuffer();
+            if (i === 0) {
+                // Página 1 (Anverso): Procesar completo para evitar cortar la Placa
+                console.log(`[OCR] 🔎 Procesando Página 1 a ancho completo (procesada)...`);
+                const fullImage = await sharp(imageBuffer)
+                    .grayscale()
+                    .normalize()
+                    .sharpen()
+                    .png()
+                    .toBuffer();
+                const result = await worker.recognize(fullImage);
+                texts.push(result.data.text || '');
 
-            console.log(`[OCR] 🔎 Cortando y procesando columna izquierda inferior...`);
-            const leftImage = await sharp(imageBuffer)
-                .extract({ left: 0, top: topHeight, width: halfWidth, height: bottomHeight })
-                .grayscale()
-                .normalize()
-                .sharpen()
-                .png()
-                .toBuffer();
+                console.log(`[OCR] 🔎 Procesando Página 1 a ancho completo (raw)...`);
+                const rawImage = await sharp(imageBuffer)
+                    .png()
+                    .toBuffer();
+                const resultRaw = await worker.recognize(rawImage);
+                // Append both to ensure we capture all text
+                texts.push(resultRaw.data.text || '');
+            } else {
+                // Páginas siguientes (Reverso): Cortar en columnas para evitar mezclar datos de especificaciones
+                console.log(`[OCR] 🔎 Cortando Página ${i + 1} en secciones...`);
+                const sharpImg = sharp(imageBuffer);
+                const metadata = await sharpImg.metadata();
+                const width = metadata.width || 2200;
+                const height = metadata.height || 1550;
+                const halfWidth = Math.floor(width / 2);
+                const topHeight = Math.floor(height * 0.40);
+                const bottomHeight = height - topHeight;
 
-            console.log(`[OCR] 🔎 Cortando y procesando columna derecha inferior...`);
-            const rightImage = await sharp(imageBuffer)
-                .extract({ left: halfWidth, top: topHeight, width: width - halfWidth, height: bottomHeight })
-                .grayscale()
-                .normalize()
-                .sharpen()
-                .png()
-                .toBuffer();
+                const topImage = await sharp(imageBuffer)
+                    .extract({ left: 0, top: 0, width: width, height: topHeight })
+                    .grayscale()
+                    .normalize()
+                    .sharpen()
+                    .png()
+                    .toBuffer();
 
-            console.log(`[OCR] 📄 Ejecutando OCR en sección superior...`);
-            const resultTop = await worker.recognize(topImage);
+                const leftImage = await sharp(imageBuffer)
+                    .extract({ left: 0, top: topHeight, width: halfWidth, height: bottomHeight })
+                    .grayscale()
+                    .normalize()
+                    .sharpen()
+                    .png()
+                    .toBuffer();
 
-            console.log(`[OCR] 📄 Ejecutando OCR en columna izquierda inferior...`);
-            const resultLeft = await worker.recognize(leftImage);
-            
-            console.log(`[OCR] 📄 Ejecutando OCR en columna derecha inferior...`);
-            const resultRight = await worker.recognize(rightImage);
+                const rightImage = await sharp(imageBuffer)
+                    .extract({ left: halfWidth, top: topHeight, width: width - halfWidth, height: bottomHeight })
+                    .grayscale()
+                    .normalize()
+                    .sharpen()
+                    .png()
+                    .toBuffer();
 
-            const pageText = (resultTop.data.text || '') + '\n' + (resultLeft.data.text || '') + '\n' + (resultRight.data.text || '');
-            texts.push(pageText);
+                const resultTop = await worker.recognize(topImage);
+                const resultLeft = await worker.recognize(leftImage);
+                const resultRight = await worker.recognize(rightImage);
+
+                const pageText = (resultTop.data.text || '') + '\n' + (resultLeft.data.text || '') + '\n' + (resultRight.data.text || '');
+                texts.push(pageText);
+            }
         }
     } finally {
         await worker.terminate().catch(() => { });
