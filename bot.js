@@ -498,12 +498,9 @@ function truncarValorEnSiguienteEtiqueta(valor = '', etiquetaBusqueda = '') {
     
     const etiquetasADerecha = [
         { name: 'placa', regex: /Plac\s*a/i },
-        { name: 'fabricacion', regex: /Año\s*F/i },
-        { name: 'fabricacion', regex: /Ano\s*F/i },
-        { name: 'modelo', regex: /Año\s*M/i },
-        { name: 'modelo', regex: /Ano\s*M/i },
-        { name: 'version', regex: /V\s*er\s*sión/i },
-        { name: 'version', regex: /V\s*er\s*sion/i },
+        { name: 'fabricacion', regex: /A\s*[ñn]\s*o\s*F/i },
+        { name: 'modelo', regex: /A\s*[ñn]\s*o\s*M/i },
+        { name: 'version', regex: /V\s*er\s*si[oó]n/i },
         { name: 'cilindros', regex: /Cilindr\s*os/i },
         { name: 'cilindrada', regex: /Cilindr\s*ada/i },
         { name: 'longitud', regex: /Longitud/i },
@@ -763,7 +760,11 @@ function extraerDatosTiveDesdeTexto(text, logPrefix = 'TIVE TEXTO', sourceName =
             // Ej: "TRIMOTO PASAJEROS" → "TRIMOTO"
             return (_c || '').replace(/\s+(DE\s+)?(PASAJEROS|CARGA|MIXTO|ESCOLAR)$/i, '').trim();
         })(),
-        potencia: buscarValorTive(cleanText, 'Potencia Motor') || buscarValorTive(cleanText, 'Potencia'),
+        potencia: (() => {
+            const _p = buscarValorTive(cleanText, 'Potencia Motor') || buscarValorTive(cleanText, 'Potencia');
+            // OCR lee "(0" del PDF → convertir a "@"  ej: "11,80(07500KW/RPM" → "11,80@7500KW/RPM"
+            return (_p || '').replace(/\(0(?=\d)/g, '@').trim();
+        })(),
         formRod: buscarValorTive(cleanText, 'Formula Rodante') || buscarValorTive(cleanText, 'Fórmula Rodante'),
         combustible: buscarValorTive(cleanText, 'Tipo Combustible') || buscarValorTive(cleanText, 'Combustible'),
         asientos: buscarPrimerValorTive(cleanText, ['Nro. Asientos', 'N° Asientos', 'No Asientos', 'Asientos']),
@@ -1280,6 +1281,10 @@ async function generarTIVE(chatId, datos, qrCustomLink = null, originalBuffer = 
         sedeLimpia = sedeLimpia.replace(regex, '');
     });
 
+    // Solo conservar el número romano/dígito limpio (la plantilla ya imprime "N°")
+    // Ej OCR: "N' III" → "III" | "N° IX" → "IX" | "III" → "III"
+    zonaLimpia = zonaLimpia.replace(/^N\s*[°º'`*o]?\s*/i, '').trim();
+
     console.log(`[TIVE] 🎨 Generando tarjeta para: ${safe(datos.placa)}`);
     const gris = rgb(0.6, 0.6, 0.6);
     const negro = rgb(0, 0, 0);
@@ -1290,8 +1295,8 @@ async function generarTIVE(chatId, datos, qrCustomLink = null, originalBuffer = 
     const fontBAnt = await pdfAnt.embedFont(FONT_BYTES);
     const pageA = pdfAnt.getPages()[0];
     const { height: hA } = pageA.getSize();
-    pageA.drawText(zonaLimpia, { x: 74, y: hA - 56.5, size: 5.2, font: fontBAnt, color: gris });
-    pageA.drawText(sedeLimpia, { x: 72, y: hA - 63.5, size: 5.2, font: fontBAnt, color: gris });
+    pageA.drawText(zonaLimpia, { x: 58, y: hA - 55.5, size: 5.2, font: fontBAnt, color: gris });
+    pageA.drawText(sedeLimpia, { x: 52, y: hA - 63.5, size: 5.2, font: fontBAnt, color: gris });
     pageA.drawText(safe(datos.partida), { x: 65, y: hA - 75, size: 6.8, font: fontBAnt, color: negro });
     pageA.drawText(safe(datos.dua), { x: 50, y: hA - 89, size: 6.8, font: fontBAnt, color: negro });
     pageA.drawText(safe(datos.titulo), { x: 34.5, y: hA - 104, size: 6.8, font: fontBAnt, color: negro });
@@ -1452,7 +1457,12 @@ async function generarTiveCompleto(chatId, datos, qrCustomLink = null, verificat
     }
     const datosCompletos = {
         ...baseDatos,
-        zonaLimpia: limpiarEtiquetaRegistral(baseDatos.zona),
+        zonaLimpia: (() => {
+            let z = limpiarEtiquetaRegistral(baseDatos.zona);
+            // Solo el número romano — la plantilla ya imprime "N°"
+            z = z.replace(/^N\s*[°º'`*o]?\s*/i, '').trim();
+            return z;
+        })(),
         sedeLimpia: limpiarEtiquetaRegistral(baseDatos.sede),
     };
     const pdfDisplayName = `TIVE_${safe(datosCompletos.placa) || 'DOC'}`;
