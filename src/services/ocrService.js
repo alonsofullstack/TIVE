@@ -138,7 +138,95 @@ async function extraerConOCR(pdfBuffer, sourceName = '') {
 }
 
 async function extraerConIA(pdfBuffer, sourceName = '') {
-    logInfo('OCR', '🧾', `Iniciando extracción local offline (Gemini omitido, usando texto embebido + Tesseract)`, { bufferSize: `${pdfBuffer.length} bytes`, sourceName: sourceName || '(sin nombre)' });
+    logInfo('OCR', '🧾', `Iniciando extracción con Gemini AI (multimodal)`, { keysDisponibles: API_KEYS.length, bufferSize: `${pdfBuffer.length} bytes`, sourceName: sourceName || '(sin nombre)' });
+    
+    if (API_KEYS.length > 0) {
+        for (const key of API_KEYS) {
+            try {
+                const genAI = new GoogleGenerativeAI(key);
+                const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+                
+                const prompt = `Analiza este documento TIVE (Tarjeta de Identificación Vehicular Electrónica). 
+                Extrae TODOS los datos técnicos y registrales.
+                Devuelve estrictamente un objeto JSON con estas llaves exactas:
+                {
+                  "codVerif": "",
+                  "fechaFinal": "",
+                  "zona": "",
+                  "sede": "",
+                  "partida": "",
+                  "dua": "",
+                  "titulo": "",
+                  "fechaTitulo": "",
+                  "categoria": "",
+                  "marca": "",
+                  "modelo": "",
+                  "color": "",
+                  "vin": "",
+                  "serie": "",
+                  "motor": "",
+                  "carroceria": "",
+                  "potencia": "",
+                  "formRod": "",
+                  "combustible": "",
+                  "asientos": "",
+                  "pasajeros": "",
+                  "ruedas": "",
+                  "ejes": "",
+                  "placa": "",
+                  "añoFabricacion": "",
+                  "cilindros": "",
+                  "longitud": "",
+                  "altura": "",
+                  "ancho": "",
+                  "cilindrada": "",
+                  "pBruto": "",
+                  "pNeto": "",
+                  "cargaUtil": "",
+                  "version": "",
+                  "añoModelo": "",
+                  "tituloNo": ""
+                }
+                
+                IMPORTANTE:
+                - Usa solo valores encontrados en el documento. No inventes datos.
+                - No incluyas unidades de medida (como kg, m, mt, etc.) en los campos numéricos como pesos y dimensiones.
+                - El código de verificación es un código numérico (generalmente de 4 a 9 dígitos).
+                - La fechaFinal suele ser la fecha y hora que aparece debajo del código de verificación o al final del documento.
+                - Asegúrate de extraer la Placa correctamente con su formato (por ejemplo: ABC-123 o 1234-AB).`;
+
+                const result = await model.generateContent([
+                    { inlineData: { data: pdfBuffer.toString("base64"), mimeType: "application/pdf" } },
+                    { text: prompt }
+                ]);
+                
+                const responseText = result.response.text().replace(/```json|```/g, "").trim();
+                const parsedData = JSON.parse(responseText);
+                
+                // Normalizar/completar los datos mediante la función del pdfParser
+                const datosCompletos = completarDatosExtraidosTive(parsedData, sourceName);
+                
+                if (datosCompletos.placa || datosCompletos.marca || datosCompletos.serie || datosCompletos.vin) {
+                    logInfo('OCR', '✅', `Extracción con Gemini AI exitosa`, {
+                        placa: datosCompletos.placa || '(vacía)',
+                        marca: datosCompletos.marca || '(vacía)',
+                        vin: datosCompletos.vin || '(vacío)',
+                        camposExtraidos: Object.entries(datosCompletos).filter(([, v]) => v).length
+                    });
+                    logInfo('OCR', '📊', `Datos completos extraídos por Gemini AI:\n${JSON.stringify(datosCompletos, null, 2)}`);
+                    return datosCompletos;
+                } else {
+                    logInfo('OCR', '⚠️', `Gemini AI devolvió objeto pero sin datos críticos (placa, marca, serie, vin). Activando fallback.`);
+                }
+            } catch (e) {
+                logError('OCR', '⚠️', `Error al extraer con Gemini AI (intentando con siguiente clave o fallback)`, e);
+            }
+        }
+    } else {
+        logInfo('OCR', '⚠️', `No hay claves de Gemini configuradas.`);
+    }
+    
+    logInfo('OCR', '🔄', `Activando fallback a extracción local por texto embebido / OCR (Tesseract)...`);
     return await extraerConOCR(pdfBuffer, sourceName);
 }
 
