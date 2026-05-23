@@ -203,7 +203,7 @@ module.exports = function registerCommands(bot, state, deps) {
             return bot.sendMessage(chatId, "📷 Envía la firma como imagen JPG/PNG para guardarla.");
         }
 
-        if (state === "awaiting_tive_completar_field" && msg.text && !msg.text.startsWith('/')) {
+        if (state === "awaiting_tive_completar_field" && msg.text && (!msg.text.startsWith('/') || msg.text.toLowerCase() === '/ok')) {
             const pending = userTiveCompletarData.get(chatId);
             if (!pending) {
                 userState.delete(chatId);
@@ -211,10 +211,24 @@ module.exports = function registerCommands(bot, state, deps) {
             }
             const current = pending.missingFields[pending.index];
             const rawValue = msg.text.trim();
-            pending.datos[current.key] = current.key === 'placa' ? fmtPlaca(rawValue) : rawValue;
+
             if (current.key === 'placa') {
-                pending.datos.placaOriginal = rawValue;
+                const respuesta = rawValue.toLowerCase().replace(/^\//,'');
+                const esConfirmacion = ['si', 'sí', 'si', 'ok', 'si.', 'sí.', 'yes', 'y'].includes(respuesta);
+                if (esConfirmacion && (pending.datos.placaOriginal || pending.datos.placa)) {
+                    // Usar el valor ya detectado
+                    const placaDetectada = fmtPlaca(pending.datos.placaOriginal || pending.datos.placa);
+                    pending.datos.placa = placaDetectada;
+                    pending.datos.placaOriginal = pending.datos.placaOriginal || pending.datos.placa;
+                } else {
+                    // Usar el nuevo valor que escribió el usuario
+                    pending.datos.placa = fmtPlaca(rawValue);
+                    pending.datos.placaOriginal = rawValue;
+                }
+            } else {
+                pending.datos[current.key] = rawValue;
             }
+
             pending.index += 1;
 
             if (pending.index >= pending.missingFields.length) {
@@ -239,7 +253,7 @@ module.exports = function registerCommands(bot, state, deps) {
                 const next = pending.missingFields[pending.index];
                 await bot.sendMessage(chatId, `✍️ Falta el dato *${next.label}*.\nEnvíalo para continuar.`, { parse_mode: 'Markdown' });
             }
-        } else if (state === "awaiting_tive_completo_field" && msg.text && !msg.text.startsWith('/')) {
+        } else if (state === "awaiting_tive_completo_field" && msg.text && (!msg.text.startsWith('/') || msg.text.toLowerCase() === '/ok')) {
             const pending = userTiveCompletoData.get(chatId);
             if (!pending) {
                 userState.delete(chatId);
@@ -247,10 +261,24 @@ module.exports = function registerCommands(bot, state, deps) {
             }
             const current = pending.missingFields[pending.index];
             const rawValue = msg.text.trim();
-            pending.datos[current.key] = current.key === 'placa' ? fmtPlaca(rawValue) : rawValue;
+
             if (current.key === 'placa') {
-                pending.datos.placaOriginal = rawValue;
+                const respuesta = rawValue.toLowerCase().replace(/^\//,'');
+                const esConfirmacion = ['si', 'sí', 'si', 'ok', 'si.', 'sí.', 'yes', 'y'].includes(respuesta);
+                if (esConfirmacion && (pending.datos.placaOriginal || pending.datos.placa)) {
+                    // Usar el valor ya detectado
+                    const placaDetectada = fmtPlaca(pending.datos.placaOriginal || pending.datos.placa);
+                    pending.datos.placa = placaDetectada;
+                    pending.datos.placaOriginal = pending.datos.placaOriginal || pending.datos.placa;
+                } else {
+                    // Usar el nuevo valor que escribió el usuario
+                    pending.datos.placa = fmtPlaca(rawValue);
+                    pending.datos.placaOriginal = rawValue;
+                }
+            } else {
+                pending.datos[current.key] = rawValue;
             }
+
             pending.index += 1;
 
             if (pending.index >= pending.missingFields.length) {

@@ -171,11 +171,12 @@ function formatearPdf417TiveCompleto(datos) {
 }
 
 function placaRequiereConfirmacion(valor = '') {
-    const original = safe(valor);
-    if (!original) return true;
-    // Normalize all dash types to standard hyphen before checking
-    const normalized = original.replace(/[–—]/g, '-');
-    return !normalized.includes('-');
+    // Siempre se confirma la placa (si tiene valor se muestra para confirmar, si no se pide)
+    return true;
+}
+
+function placaTieneValorDetectado(valor = '') {
+    return safe(valor).length > 0;
 }
 
 async function aplicarSeguridadOCR(pdfBuffer, width = 2000) {
@@ -703,9 +704,20 @@ module.exports = function (bot) {
         userTiveCompletoData.set(chatId, { datos: prepared, missingFields, index: 0, sourceHash });
         userState.set(chatId, 'awaiting_tive_completo_field');
         const current = missingFields[0];
-        await bot.sendMessage(chatId, `✍️ Falta el dato *${current.label}*.\nEnvíalo ahora para continuar con *TIVE COMPLETO*.`, {
-            parse_mode: 'Markdown'
-        });
+
+        // Si es placa y ya tiene un valor detectado, mostrarlo para confirmación
+        if (current.key === 'placa' && placaTieneValorDetectado(prepared.placaOriginal || prepared.placa)) {
+            const valorDetectado = fmtPlaca(safe(prepared.placaOriginal || prepared.placa));
+            await bot.sendMessage(chatId,
+                `🚗 *PLACA detectada:* \`${valorDetectado}\`\n\n` +
+                `¿Es correcta? Responde *sí* (o /ok) para confirmarla, o escribe la placa correcta.`,
+                { parse_mode: 'Markdown' }
+            );
+        } else {
+            await bot.sendMessage(chatId, `✍️ Falta el dato *${current.label}*.\nEnvíalo ahora para continuar con *TIVE COMPLETO*.`, {
+                parse_mode: 'Markdown'
+            });
+        }
     }
 
     async function iniciarCapturaFaltantesTiveCompletar(chatId, datos, sourceBuffer = null) {
@@ -723,9 +735,20 @@ module.exports = function (bot) {
         userTiveCompletarData.set(chatId, { datos: prepared, missingFields, index: 0, sourceHash });
         userState.set(chatId, 'awaiting_tive_completar_field');
         const current = missingFields[0];
-        await bot.sendMessage(chatId, `✍️ Falta el dato *${current.label}*.\nEnvíalo ahora para continuar con *TIVE PARA COMPLETAR*.`, {
-            parse_mode: 'Markdown'
-        });
+
+        // Si es placa y ya tiene un valor detectado, mostrarlo para confirmación
+        if (current.key === 'placa' && placaTieneValorDetectado(prepared.placaOriginal || prepared.placa)) {
+            const valorDetectado = fmtPlaca(safe(prepared.placaOriginal || prepared.placa));
+            await bot.sendMessage(chatId,
+                `🚗 *PLACA detectada:* \`${valorDetectado}\`\n\n` +
+                `¿Es correcta? Responde *sí* (o /ok) para confirmarla, o escribe la placa correcta.`,
+                { parse_mode: 'Markdown' }
+            );
+        } else {
+            await bot.sendMessage(chatId, `✍️ Falta el dato *${current.label}*.\nEnvíalo ahora para continuar con *TIVE PARA COMPLETAR*.`, {
+                parse_mode: 'Markdown'
+            });
+        }
     }
 
     return {
