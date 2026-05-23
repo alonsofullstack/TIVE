@@ -40,8 +40,8 @@ const TIVE_COMPLETO_FIELDS = [
     { key: 'codigo_de_verificacion', dataKey: 'codVerif', x: 231, y: 615, dx: -7.3, dy: -10.3, size: 8, bold: false },
     { key: 'fecha', dataKey: 'fechaFinal', x: 180.8, y: 579.5, dx: -13, dy: 1, size: 8, bold: false },
     { key: 'zona_registral', dataKey: 'zonaLimpia', x: 144.0, y: 482.0, dx: -16, dy: 6, size: 9, bold: true },
-    { key: 'sede_registral', dataKey: 'sedeLimpia', x: 141.0, y: 467.0, dx: -22.5, dy: 3, size: 9, bold: true },
-    { key: 'parda_registral', dataKey: 'partida', x: 120.9, y: 452.9, dx: -6, dy: -5.5, size: 8, bold: false },
+    { key: 'sede_registral', dataKey: 'sedeLimpia', x: 141.0, y: 467.0, dx: -22.5, dy: 6, size: 9, bold: true },
+    { key: 'parda_registral', dataKey: 'partida', x: 122.9, y: 452.9, dx: -6, dy: -5.5, size: 8, bold: false },
     { key: 'duadam', dataKey: 'dua', x: 103.1, y: 438, dx: -10.5, dy: -7, size: 8, bold: false },
     { key: 'titulo', dataKey: 'titulo', x: 89.3, y: 422.3, dx: -13, dy: -7, size: 8, bold: false },
     { key: 'fecha_del_titulo', dataKey: 'fechaTitulo', x: 126.3, y: 406.6, dx: -14.5, dy: -7, size: 8, bold: false },
@@ -246,7 +246,7 @@ function obtenerCamposFaltantesTiveCompletar(datos) {
     return [...forcedFields, ...standardFields];
 }
 
-module.exports = function(bot) {
+module.exports = function (bot) {
 
     async function generarTarjetaAntigua(chatId, datos, originalBuffer = null) {
         logInfo('ANTIGUA', '🎨', `Generando tarjeta de inscripción antigua`, { placa: datos.placa, zona: datos.zona || '?', sede: datos.sede || '?', tieneBufferOriginal: !!originalBuffer });
@@ -594,7 +594,7 @@ module.exports = function(bot) {
             const sedeInput = datosCompletos.sedeLimpia || datosCompletos.sede;
             const signatureService = require('./signatureService')(bot);
             const firmaPath = firmaPathOverride || signatureService.buscarArchivoFirma(sedeInput);
-            
+
             if (!firmaPath || !fs.existsSync(firmaPath)) {
                 await signatureService.pedirFirmaFaltanteTive(chatId, sedeInput, datos, qrCustomLink, verificationHash);
                 return;
