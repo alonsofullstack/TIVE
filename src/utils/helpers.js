@@ -344,6 +344,21 @@ const escapeMarkdown = (text) => {
     return text.replace(/[_*`\[]/g, '\\$&');
 };
 
+function normalizarTituloDesdeTituloNo(tituloNo = '') {
+    const raw = safe(tituloNo).trim();
+    if (!raw) return '';
+    const extractedMatch = raw.match(/\b(\d{3,}-\d{3,})\b/) || raw.match(/(\d+-\d+)/);
+    const limpio = extractedMatch ? extractedMatch[1] : raw.replace(/\s+/g, '');
+    if (!limpio) return '';
+    const dateNumberMatch = limpio.match(/^(\d{4})-(\d+)$/);
+    if (dateNumberMatch) {
+        return `${dateNumberMatch[2]}-${dateNumberMatch[1]}`;
+    }
+    const match = limpio.match(/^(\d+)-(\d+)$/);
+    if (!match) return limpio;
+    return `${match[1]}-${match[2]}`;
+}
+
 module.exports = {
     SEDE_TO_ZONA,
     safe,
@@ -360,5 +375,6 @@ module.exports = {
     generarCodigoVerificacion,
     generarFechaHoraTive,
     generarHashVerificacion,
-    escapeMarkdown
+    escapeMarkdown,
+    normalizarTituloDesdeTituloNo
 };
