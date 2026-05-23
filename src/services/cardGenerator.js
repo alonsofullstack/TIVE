@@ -37,10 +37,10 @@ const {
 const C128_PATTERNS = { '0': '11011001100', '1': '11001101100', '2': '11001100110', '3': '10001101100', '4': '10001100110', '5': '10110001100', '6': '10110000110', '7': '10110110000', '8': '10110011011', '9': '11001011000', 'A': '11000101100', 'B': '11000100110', 'C': '11011000100', 'D': '11011000010', 'E': '11011011000', 'F': '11011001101', 'G': '11011011011', 'H': '11001101101', 'I': '11001101111', 'J': '11011110110', 'K': '11011111011', 'L': '11110110110', 'M': '11110110111', 'N': '11110111101', 'O': '11110111111', 'P': '11001101101', 'Q': '11001101111', 'R': '11011110110', 'S': '11011111011', 'T': '11110110110', 'U': '11110110111', 'V': '11110111101', 'W': '11110111111', 'X': '11001101101', 'Y': '11001101111', 'Z': '11011110110', '-': '11000111010', '.': '11011011110', ' ': '11011011011', ':': '11011111010' };
 
 const TIVE_COMPLETO_FIELDS = [
-    { key: 'codigo_de_verificacion', dataKey: 'codVerif', x: 231, y: 615, dx: -7.3, dy: -10.3, size: 8, bold: false },
+    { key: 'codigo_de_verificacion', dataKey: 'codVerif', x: 231, y: 615, dx: -8.3, dy: -10.3, size: 8, bold: false },
     { key: 'fecha', dataKey: 'fechaFinal', x: 180.8, y: 579.5, dx: -13, dy: 1, size: 8, bold: false },
     { key: 'zona_registral', dataKey: 'zonaLimpia', x: 144.0, y: 482.0, dx: -16, dy: 6, size: 9, bold: true },
-    { key: 'sede_registral', dataKey: 'sedeLimpia', x: 141.0, y: 467.0, dx: -22.5, dy: 6, size: 9, bold: true },
+    { key: 'sede_registral', dataKey: 'sedeLimpia', x: 141.0, y: 467.0, dx: -22.5, dy: 9, size: 9, bold: true },
     { key: 'parda_registral', dataKey: 'partida', x: 122.9, y: 452.9, dx: -6, dy: -5.5, size: 8, bold: false },
     { key: 'duadam', dataKey: 'dua', x: 103.1, y: 438, dx: -10.5, dy: -7, size: 8, bold: false },
     { key: 'titulo', dataKey: 'titulo', x: 89.3, y: 422.3, dx: -13, dy: -7, size: 8, bold: false },
