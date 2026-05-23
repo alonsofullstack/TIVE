@@ -173,7 +173,9 @@ function formatearPdf417TiveCompleto(datos) {
 function placaRequiereConfirmacion(valor = '') {
     const original = safe(valor);
     if (!original) return true;
-    return !original.includes('-');
+    // Normalize all dash types to standard hyphen before checking
+    const normalized = original.replace(/[–—]/g, '-');
+    return !normalized.includes('-');
 }
 
 async function aplicarSeguridadOCR(pdfBuffer, width = 2000) {

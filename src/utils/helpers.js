@@ -276,6 +276,9 @@ const fmtPlaca = (p) => {
     if (!p) return "";
     let normalized = p.trim().toUpperCase();
 
+    // Normalize all dash types to standard hyphen
+    normalized = normalized.replace(/[–—]/g, '-');
+
     if (normalized.includes("-")) {
         let parts = normalized.split("-");
         let alnumOnly = normalized.replace(/[^A-Z0-9]/g, "");
