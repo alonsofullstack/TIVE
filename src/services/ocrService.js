@@ -137,141 +137,189 @@ async function extraerConOCR(pdfBuffer, sourceName = '') {
     throw new Error("No se pudo extraer información con IA ni OCR. Asegúrate de que el PDF sea un documento TIVE legible de SUNARP.");
 }
 
-async function extraerConIA(pdfBuffer, sourceName = '') {
-    logInfo('OCR', '🧾', `Iniciando extracción con Gemini AI (multimodal)`, { keysDisponibles: API_KEYS.length, bufferSize: `${pdfBuffer.length} bytes`, sourceName: sourceName || '(sin nombre)' });
-    
-    if (API_KEYS.length > 0) {
-        for (const key of API_KEYS) {
-            try {
-                const genAI = new GoogleGenerativeAI(key);
-                const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
-                
-                const prompt = `Analiza este documento TIVE (Tarjeta de Identificación Vehicular Electrónica). 
-                Extrae TODOS los datos técnicos y registrales.
-                Devuelve estrictamente un objeto JSON con estas llaves exactas:
-                {
-                  "codVerif": "",
-                  "fechaFinal": "",
-                  "zona": "",
-                  "sede": "",
-                  "partida": "",
-                  "dua": "",
-                  "titulo": "",
-                  "fechaTitulo": "",
-                  "categoria": "",
-                  "marca": "",
-                  "modelo": "",
-                  "color": "",
-                  "vin": "",
-                  "serie": "",
-                  "motor": "",
-                  "carroceria": "",
-                  "potencia": "",
-                  "formRod": "",
-                  "combustible": "",
-                  "asientos": "",
-                  "pasajeros": "",
-                  "ruedas": "",
-                  "ejes": "",
-                  "placa": "",
-                  "añoFabricacion": "",
-                  "cilindros": "",
-                  "longitud": "",
-                  "altura": "",
-                  "ancho": "",
-                  "cilindrada": "",
-                  "pBruto": "",
-                  "pNeto": "",
-                  "cargaUtil": "",
-                  "version": "",
-                  "añoModelo": "",
-                  "tituloNo": ""
-                }
-                
-                IMPORTANTE:
-                - Usa solo valores encontrados en el documento. No inventes datos.
-                - No incluyas unidades de medida (como kg, m, mt, etc.) en los campos numéricos como pesos y dimensiones.
-                - El código de verificación es un código numérico (generalmente de 4 a 9 dígitos).
-                - La fechaFinal suele ser la fecha y hora que aparece debajo del código de verificación o al final del documento.
-                - Asegúrate de extraer la Placa correctamente con su formato (por ejemplo: ABC-123 o 1234-AB).`;
+// Modelos de Gemini a intentar en orden de prioridad.
+// Si el modelo principal está saturado (503), se pasa al siguiente automáticamente.
+const GEMINI_MODELS_FALLBACK = [
+    "gemini-flash-latest",
+    "gemini-flash-lite-latest",
+    "gemini-2.5-flash",
+];
 
-                const result = await model.generateContent([
-                    { inlineData: { data: pdfBuffer.toString("base64"), mimeType: "application/pdf" } },
-                    { text: prompt }
-                ]);
-                
-                const responseText = result.response.text().replace(/```json|```/g, "").trim();
-                const parsedData = JSON.parse(responseText);
-                
-                // Normalizar/completar los datos mediante la función del pdfParser
-                const datosCompletos = completarDatosExtraidosTive(parsedData, sourceName);
-                
-                if (datosCompletos.placa || datosCompletos.marca || datosCompletos.serie || datosCompletos.vin) {
-                    logInfo('OCR', '✅', `Extracción con Gemini AI exitosa`, {
-                        placa: datosCompletos.placa || '(vacía)',
-                        marca: datosCompletos.marca || '(vacía)',
-                        vin: datosCompletos.vin || '(vacío)',
-                        camposExtraidos: Object.entries(datosCompletos).filter(([, v]) => v).length
-                    });
-                    logInfo('OCR', '📊', `Datos completos extraídos por Gemini AI:\n${JSON.stringify(datosCompletos, null, 2)}`);
-                    return datosCompletos;
-                } else {
-                    logInfo('OCR', '⚠️', `Gemini AI devolvió objeto pero sin datos críticos (placa, marca, serie, vin). Activando fallback.`);
-                }
-            } catch (e) {
-                logError('OCR', '⚠️', `Error al extraer con Gemini AI (intentando con siguiente clave o fallback)`, e);
-            }
-        }
-    } else {
-        logInfo('OCR', '⚠️', `No hay claves de Gemini configuradas.`);
+const GEMINI_PROMPT_TIVE = `Analiza este documento TIVE (Tarjeta de Identificación Vehicular Electrónica). 
+Extrae TODOS los datos técnicos y registrales.
+Devuelve estrictamente un objeto JSON plano con estas llaves exactas (sin subobjetos ni anidamiento):
+{
+  "codVerif": "",
+  "fechaFinal": "",
+  "zona": "",
+  "sede": "",
+  "partida": "",
+  "dua": "",
+  "titulo": "",
+  "fechaTitulo": "",
+  "categoria": "",
+  "marca": "",
+  "modelo": "",
+  "color": "",
+  "vin": "",
+  "serie": "",
+  "motor": "",
+  "carroceria": "",
+  "potencia": "",
+  "formRod": "",
+  "combustible": "",
+  "asientos": "",
+  "pasajeros": "",
+  "ruedas": "",
+  "ejes": "",
+  "placa": "",
+  "añoFabricacion": "",
+  "cilindros": "",
+  "longitud": "",
+  "altura": "",
+  "ancho": "",
+  "cilindrada": "",
+  "pBruto": "",
+  "pNeto": "",
+  "cargaUtil": "",
+  "version": "",
+  "añoModelo": "",
+  "tituloNo": ""
+}
+
+IMPORTANTE:
+- Usa solo valores encontrados en el documento. No inventes datos.
+- No incluyas unidades de medida (como kg, m, mt, etc.) en los campos numéricos como pesos y dimensiones.
+- El código de verificación es un código numérico (generalmente de 4 a 9 dígitos).
+- La fechaFinal suele ser la fecha y hora que aparece debajo del código de verificación o al final del documento.
+- Asegúrate de extraer la Placa correctamente con su formato (por ejemplo: ABC-123 o 1234-AB).
+- Devuelve SOLO el JSON, sin texto adicional, sin markdown, sin bloques de código.`;
+
+/**
+ * Intenta extraer datos de un PDF TIVE usando una clave y modelo de Gemini específicos.
+ * Devuelve los datos si son válidos, o null si falla.
+ */
+async function _intentarExtraerConModelo(pdfBuffer, sourceName, key, modelName) {
+    const genAI = new GoogleGenerativeAI(key);
+    const model = genAI.getGenerativeModel({ model: modelName });
+
+    const result = await model.generateContent([
+        { inlineData: { data: pdfBuffer.toString("base64"), mimeType: "application/pdf" } },
+        { text: GEMINI_PROMPT_TIVE }
+    ]);
+
+    const responseText = result.response.text().replace(/```json|```/g, "").trim();
+    const parsedData = JSON.parse(responseText);
+    const datosCompletos = completarDatosExtraidosTive(parsedData, sourceName);
+
+    if (datosCompletos.placa || datosCompletos.marca || datosCompletos.serie || datosCompletos.vin) {
+        return datosCompletos;
     }
-    
+    return null;
+}
+
+async function extraerConIA(pdfBuffer, sourceName = '') {
+    logInfo('OCR', '🧾', `Iniciando extracción con Gemini AI (multimodal)`, { keysDisponibles: API_KEYS.length, modelos: GEMINI_MODELS_FALLBACK.join(' → '), bufferSize: `${pdfBuffer.length} bytes`, sourceName: sourceName || '(sin nombre)' });
+
+    if (API_KEYS.length === 0) {
+        logInfo('OCR', '⚠️', `No hay claves de Gemini configuradas.`);
+    } else {
+        // Estrategia: por cada modelo, intentar todas las claves antes de pasar al siguiente modelo.
+        for (const modelName of GEMINI_MODELS_FALLBACK) {
+            logInfo('OCR', '🔑', `Intentando con modelo: ${modelName}`);
+            for (const key of API_KEYS) {
+                try {
+                    const datosCompletos = await _intentarExtraerConModelo(pdfBuffer, sourceName, key, modelName);
+                    if (datosCompletos) {
+                        logInfo('OCR', '✅', `Extracción con Gemini AI exitosa`, {
+                            modelo: modelName,
+                            placa: datosCompletos.placa || '(vacía)',
+                            marca: datosCompletos.marca || '(vacía)',
+                            vin: datosCompletos.vin || '(vacío)',
+                            camposExtraidos: Object.entries(datosCompletos).filter(([, v]) => v).length
+                        });
+                        logInfo('OCR', '📊', `Datos completos extraídos por Gemini AI:\n${JSON.stringify(datosCompletos, null, 2)}`);
+                        return datosCompletos;
+                    } else {
+                        logInfo('OCR', '⚠️', `Gemini AI (${modelName}) devolvió objeto sin datos críticos. Intentando siguiente clave.`);
+                    }
+                } catch (e) {
+                    const is503 = e.message && e.message.includes('503');
+                    const is429 = e.message && e.message.includes('429');
+                    if (is503) {
+                        logError('OCR', '⚠️', `Modelo ${modelName} con sobrecarga (503). Intentando siguiente clave...`, e);
+                    } else if (is429) {
+                        logError('OCR', '⚠️', `Cuota agotada (429) para modelo ${modelName}. Intentando siguiente clave...`, e);
+                    } else {
+                        logError('OCR', '⚠️', `Error con Gemini AI (${modelName}). Intentando siguiente clave...`, e);
+                    }
+                }
+            }
+            logInfo('OCR', '🔄', `Todas las claves fallaron con ${modelName}. Probando siguiente modelo...`);
+        }
+        logInfo('OCR', '⚠️', `Todos los modelos de Gemini fallaron.`);
+    }
+
     logInfo('OCR', '🔄', `Activando fallback a extracción local por texto embebido / OCR (Tesseract)...`);
     return await extraerConOCR(pdfBuffer, sourceName);
 }
 
 async function extraerConIA_Antigua(pdfBuffer) {
-    logInfo('IA-ANTIGUA', '🧠', `Iniciando extracción de documento antiguo con Gemini AI`, { keysDisponibles: API_KEYS.length, bufferSize: `${pdfBuffer.length} bytes`, bufferSizeKB: `${(pdfBuffer.length / 1024).toFixed(1)} KB` });
+    logInfo('IA-ANTIGUA', '🧠', `Iniciando extracción de documento antiguo con Gemini AI`, { keysDisponibles: API_KEYS.length, modelos: GEMINI_MODELS_FALLBACK.join(' → '), bufferSize: `${pdfBuffer.length} bytes`, bufferSizeKB: `${(pdfBuffer.length / 1024).toFixed(1)} KB` });
     if (API_KEYS.length === 0) throw new Error("Llaves API no configuradas.");
 
-    for (const key of API_KEYS) {
-        try {
-            const genAI = new GoogleGenerativeAI(key);
-            const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
-            const prompt = `Analiza este documento de Inscripción de Vehículo de SUNARP y extrae TODOS los datos técnicos y registrales.
-            Devuelve estrictamente un objeto JSON con estos campos:
-            {
-              "controlAnverso": "", "zona": "", "sede": "", "reparticion": "", "placa": "", "titulo": "", "partida": "",
-              "apPaterno": "", "apPaterno2": "", "apMaterno": "", "apMaterno2": "", "nombres": "", "nombres2": "",
-              "domicilio": "", "fechaPropiedad": "", "fechaInferior": "", "fechaAsiento": "",
-              "controlReverso": "", "clase": "", "marca": "", "añoFab": "", "modelo": "", "combustible": "",
-              "carroceria": "", "ejes": "", "color": "", "cilindros": "", "motor": "", "ruedas": "", "serie": "",
-              "pasajeros": "", "asientos": "", "pesoSeco": "", "pesoBruto": "", "longitud": "", "altura": "", "ancho": "", "cargaUtil": ""
-            }
-            IMPORTANTE: 
-            - El Título Nro se mapea a "titulo". 
-            - La Partida se mapea a "partida".
-            - Busca específicamente la "Fecha Asiento" (suele estar al final) y ponla en "fechaAsiento".
-            - Si hay dos propietarios (Persona Natural), sepáralos. 
-            - Extrae Zona y Sede del recibo o encabezado si es posible.
-            - No incluyas unidades de medida (tn, mt) en los campos de peso o dimensiones.`;
+    const promptAntigua = `Analiza este documento de Inscripción de Vehículo de SUNARP y extrae TODOS los datos técnicos y registrales.
+Devuelve estrictamente un objeto JSON plano con estos campos (sin subobjetos ni anidamiento):
+{
+  "controlAnverso": "", "zona": "", "sede": "", "reparticion": "", "placa": "", "titulo": "", "partida": "",
+  "apPaterno": "", "apPaterno2": "", "apMaterno": "", "apMaterno2": "", "nombres": "", "nombres2": "",
+  "domicilio": "", "fechaPropiedad": "", "fechaInferior": "", "fechaAsiento": "",
+  "controlReverso": "", "clase": "", "marca": "", "añoFab": "", "modelo": "", "combustible": "",
+  "carroceria": "", "ejes": "", "color": "", "cilindros": "", "motor": "", "ruedas": "", "serie": "",
+  "pasajeros": "", "asientos": "", "pesoSeco": "", "pesoBruto": "", "longitud": "", "altura": "", "ancho": "", "cargaUtil": ""
+}
+IMPORTANTE:
+- El Título Nro se mapea a "titulo".
+- La Partida se mapea a "partida".
+- Busca específicamente la "Fecha Asiento" (suele estar al final) y ponla en "fechaAsiento".
+- Si hay dos propietarios (Persona Natural), sepáralos.
+- Extrae Zona y Sede del recibo o encabezado si es posible.
+- No incluyas unidades de medida (tn, mt) en los campos de peso o dimensiones.
+- Devuelve SOLO el JSON, sin texto adicional, sin markdown, sin bloques de código.`;
 
-            const result = await model.generateContent([{ inlineData: { data: pdfBuffer.toString("base64"), mimeType: "application/pdf" } }, { text: prompt }]);
-            const rawText = result.response.text();
-            const parsedData = JSON.parse(rawText.replace(/```json|```/g, "").trim());
-            logInfo('IA-ANTIGUA', '✅', `Extracción exitosa con Gemini AI`, {
-                placa: parsedData.placa || '(vacía)',
-                clase: parsedData.clase || '(vacía)',
-                marca: parsedData.marca || '(vacía)',
-                motor: parsedData.motor || '(vacío)',
-                fechaAsiento: parsedData.fechaAsiento || '(vacía)',
-                camposExtraidos: Object.entries(parsedData).filter(([, v]) => v).length
-            });
-            logInfo('IA-ANTIGUA', '📊', `Datos completos extraídos por IA:\n${JSON.stringify(parsedData, null, 2)}`);
-            return parsedData;
-        } catch (e) { logError('IA-ANTIGUA', '⚠️', `Error con key de Gemini (intentando siguiente)`, e); }
+    for (const modelName of GEMINI_MODELS_FALLBACK) {
+        logInfo('IA-ANTIGUA', '🔑', `Intentando con modelo: ${modelName}`);
+        for (const key of API_KEYS) {
+            try {
+                const genAI = new GoogleGenerativeAI(key);
+                const model = genAI.getGenerativeModel({ model: modelName });
+                const result = await model.generateContent([{ inlineData: { data: pdfBuffer.toString("base64"), mimeType: "application/pdf" } }, { text: promptAntigua }]);
+                const rawText = result.response.text();
+                const parsedData = JSON.parse(rawText.replace(/```json|```/g, "").trim());
+                if (parsedData.placa || parsedData.marca || parsedData.motor || parsedData.serie) {
+                    logInfo('IA-ANTIGUA', '✅', `Extracción exitosa con Gemini AI (${modelName})`, {
+                        placa: parsedData.placa || '(vacía)',
+                        clase: parsedData.clase || '(vacía)',
+                        marca: parsedData.marca || '(vacía)',
+                        motor: parsedData.motor || '(vacío)',
+                        fechaAsiento: parsedData.fechaAsiento || '(vacía)',
+                        camposExtraidos: Object.entries(parsedData).filter(([, v]) => v).length
+                    });
+                    logInfo('IA-ANTIGUA', '📊', `Datos completos extraídos por IA:\n${JSON.stringify(parsedData, null, 2)}`);
+                    return parsedData;
+                } else {
+                    logInfo('IA-ANTIGUA', '⚠️', `Modelo ${modelName} devolvió JSON sin datos críticos. Intentando siguiente clave.`);
+                }
+            } catch (e) {
+                const is503 = e.message && e.message.includes('503');
+                const is429 = e.message && e.message.includes('429');
+                logError('IA-ANTIGUA', '⚠️', `Error con modelo ${modelName}${is503 ? ' (503 sobrecarga)' : is429 ? ' (429 cuota)' : ''} (intentando siguiente)`, e);
+            }
+        }
+        logInfo('IA-ANTIGUA', '🔄', `Todas las claves fallaron con ${modelName}. Probando siguiente modelo...`);
     }
-    throw new Error("No se pudo extraer información del documento antiguo.");
+
+    throw new Error("No se pudo extraer información del documento antiguo con ningún modelo de Gemini.");
 }
 
 module.exports = {
