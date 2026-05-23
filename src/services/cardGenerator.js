@@ -39,7 +39,7 @@ const C128_PATTERNS = { '0': '11011001100', '1': '11001101100', '2': '1100110011
 const TIVE_COMPLETO_FIELDS = [
     { key: 'codigo_de_verificacion', dataKey: 'codVerif', x: 231, y: 615, dx: -8.3, dy: -10.3, size: 8, bold: false },
     { key: 'fecha', dataKey: 'fechaFinal', x: 180.8, y: 579.5, dx: -13, dy: 1, size: 8, bold: false },
-    { key: 'zona_registral', dataKey: 'zonaLimpia', x: 144.0, y: 482.0, dx: -16, dy: 6, size: 9, bold: true },
+    { key: 'zona_registral', dataKey: 'zonaLimpia', x: 144.0, y: 482.0, dx: -16, dy: 8, size: 9, bold: true },
     { key: 'sede_registral', dataKey: 'sedeLimpia', x: 141.0, y: 467.0, dx: -22.5, dy: 10.5, size: 9, bold: true },
     { key: 'parda_registral', dataKey: 'partida', x: 122.9, y: 452.9, dx: -6, dy: -5.5, size: 8, bold: false },
     { key: 'duadam', dataKey: 'dua', x: 103.1, y: 438, dx: -10.5, dy: -7, size: 8, bold: false },
@@ -51,7 +51,7 @@ const TIVE_COMPLETO_FIELDS = [
     { key: 'color', dataKey: 'color', x: 88.4, y: 233.2, dx: -12, dy: -6, size: 8, bold: false },
     { key: 'numero_de_vin', dataKey: 'vin', x: 120.5, y: 220.2, dx: -8.5, dy: -7, size: 8, bold: false },
     { key: 'numero_de_serie', dataKey: 'serie', x: 128.3, y: 206.2, dx: -11, dy: -7, size: 8, bold: false },
-    { key: 'numero_motor', dataKey: 'motor', x: 118, y: 191.9, dx: -11, dy: -7, size: 8, bold: false },
+    { key: 'numero_motor', dataKey: 'motor', x: 118, y: 191.9, dx: -9, dy: -7, size: 8, bold: false },
     { key: 'carroceria', dataKey: 'carroceria', x: 104.5, y: 178.6, dx: -8.5, dy: -7, size: 8, bold: false },
     { key: 'potencia', dataKey: 'potencia', x: 99.6, y: 164, dx: -10, dy: -7, size: 8, bold: false },
     { key: 'form_rod', dataKey: 'formRod', x: 107.6, y: 150.7, dx: -10, dy: -6, size: 8, bold: false },
