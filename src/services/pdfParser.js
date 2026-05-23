@@ -249,7 +249,7 @@ function normalizarValorNumerico(valor = '') {
 }
 
 function buscarPlacaEnTexto(texto = '') {
-    const cleanText = texto.toUpperCase();
+    const cleanText = texto.toUpperCase().replace(/[–—]/g, '-');
     
     const regexesEstandar = [
         /\b([A-Z]{3}-\d{3})\b/g,
