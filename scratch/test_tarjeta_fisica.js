@@ -126,37 +126,37 @@ const ANV = {
 
     //         imprime →  "III"
     //         campo   →  Zona Registral No.  (texto gris pequeño)
-    zona:        { x:  58,   y:  69, size: 6  },
+    zona:        { x:  58,   y:  66.5, size: 6  },
 
     //         imprime →  "TARAPOTO"
     //         campo   →  Oficina Registral  (texto gris pequeño)
-    sede:        { x:  128,   y:  69, size: 6  },
+    sede:        { x:  128,   y:  67, size: 6  },
 
     //         imprime →  "60687645"
     //         campo   →  Partida Registral
-    partida:     { x:  128,   y:  81,   size: 5.5  },
+    partida:     { x:  128,   y:  79,   size: 5.5  },
 
     //         imprime →  "118 2018 10 114792 490"
     //         campo   →  DUA/DAM
-    dua:         { x:  35,   y:  98,   size: 5.5 },
+    dua:         { x:  38,   y:  96,   size: 5.5 },
 
     //         imprime →  "2019-00094796"
     //         campo   →  Título
-    titulo:      { x:  35, y: 111,   size: 5.5  },
+    titulo:      { x:  38, y: 109.5,   size: 5.5  },
 
     //         imprime →  "04/05/2018"
     //         campo   →  Fecha del Título
-    fechaTitulo: { x:  128,   y: 111,   size: 5.5  },
+    fechaTitulo: { x:  128,   y: 109,   size: 5.5  },
 
     //         imprime →  "4422-CS"
     //         campo   →  Placa No.  (texto GRANDE)
-    placa:       { x: 38,   y: 81,   size: 7.5 },
+    placa:       { x: 38,   y: 80,   size: 7.5 },
 
     //         imprime →  código de barras de la placa
     //         campo   →  rectángulo inferior izquierdo
     //         x/y     →  esquina superior izquierda del rectángulo
     //         w/h     →  ancho y alto en puntos
-    barcode: { x: 15, y: 163.5, w: 68, h: 17 },
+    barcode: { x: 16.5, y: 161.5, w: 68, h: 17 },
 };
 
 // =================================================================
