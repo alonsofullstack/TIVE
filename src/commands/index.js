@@ -74,16 +74,6 @@ module.exports = function registerCommands(bot, state, deps) {
                 bot.sendMessage(chatId, `❌ Error: ${e.message}`);
             }
         } else if (data === "gen_tarjeta_fisica_pvc") {
-            userState.set(chatId, "awaiting_qr_fisica_pvc");
-            bot.editMessageText(`💳 *Configuración QR para Tarjeta Física PVC*\nEscribe el link personalizado o elige el oficial:`, {
-                chat_id: chatId,
-                message_id: messageId,
-                parse_mode: 'Markdown',
-                reply_markup: {
-                    inline_keyboard: [[{ text: "🏢 Usar Link Oficial SUNARP", callback_data: "use_official_fisica_pvc" }]]
-                }
-            }).catch(handleEditError);
-        } else if (data === "use_official_fisica_pvc") {
             bot.editMessageText(`💳 *Procesando datos localmente...*`, { chat_id: chatId, message_id: messageId, parse_mode: 'Markdown' }).catch(handleEditError);
             try {
                 const datos = await extraerConIA(buffer, userPdfNames.get(chatId));
@@ -386,18 +376,6 @@ module.exports = function registerCommands(bot, state, deps) {
                 await generarTIVE(chatId, datos, customLink, buffer);
             } catch (e) {
                 logError('BOT', '❌', 'Error en flujo custom', e);
-                bot.sendMessage(chatId, "❌ Error: " + escapeMarkdown(e.message), { parse_mode: 'Markdown' });
-            }
-        } else if (state === "awaiting_qr_fisica_pvc" && msg.text && !msg.text.startsWith('/')) {
-            const customLink = msg.text;
-            userState.delete(chatId);
-            bot.sendMessage(chatId, `💳 Procesando datos localmente...`);
-            try {
-                const datos = await extraerConIA(buffer, userPdfNames.get(chatId));
-                if (!datos.placa) bot.sendMessage(chatId, "⚠️ Advertencia: No se detectó placa.");
-                await generarTIVE(chatId, datos, customLink, buffer, { anv: 'TARJETA FISICA ADELANTE.pdf', rev: 'TARJETA FISICA ATRAS.pdf' });
-            } catch (e) {
-                logError('BOT', '❌', 'Error en flujo custom fisica pvc', e);
                 bot.sendMessage(chatId, "❌ Error: " + escapeMarkdown(e.message), { parse_mode: 'Markdown' });
             }
         } else if (state === "awaiting_plate_for_qr") {
