@@ -4,12 +4,14 @@ const { logInfo, logError } = require('../utils/logger');
 module.exports = function registerCommands(bot, state, deps) {
     const {
         userPdfs, userPdfNames, userState, userAntiguaData,
-        userTiveCompletoData, userTiveCompletarData, userFirmaPendienteData
+        userTiveCompletoData, userTiveCompletarData, userFirmaPendienteData,
+        userFisicaPvcCompletarData
     } = state;
     
     const {
         isAuthorized, extraerConIA, generarTIVE, extraerTiveCompletoConLibreria,
         iniciarCapturaFaltantesTiveCompleto, iniciarCapturaFaltantesTiveCompletar,
+        iniciarCapturaFaltantesFisicaPvcCompletar,
         finalizarInsercionQR, extraerConIA_Antigua, generarTarjetaAntigua,
         guardarFirmaPendienteDesdeMensaje, componerTituloCompletar, generarTiveCompleto,
         fmtPlaca, escapeMarkdown
@@ -72,10 +74,20 @@ module.exports = function registerCommands(bot, state, deps) {
                 bot.sendMessage(chatId, `❌ Error: ${e.message}`);
             }
         } else if (data === "gen_tarjeta_fisica_pvc") {
-            bot.editMessageText(`💳 *Extrayendo datos para TARJETA FISICA PVC...*`, { chat_id: chatId, message_id: messageId, parse_mode: 'Markdown' }).catch(handleEditError);
+            userState.set(chatId, "awaiting_qr_fisica_pvc");
+            bot.editMessageText(`💳 *Configuración QR para Tarjeta Física PVC*\nEscribe el link personalizado o elige el oficial:`, {
+                chat_id: chatId,
+                message_id: messageId,
+                parse_mode: 'Markdown',
+                reply_markup: {
+                    inline_keyboard: [[{ text: "🏢 Usar Link Oficial SUNARP", callback_data: "use_official_fisica_pvc" }]]
+                }
+            }).catch(handleEditError);
+        } else if (data === "use_official_fisica_pvc") {
+            bot.editMessageText(`💳 *Procesando datos localmente...*`, { chat_id: chatId, message_id: messageId, parse_mode: 'Markdown' }).catch(handleEditError);
             try {
-                const datos = await extraerTiveCompletoConLibreria(buffer);
-                await iniciarCapturaFaltantesTiveCompleto(chatId, datos, buffer);
+                const datos = await extraerConIA(buffer, userPdfNames.get(chatId));
+                await generarTIVE(chatId, datos, null, buffer);
             } catch (e) {
                 bot.sendMessage(chatId, `❌ Error: ${e.message}`);
             }
@@ -83,7 +95,7 @@ module.exports = function registerCommands(bot, state, deps) {
             bot.editMessageText(`💳 *Extrayendo datos para TARJETA FISICA PVC PARA COMPLETAR...*`, { chat_id: chatId, message_id: messageId, parse_mode: 'Markdown' }).catch(handleEditError);
             try {
                 const datos = await extraerTiveCompletoConLibreria(buffer);
-                await iniciarCapturaFaltantesTiveCompletar(chatId, datos, buffer);
+                await iniciarCapturaFaltantesFisicaPvcCompletar(chatId, datos, buffer);
             } catch (e) {
                 bot.sendMessage(chatId, `❌ Error: ${e.message}`);
             }

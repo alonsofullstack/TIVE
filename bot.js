@@ -38,6 +38,7 @@ const deps = {
     extraerTiveCompletoConLibreria: pdfParser.extraerTiveCompletoConLibreria,
     iniciarCapturaFaltantesTiveCompleto: cardGenerator.iniciarCapturaFaltantesTiveCompleto,
     iniciarCapturaFaltantesTiveCompletar: cardGenerator.iniciarCapturaFaltantesTiveCompletar,
+    iniciarCapturaFaltantesFisicaPvcCompletar: cardGenerator.iniciarCapturaFaltantesFisicaPvcCompletar,
     finalizarInsercionQR: cardGenerator.finalizarInsercionQR,
     extraerConIA_Antigua: ocrService.extraerConIA_Antigua,
     generarTarjetaAntigua: cardGenerator.generarTarjetaAntigua,

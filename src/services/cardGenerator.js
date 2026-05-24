@@ -31,7 +31,7 @@ const {
 
 const state = require('../state');
 const {
-    userState, userTiveCompletoData, userTiveCompletarData
+    userState, userTiveCompletoData, userTiveCompletarData, userFisicaPvcCompletarData
 } = state;
 
 const C128_PATTERNS = { '0': '11011001100', '1': '11001101100', '2': '11001100110', '3': '10001101100', '4': '10001100110', '5': '10110001100', '6': '10110000110', '7': '10110110000', '8': '10110011011', '9': '11001011000', 'A': '11000101100', 'B': '11000100110', 'C': '11011000100', 'D': '11011000010', 'E': '11011011000', 'F': '11011001101', 'G': '11011011011', 'H': '11001101101', 'I': '11001101111', 'J': '11011110110', 'K': '11011111011', 'L': '11110110110', 'M': '11110110111', 'N': '11110111101', 'O': '11110111111', 'P': '11001101101', 'Q': '11001101111', 'R': '11011110110', 'S': '11011111011', 'T': '11110110110', 'U': '11110110111', 'V': '11110111101', 'W': '11110111111', 'X': '11001101101', 'Y': '11001101111', 'Z': '11011110110', '-': '11000111010', '.': '11011011110', ' ': '11011011011', ':': '11011111010' };
@@ -755,12 +755,43 @@ module.exports = function (bot) {
         }
     }
 
+    async function iniciarCapturaFaltantesFisicaPvcCompletar(chatId, datos, sourceBuffer = null) {
+        const prepared = prepararDatosTiveCompleto(datos);
+        const sourceHash = generarHashVerificacion(sourceBuffer, prepared);
+        const missingFields = obtenerCamposFaltantesTiveCompletar(prepared);
+
+        if (missingFields.length === 0) {
+            userFisicaPvcCompletarData.delete(chatId);
+            userState.delete(chatId);
+            await generarTIVE(chatId, prepared, null, sourceBuffer);
+            return;
+        }
+
+        userFisicaPvcCompletarData.set(chatId, { datos: prepared, missingFields, index: 0, sourceBuffer });
+        userState.set(chatId, 'awaiting_fisica_pvc_completar_field');
+        const current = missingFields[0];
+
+        if (current.key === 'placa' && placaTieneValorDetectado(prepared.placaOriginal || prepared.placa)) {
+            const valorDetectado = fmtPlaca(safe(prepared.placaOriginal || prepared.placa));
+            await bot.sendMessage(chatId,
+                `🚗 *PLACA detectada:* \`${valorDetectado}\`\n\n` +
+                `¿Es correcta? Responde *sí* (o /ok) para confirmarla, o escribe la placa correcta.`,
+                { parse_mode: 'Markdown' }
+            );
+        } else {
+            await bot.sendMessage(chatId, `✍️ Falta el dato *${current.label}*.\nEnvíalo ahora para continuar con *TARJETA FISICA PVC PARA COMPLETAR*.`, {
+                parse_mode: 'Markdown'
+            });
+        }
+    }
+
     return {
         generarTarjetaAntigua,
         generarTIVE,
         generarTiveCompleto,
         finalizarInsercionQR,
         iniciarCapturaFaltantesTiveCompleto,
-        iniciarCapturaFaltantesTiveCompletar
+        iniciarCapturaFaltantesTiveCompletar,
+        iniciarCapturaFaltantesFisicaPvcCompletar
     };
 };
