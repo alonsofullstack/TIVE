@@ -5,8 +5,10 @@ const userAntiguaData = new Map();
 const userTiveCompletoData = new Map();
 const userTiveCompletarData = new Map();
 const userFirmaPendienteData = new Map();
+const userFisicaPvcCompletarData = new Map();
 
 module.exports = {
     userPdfs, userPdfNames, userState, userAntiguaData,
-    userTiveCompletoData, userTiveCompletarData, userFirmaPendienteData
+    userTiveCompletoData, userTiveCompletarData, userFirmaPendienteData,
+    userFisicaPvcCompletarData
 };

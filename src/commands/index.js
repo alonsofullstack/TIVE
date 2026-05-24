@@ -71,6 +71,22 @@ module.exports = function registerCommands(bot, state, deps) {
             } catch (e) {
                 bot.sendMessage(chatId, `❌ Error: ${e.message}`);
             }
+        } else if (data === "gen_tarjeta_fisica_pvc") {
+            bot.editMessageText(`💳 *Extrayendo datos para TARJETA FISICA PVC...*`, { chat_id: chatId, message_id: messageId, parse_mode: 'Markdown' }).catch(handleEditError);
+            try {
+                const datos = await extraerTiveCompletoConLibreria(buffer);
+                await iniciarCapturaFaltantesTiveCompleto(chatId, datos, buffer);
+            } catch (e) {
+                bot.sendMessage(chatId, `❌ Error: ${e.message}`);
+            }
+        } else if (data === "gen_tarjeta_fisica_pvc_completar") {
+            bot.editMessageText(`💳 *Extrayendo datos para TARJETA FISICA PVC PARA COMPLETAR...*`, { chat_id: chatId, message_id: messageId, parse_mode: 'Markdown' }).catch(handleEditError);
+            try {
+                const datos = await extraerTiveCompletoConLibreria(buffer);
+                await iniciarCapturaFaltantesTiveCompletar(chatId, datos, buffer);
+            } catch (e) {
+                bot.sendMessage(chatId, `❌ Error: ${e.message}`);
+            }
         } else if (data === "insert_qr_only") {
             const hash = crypto.createHash('sha256').update(buffer).digest('hex').toUpperCase();
             await finalizarInsercionQR(chatId, buffer, "CERTIFICADO", hash, messageId);
@@ -153,6 +169,8 @@ module.exports = function registerCommands(bot, state, deps) {
                         [{ text: "🚀 Generar Fotos TIVE PVC", callback_data: "ask_qr" }],
                         [{ text: "🧾 TIVE COMPLETO", callback_data: "gen_tive_completo" }],
                         [{ text: "🧾 TIVE PARA COMPLETAR", callback_data: "gen_tive_completar" }],
+                        [{ text: "💳 TARJETA FISICA PVC", callback_data: "gen_tarjeta_fisica_pvc" }],
+                        [{ text: "💳 TARJETA FISICA PVC PARA COMPLETAR", callback_data: "gen_tarjeta_fisica_pvc_completar" }],
                         [{ text: "📜 Generar Tarjeta Antigua", callback_data: "gen_antigua" }],
                         [{ text: "🔐 Insertar QR en PDF Original", callback_data: "insert_qr_only" }]
                     ]

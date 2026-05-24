@@ -34,6 +34,7 @@ const deps = {
     isAuthorized,
     extraerConIA: ocrService.extraerConIA,
     generarTIVE: cardGenerator.generarTIVE,
+    generarTIVE_FisicaPvc: cardGenerator.generarTIVE,
     extraerTiveCompletoConLibreria: pdfParser.extraerTiveCompletoConLibreria,
     iniciarCapturaFaltantesTiveCompleto: cardGenerator.iniciarCapturaFaltantesTiveCompleto,
     iniciarCapturaFaltantesTiveCompletar: cardGenerator.iniciarCapturaFaltantesTiveCompletar,
