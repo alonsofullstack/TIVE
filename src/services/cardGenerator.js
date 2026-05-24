@@ -341,7 +341,7 @@ module.exports = function (bot) {
         await bot.sendDocument(chatId, Buffer.from(pdfBytes), { caption: "✅ Tarjeta Antigua Generada con Éxito" }, { filename: fileName });
     }
 
-    async function generarTIVE(chatId, datos, qrCustomLink = null, originalBuffer = null, templates = { anv: 'adelantexd.pdf', rev: 'atrasxd.pdf' }) {
+    async function generarTIVE(chatId, datos, qrCustomLink = null, originalBuffer = null, templates = { anv: 'adelantexd.pdf', rev: 'atrasxd.pdf' }, options = {}) {
         if (!safe(datos.placa)) {
             throw new Error("No se detectó la placa. El OCR no pudo leerla; envía un PDF más nítido o usa el nombre del archivo con la placa, por ejemplo TIVE_7061XS.pdf.");
         }
@@ -396,8 +396,10 @@ module.exports = function (bot) {
 
         const DOMAIN_URL = process.env.DOMAIN_URL || 'http://localhost:3000';
         const finalQR = qrCustomLink || `${DOMAIN_URL}/servicio/verCertificado/Tive/TIVE-${safe(datos.placa).toUpperCase()}`;
-        const qrImg = await pdfAnt.embedPng(await QRCode.toDataURL(finalQR, { margin: 1 }));
-        pageA.drawImage(qrImg, { x: 100, y: hA - 170, width: 52, height: 52 });
+        if (!options.noQR) {
+            const qrImg = await pdfAnt.embedPng(await QRCode.toDataURL(finalQR, { margin: 1 }));
+            pageA.drawImage(qrImg, { x: 100, y: hA - 170, width: 52, height: 52 });
+        }
 
         const pdfRev = await PDFDocument.load(fs.readFileSync(getTemplatePath(templates.rev)));
         pdfRev.registerFontkit(fontkit);
@@ -763,7 +765,7 @@ module.exports = function (bot) {
         if (missingFields.length === 0) {
             userFisicaPvcCompletarData.delete(chatId);
             userState.delete(chatId);
-            await generarTIVE(chatId, prepared, null, sourceBuffer, { anv: 'TARJETA FISICA ADELANTE.pdf', rev: 'TARJETA FISICA ATRAS.pdf' });
+            await generarTIVE(chatId, prepared, null, sourceBuffer, { anv: 'TARJETA FISICA ADELANTE.pdf', rev: 'TARJETA FISICA ATRAS.pdf' }, { noQR: true });
             return;
         }
 
