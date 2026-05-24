@@ -377,16 +377,16 @@ module.exports = function (bot) {
         if (options.noQR) {
             // ── TARJETA FÍSICA PVC — posiciones calibradas ──────────────
             const pA = (val, x, y, size) => { if (safe(val)) pageA.drawText(safe(val), { x, y: hA - y, size, font: fontBAnt, color: negro }); };
-            pA(zonaLimpia,          58,    69,    6  );  // Zona Registral No.
-            pA(sedeLimpia,         128,    69,    6  );  // Oficina Registral
-            pA(datos.placa,         38,    81,    7.5);  // Placa No. (grande)
-            pA(datos.partida,      128,    81,    5.5);  // Partida Registral
-            pA(datos.dua,           35,    98,    5.5);  // DUA/DAM
-            pA(datos.titulo,        35,   111,    5.5);  // Título
-            pA(datos.fechaTitulo,  128,   111,    5.5);  // Fecha del Título
+            pA(zonaLimpia,          58,    66.5,  6  );  // Zona Registral No.
+            pA(sedeLimpia,         128,    67,    6  );  // Oficina Registral
+            pA(datos.placa,         38,    80,    7.5);  // Placa No. (grande)
+            pA(datos.partida,      128,    79,    5.5);  // Partida Registral
+            pA(datos.dua,           38,    96,    5.5);  // DUA/DAM
+            pA(datos.titulo,        38,   109.5,  5.5);  // Título
+            pA(datos.fechaTitulo,  128,   109,    5.5);  // Fecha del Título
             // Código de barras
             const barImgAnv = await bwipjs.toBuffer({ bcid: 'code128', text: safe(datos.placa), scale: 4, height: 15, includetext: false });
-            pageA.drawImage(await pdfAnt.embedPng(barImgAnv), { x: 15, y: hA - 163.5, width: 68, height: 17 });
+            pageA.drawImage(await pdfAnt.embedPng(barImgAnv), { x: 16.5, y: hA - 161.5, width: 68, height: 17 });
         } else {
             // ── TIVE PVC NORMAL — posiciones originales ─────────────────
             pageA.drawText(zonaLimpia,           { x: 58,   y: hA - 55.5,  size: 5.2, font: fontBAnt, color: gris  });
