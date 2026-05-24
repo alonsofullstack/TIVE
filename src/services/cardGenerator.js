@@ -341,7 +341,7 @@ module.exports = function (bot) {
         await bot.sendDocument(chatId, Buffer.from(pdfBytes), { caption: "✅ Tarjeta Antigua Generada con Éxito" }, { filename: fileName });
     }
 
-    async function generarTIVE(chatId, datos, qrCustomLink = null, originalBuffer = null) {
+    async function generarTIVE(chatId, datos, qrCustomLink = null, originalBuffer = null, templates = { anv: 'adelantexd.pdf', rev: 'atrasxd.pdf' }) {
         if (!safe(datos.placa)) {
             throw new Error("No se detectó la placa. El OCR no pudo leerla; envía un PDF más nítido o usa el nombre del archivo con la placa, por ejemplo TIVE_7061XS.pdf.");
         }
@@ -368,7 +368,7 @@ module.exports = function (bot) {
         const gris = rgb(0.6, 0.6, 0.6);
         const negro = rgb(0, 0, 0);
 
-        const pdfAnt = await PDFDocument.load(fs.readFileSync(getTemplatePath('adelantexd.pdf')));
+        const pdfAnt = await PDFDocument.load(fs.readFileSync(getTemplatePath(templates.anv)));
         pdfAnt.registerFontkit(fontkit);
         const fontBAnt = await pdfAnt.embedFont(FONT_BYTES);
         const pageA = pdfAnt.getPages()[0];
@@ -399,7 +399,7 @@ module.exports = function (bot) {
         const qrImg = await pdfAnt.embedPng(await QRCode.toDataURL(finalQR, { margin: 1 }));
         pageA.drawImage(qrImg, { x: 100, y: hA - 170, width: 52, height: 52 });
 
-        const pdfRev = await PDFDocument.load(fs.readFileSync(getTemplatePath('atrasxd.pdf')));
+        const pdfRev = await PDFDocument.load(fs.readFileSync(getTemplatePath(templates.rev)));
         pdfRev.registerFontkit(fontkit);
         const fontBRev = await pdfRev.embedFont(FONT_BYTES);
         const pageR = pdfRev.getPages()[0];
@@ -763,7 +763,7 @@ module.exports = function (bot) {
         if (missingFields.length === 0) {
             userFisicaPvcCompletarData.delete(chatId);
             userState.delete(chatId);
-            await generarTIVE(chatId, prepared, null, sourceBuffer);
+            await generarTIVE(chatId, prepared, null, sourceBuffer, { anv: 'TARJETA FISICA ADELANTE.pdf', rev: 'TARJETA FISICA ATRAS.pdf' });
             return;
         }
 

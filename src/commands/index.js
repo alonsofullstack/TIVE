@@ -87,7 +87,7 @@ module.exports = function registerCommands(bot, state, deps) {
             bot.editMessageText(`💳 *Procesando datos localmente...*`, { chat_id: chatId, message_id: messageId, parse_mode: 'Markdown' }).catch(handleEditError);
             try {
                 const datos = await extraerConIA(buffer, userPdfNames.get(chatId));
-                await generarTIVE(chatId, datos, null, buffer);
+                await generarTIVE(chatId, datos, null, buffer, { anv: 'TARJETA FISICA ADELANTE.pdf', rev: 'TARJETA FISICA ATRAS.pdf' });
             } catch (e) {
                 bot.sendMessage(chatId, `❌ Error: ${e.message}`);
             }
@@ -323,7 +323,7 @@ module.exports = function registerCommands(bot, state, deps) {
                 
                 await bot.sendMessage(chatId, "✅ Datos faltantes completados. Generando *TARJETA FISICA PVC PARA COMPLETAR*...", { parse_mode: 'Markdown' });
                 try {
-                    await generarTIVE(chatId, pending.datos, null, pending.sourceBuffer);
+                    await generarTIVE(chatId, pending.datos, null, pending.sourceBuffer, { anv: 'TARJETA FISICA ADELANTE.pdf', rev: 'TARJETA FISICA ATRAS.pdf' });
                 } catch (e) {
                     logError('BOT', '❌', 'Error generando TARJETA FISICA PVC PARA COMPLETAR', e);
                     bot.sendMessage(chatId, "❌ Error: " + e.message);
@@ -395,7 +395,7 @@ module.exports = function registerCommands(bot, state, deps) {
             try {
                 const datos = await extraerConIA(buffer, userPdfNames.get(chatId));
                 if (!datos.placa) bot.sendMessage(chatId, "⚠️ Advertencia: No se detectó placa.");
-                await generarTIVE(chatId, datos, customLink, buffer);
+                await generarTIVE(chatId, datos, customLink, buffer, { anv: 'TARJETA FISICA ADELANTE.pdf', rev: 'TARJETA FISICA ATRAS.pdf' });
             } catch (e) {
                 logError('BOT', '❌', 'Error en flujo custom fisica pvc', e);
                 bot.sendMessage(chatId, "❌ Error: " + escapeMarkdown(e.message), { parse_mode: 'Markdown' });
