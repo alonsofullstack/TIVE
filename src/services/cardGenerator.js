@@ -492,11 +492,18 @@ module.exports = function (bot) {
                             .png()
                             .toBuffer();
 
-                        const sigImg = await pdfRev.embedPng(sigCrop);
-                        pageR.drawImage(sigImg, { x: 184, y: 4, width: 55, height: 24 });
+                        if (options.noQR) {
+                            // Tarjeta física → firma en el ANVERSO
+                            const sigImg = await pdfAnt.embedPng(sigCrop);
+                            pageA.drawImage(sigImg, { x: 184, y: 4, width: 55, height: 24 });
+                        } else {
+                            // TIVE normal → firma en el REVERSO
+                            const sigImg = await pdfRev.embedPng(sigCrop);
+                            pageR.drawImage(sigImg, { x: 184, y: 4, width: 55, height: 24 });
+                        }
                     }
                 }
-            } catch (e) { logError('TIVE', '⚠️', `Error recortando firma del PDF original para incrustar en reverso`, e); }
+            } catch (e) { logError('TIVE', '⚠️', `Error recortando firma del PDF original`, e); }
         }
 
         const bufA = await pdfAnt.save();
