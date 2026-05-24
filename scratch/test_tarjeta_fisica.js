@@ -126,37 +126,37 @@ const ANV = {
 
     //         imprime →  "III"
     //         campo   →  Zona Registral No.  (texto gris pequeño)
-    zona:        { x:  58,   y:  66.5, size: 6  },
+    zona:        { x:  68,   y:  57.5, size: 6  },
 
     //         imprime →  "TARAPOTO"
     //         campo   →  Oficina Registral  (texto gris pequeño)
-    sede:        { x:  128,   y:  67, size: 6  },
+    sede:        { x:  136,   y:  57.5, size: 6  },
 
     //         imprime →  "60687645"
     //         campo   →  Partida Registral
-    partida:     { x:  128,   y:  79,   size: 5.5  },
+    partida:     { x:  136,   y:  70.5,   size: 5.5  },
 
     //         imprime →  "118 2018 10 114792 490"
     //         campo   →  DUA/DAM
-    dua:         { x:  38,   y:  96,   size: 5.5 },
+    dua:         { x:  45,   y:  87.5,   size: 5.5 },
 
     //         imprime →  "2019-00094796"
     //         campo   →  Título
-    titulo:      { x:  38, y: 109.5,   size: 5.5  },
+    titulo:      { x:  38, y: 100.8,   size: 5.5  },
 
     //         imprime →  "04/05/2018"
     //         campo   →  Fecha del Título
-    fechaTitulo: { x:  128,   y: 109,   size: 5.5  },
+    fechaTitulo: { x:  132,   y: 100.5,   size: 5.5  },
 
     //         imprime →  "4422-CS"
     //         campo   →  Placa No.  (texto GRANDE)
-    placa:       { x: 38,   y: 80,   size: 7.5 },
+    placa:       { x: 45,   y: 70.5,   size: 7.5 },
 
     //         imprime →  código de barras de la placa
     //         campo   →  rectángulo inferior izquierdo
     //         x/y     →  esquina superior izquierda del rectángulo
     //         w/h     →  ancho y alto en puntos
-    barcode: { x: 16.5, y: 161.5, w: 68, h: 17 },
+    barcode: { x: 25.5, y: 152.5, w: 68, h: 17 },
 };
 
 // =================================================================
@@ -205,107 +205,107 @@ const REV = {
 
     //         imprime →  "L3"
     //         campo   →  Categoría
-    categoria:   { x:  32,   y:  52, size: 4.5 },
+    categoria:   { x:  43,   y:  41, size: 4.5 },
 
     //         imprime →  "YAMAHA"
     //         campo   →  Marca
-    marca:       { x:  25,   y:  60, size: 4.5 },
+    marca:       { x:  36.5,   y:  49.5, size: 4.5 },
 
     //         imprime →  "XTZ 125"
     //         campo   →  Modelo
-    modelo:      { x:  28,   y:  69, size: 4.5 },
+    modelo:      { x:  36.5,   y:  58.2, size: 4.5 },
 
     //         imprime →  "NEGRO"
     //         campo   →  Color
-    color:       { x:  25,   y:  77, size: 4.5 },
+    color:       { x:  36.5,   y:  66.5, size: 4.5 },
 
     //         imprime →  "LBPDE1218J0015219"
     //         campo   →  VIN
-    vin:         { x:  21,   y:  109.5, size: 4.5 },
+    vin:         { x:  28,   y:  98.9, size: 4.5 },
 
     //         imprime →  "LBPDE1218J0015219"
     //         campo   →  Serie / Chasis
-    serie:       { x:  37,   y:  117.5, size: 4.5 },
+    serie:       { x:  50,   y:  107.5, size: 4.5 },
 
     //         imprime →  "E3W8E027263"
     //         campo   →  Motor
-    motor:       { x:  25,   y:  85, size: 4.5 },
+    motor:       { x:  37,   y:  74.6, size: 4.5 },
 
     //         imprime →  "MOTOCICLETA"
     //         campo   →  Carrocería
-    carroceria:  { x:  138,   y:  110, size: 4.5 },
+    carroceria:  { x:  148,   y:  100, size: 4.5 },
 
     //         imprime →  "12,00@8000"
     //         campo   →  Potencia
-    potencia:    { x:  138,   y:  118, size: 4.5 },
+    potencia:    { x:  148,   y:  108, size: 4.5 },
 
     //         imprime →  "2X1"
     //         campo   →  Fórmula Rodante
-    formRod:     { x:  42,   y: 101.5, size: 4.5 },
+    formRod:     { x:  50,   y: 91.5, size: 4.5 },
 
     //         imprime →  "GASOLINA"
     //         campo   →  Combustible
-    combustible: { x:  38,   y: 93, size: 4.5 },
+    combustible: { x: 50,   y: 83, size: 4.5 },
 
     //         imprime →  "2018"
     //         campo   →  Año de Fabricación  (columna central)
-    añoFabricacion:{ x: 138, y:  52.5, size: 4.5 },
+    añoFabricacion:{ x: 148, y:  42.5, size: 4.5 },
 
     //         imprime →  "2018"
     //         campo   →  Año Modelo  (columna derecha)
-    añoModelo:   { x: 138,   y:  60.5,   size: 4.5 },
+    añoModelo:   { x: 148,   y:  50.5,   size: 4.5 },
 
     //         imprime →  "SIN VERSION"
     //         campo   →  Versión
-    version:     { x: 138,   y: 69,   size: 4.5 },
+    version:     { x: 148,   y: 58.7,   size: 4.5 },
 
     //         imprime →  ""  (vacío en el modelo de referencia)
     //         campo   →  Asientos
-    asientos:    { x:  138,   y: 85,   size: 4.5 },
+    asientos:    { x:  148,   y: 75.2,   size: 4.5 },
 
     //         imprime →  "1"
     //         campo   →  Pasajeros
-    pasajeros:   { x:  138,   y: 93.5,   size: 4.5 },
+    pasajeros:   { x:  148,   y: 83.2,   size: 4.5 },
 
     //         imprime →  "2"
     //         campo   →  Ruedas
-    ruedas:      { x:  138,   y: 102, size: 4.5 },
+    ruedas:      { x:  148,   y: 91, size: 4.5 },
 
     //         imprime →  "2"
     //         campo   →  Ejes
-    ejes:        { x: 138,   y: 77, size: 4.5 },
+    ejes:        { x: 148,   y: 67, size: 4.5 },
 
     //         imprime →  "1"
     //         campo   →  Cilindros  (columna central)
-    cilindros:   { x: 225,   y: 52.5,   size: 4.5 },
+    cilindros:   { x: 225,   y: 42.5,   size: 4.5 },
 
     //         imprime →  "2.00"
     //         campo   →  Longitud  (columna central)
-    longitud:    { x: 225,   y: 93.5, size: 4.5 },
+    longitud:    { x: 225,   y: 83.2, size: 4.5 },
 
     //         imprime →  "1.05"
     //         campo   →  Altura  (columna central)
-    altura:      { x: 225,   y: 102, size: 4.5 },
+    altura:      { x: 225,   y: 92, size: 4.5 },
 
     //         imprime →  "0.78"
     //         campo   →  Ancho  (columna central)
-    ancho:       { x: 225,   y: 110, size: 4.5 },
+    ancho:       { x: 225,   y: 100, size: 4.5 },
 
     //         imprime →  "0.124"
     //         campo   →  Cilindrada  (columna derecha)
-    cilindrada:  { x: 225,   y: 60.5,   size: 4.5 },
+    cilindrada:  { x: 225,   y: 50.9,   size: 4.5 },
 
     //         imprime →  "0.271"
     //         campo   →  P. Bruto  (columna derecha)
-    pBruto:      { x: 225,   y: 69, size: 4.5 },
+    pBruto:      { x: 225,   y: 58.7, size: 4.5 },
 
     //         imprime →  "0.125"
     //         campo   →  P. Neto  (columna derecha)
-    pNeto:       { x: 225,   y: 77.5, size: 4.5 },
+    pNeto:       { x: 225,   y: 67.5, size: 4.5 },
 
     //         imprime →  "0.118"
     //         campo   →  Carga Útil  (columna derecha)
-    cargaUtil:   { x: 225,   y: 85.5,   size: 4.5 },
+    cargaUtil:   { x: 225,   y: 75.5,   size: 4.5 },
 
     //         imprime →  código de barras 2D con todos los datos del vehículo
     //         campo   →  PDF417  (parte inferior)
@@ -313,7 +313,7 @@ const REV = {
     //                     pon null para centrar automáticamente
     //         y       →  distancia desde el BORDE INFERIOR — sube para ir más ARRIBA
     //         w/h     →  ancho y alto en puntos
-    pdf417: { x: 12, y: 11, w: 225, h: 35 },
+    pdf417: { x: 21, y: 21, w: 225, h: 35 },
 };
 
 // =================================================================
@@ -461,19 +461,9 @@ async function generar(datos, pdfPath = null) {
     const [imgA] = await pdf2img.convert(bufA, { width: 1200 });
     const [imgR] = await pdf2img.convert(bufR, { width: 1200 });
 
-    const crop = async (buf, extraR = 0, extraL = 0) => {
-        const b = Buffer.from(buf);
-        const m = await sharp(b).metadata();
-        const px = 35;
-        const fw = m.width  - px - extraL - px - extraR;
-        const fh = m.height - px - px;
-        return fw > 0 && fh > 0
-            ? sharp(b).extract({ left: px + extraL, top: px, width: fw, height: fh }).toBuffer()
-            : b;
-    };
-
-    const finalA = await crop(imgA, 30, 0);
-    const finalR = await crop(imgR, 25, 25);
+    // Recorte desactivado — se guarda la imagen completa sin recortar
+    const finalA = Buffer.from(imgA);
+    const finalR = Buffer.from(imgR);
 
     const tag = safe(datos.placa).replace(/[^A-Z0-9]/gi, '');
     const paths = {
