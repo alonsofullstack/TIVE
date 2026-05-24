@@ -283,6 +283,56 @@ module.exports = function registerCommands(bot, state, deps) {
                 const next = pending.missingFields[pending.index];
                 await bot.sendMessage(chatId, `✍️ Falta el dato *${next.label}*.\nEnvíalo para continuar.`, { parse_mode: 'Markdown' });
             }
+        } else if (state === "awaiting_fisica_pvc_completar_field" && msg.text && (!msg.text.startsWith('/') || msg.text.toLowerCase() === '/ok')) {
+            const pending = userFisicaPvcCompletarData.get(chatId);
+            if (!pending) {
+                userState.delete(chatId);
+                return bot.sendMessage(chatId, "⚠️ Se perdió el estado de captura. Vuelve a elegir *TARJETA FISICA PVC PARA COMPLETAR*.", { parse_mode: 'Markdown' });
+            }
+            const current = pending.missingFields[pending.index];
+            const rawValue = msg.text.trim();
+
+            if (current.key === 'placa') {
+                const respuesta = rawValue.toLowerCase().replace(/^\//,'');
+                const esConfirmacion = ['si', 'sí', 'si', 'ok', 'si.', 'sí.', 'yes', 'y'].includes(respuesta);
+                if (esConfirmacion && (pending.datos.placaOriginal || pending.datos.placa)) {
+                    // Usar el valor ya detectado
+                    const placaDetectada = fmtPlaca(pending.datos.placaOriginal || pending.datos.placa);
+                    pending.datos.placa = placaDetectada;
+                    pending.datos.placaOriginal = pending.datos.placaOriginal || pending.datos.placa;
+                } else {
+                    // Usar el nuevo valor que escribió el usuario
+                    pending.datos.placa = fmtPlaca(rawValue);
+                    pending.datos.placaOriginal = rawValue;
+                }
+            } else {
+                pending.datos[current.key] = rawValue;
+            }
+
+            pending.index += 1;
+
+            if (pending.index >= pending.missingFields.length) {
+                userFisicaPvcCompletarData.delete(chatId);
+                userState.delete(chatId);
+
+                const fullTitle = componerTituloCompletar(pending.datos.tituloNo, pending.datos.añoTitulo);
+                if (fullTitle) {
+                    pending.datos.titulo = fullTitle;
+                    pending.datos.tituloNo = fullTitle;
+                }
+                
+                await bot.sendMessage(chatId, "✅ Datos faltantes completados. Generando *TARJETA FISICA PVC PARA COMPLETAR*...", { parse_mode: 'Markdown' });
+                try {
+                    await generarTIVE(chatId, pending.datos, null, pending.sourceBuffer);
+                } catch (e) {
+                    logError('BOT', '❌', 'Error generando TARJETA FISICA PVC PARA COMPLETAR', e);
+                    bot.sendMessage(chatId, "❌ Error: " + e.message);
+                }
+            } else {
+                userFisicaPvcCompletarData.set(chatId, pending);
+                const next = pending.missingFields[pending.index];
+                await bot.sendMessage(chatId, `✍️ Falta el dato *${next.label}*.\nEnvíalo para continuar.`, { parse_mode: 'Markdown' });
+            }
         } else if (state === "awaiting_tive_completo_field" && msg.text && (!msg.text.startsWith('/') || msg.text.toLowerCase() === '/ok')) {
             const pending = userTiveCompletoData.get(chatId);
             if (!pending) {
@@ -336,6 +386,18 @@ module.exports = function registerCommands(bot, state, deps) {
                 await generarTIVE(chatId, datos, customLink, buffer);
             } catch (e) {
                 logError('BOT', '❌', 'Error en flujo custom', e);
+                bot.sendMessage(chatId, "❌ Error: " + escapeMarkdown(e.message), { parse_mode: 'Markdown' });
+            }
+        } else if (state === "awaiting_qr_fisica_pvc" && msg.text && !msg.text.startsWith('/')) {
+            const customLink = msg.text;
+            userState.delete(chatId);
+            bot.sendMessage(chatId, `💳 Procesando datos localmente...`);
+            try {
+                const datos = await extraerConIA(buffer, userPdfNames.get(chatId));
+                if (!datos.placa) bot.sendMessage(chatId, "⚠️ Advertencia: No se detectó placa.");
+                await generarTIVE(chatId, datos, customLink, buffer);
+            } catch (e) {
+                logError('BOT', '❌', 'Error en flujo custom fisica pvc', e);
                 bot.sendMessage(chatId, "❌ Error: " + escapeMarkdown(e.message), { parse_mode: 'Markdown' });
             }
         } else if (state === "awaiting_plate_for_qr") {
