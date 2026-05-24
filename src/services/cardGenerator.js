@@ -373,26 +373,35 @@ module.exports = function (bot) {
         const fontBAnt = await pdfAnt.embedFont(FONT_BYTES);
         const pageA = pdfAnt.getPages()[0];
         const { height: hA } = pageA.getSize();
-        pageA.drawText(zonaLimpia, { x: 58, y: hA - 55.5, size: 5.2, font: fontBAnt, color: gris });
-        pageA.drawText(sedeLimpia, { x: 53, y: hA - 63.5, size: 5.2, font: fontBAnt, color: gris });
-        pageA.drawText(safe(datos.partida), { x: 65, y: hA - 75, size: 6.8, font: fontBAnt, color: negro });
-        pageA.drawText(safe(datos.dua), { x: 50, y: hA - 89, size: 6.8, font: fontBAnt, color: negro });
-        pageA.drawText(safe(datos.titulo), { x: 34.5, y: hA - 104, size: 6.8, font: fontBAnt, color: negro });
-        pageA.drawText(safe(datos.fechaTitulo), { x: 62, y: hA - 117, size: 6.8, font: fontBAnt, color: negro });
-        pageA.drawText(safe(datos.placa), { x: 159, y: hA - 115, size: 17.9, font: fontBAnt, color: negro });
-        pageA.drawText(safe(datos.codVerif), { x: 213, y: hA - 142, size: 4.5, font: fontBAnt, color: negro });
-        pageA.drawText(safe(datos.tituloNo), { x: 183, y: hA - 149.5, size: 4.5, font: fontBAnt, color: negro });
-        pageA.drawText(safe(datos.fechaFinal), { x: 177, y: hA - 158, size: 4.5, font: fontBAnt, color: negro });
 
-        const barImgAnv = await bwipjs.toBuffer({
-            bcid: 'code128',
-            text: safe(datos.placa),
-            scale: 4,
-            height: 15,
-            includetext: false,
-        });
-        const pngBarAnv = await pdfAnt.embedPng(barImgAnv);
-        pageA.drawImage(pngBarAnv, { x: 10, y: hA - 168, width: 82, height: 18 });
+        if (options.noQR) {
+            // ── TARJETA FÍSICA PVC — posiciones calibradas ──────────────
+            const pA = (val, x, y, size) => { if (safe(val)) pageA.drawText(safe(val), { x, y: hA - y, size, font: fontBAnt, color: negro }); };
+            pA(zonaLimpia,          58,    69,    6  );  // Zona Registral No.
+            pA(sedeLimpia,         128,    69,    6  );  // Oficina Registral
+            pA(datos.placa,         38,    81,    7.5);  // Placa No. (grande)
+            pA(datos.partida,      128,    81,    5.5);  // Partida Registral
+            pA(datos.dua,           35,    98,    5.5);  // DUA/DAM
+            pA(datos.titulo,        35,   111,    5.5);  // Título
+            pA(datos.fechaTitulo,  128,   111,    5.5);  // Fecha del Título
+            // Código de barras
+            const barImgAnv = await bwipjs.toBuffer({ bcid: 'code128', text: safe(datos.placa), scale: 4, height: 15, includetext: false });
+            pageA.drawImage(await pdfAnt.embedPng(barImgAnv), { x: 15, y: hA - 163.5, width: 68, height: 17 });
+        } else {
+            // ── TIVE PVC NORMAL — posiciones originales ─────────────────
+            pageA.drawText(zonaLimpia,           { x: 58,   y: hA - 55.5,  size: 5.2, font: fontBAnt, color: gris  });
+            pageA.drawText(sedeLimpia,           { x: 53,   y: hA - 63.5,  size: 5.2, font: fontBAnt, color: gris  });
+            pageA.drawText(safe(datos.partida),  { x: 65,   y: hA - 75,    size: 6.8, font: fontBAnt, color: negro });
+            pageA.drawText(safe(datos.dua),      { x: 50,   y: hA - 89,    size: 6.8, font: fontBAnt, color: negro });
+            pageA.drawText(safe(datos.titulo),   { x: 34.5, y: hA - 104,   size: 6.8, font: fontBAnt, color: negro });
+            pageA.drawText(safe(datos.fechaTitulo), { x: 62, y: hA - 117,  size: 6.8, font: fontBAnt, color: negro });
+            pageA.drawText(safe(datos.placa),    { x: 159,  y: hA - 115,   size: 17.9,font: fontBAnt, color: negro });
+            pageA.drawText(safe(datos.codVerif), { x: 213,  y: hA - 142,   size: 4.5, font: fontBAnt, color: negro });
+            pageA.drawText(safe(datos.tituloNo), { x: 183,  y: hA - 149.5, size: 4.5, font: fontBAnt, color: negro });
+            pageA.drawText(safe(datos.fechaFinal),{ x: 177, y: hA - 158,   size: 4.5, font: fontBAnt, color: negro });
+            const barImgAnv = await bwipjs.toBuffer({ bcid: 'code128', text: safe(datos.placa), scale: 4, height: 15, includetext: false });
+            pageA.drawImage(await pdfAnt.embedPng(barImgAnv), { x: 10, y: hA - 168, width: 82, height: 18 });
+        }
 
         const DOMAIN_URL = process.env.DOMAIN_URL || 'http://localhost:3000';
         const finalQR = qrCustomLink || `${DOMAIN_URL}/servicio/verCertificado/Tive/TIVE-${safe(datos.placa).toUpperCase()}`;
@@ -407,25 +416,57 @@ module.exports = function (bot) {
         const pageR = pdfRev.getPages()[0];
         const { height: hR, width: wR } = pageR.getSize();
         const dR = (t, x, y, size = 4.5) => pageR.drawText(safe(t), { x, y: hR - y, size, font: fontBRev, color: negro });
-        dR(datos.categoria, 37, 40.5); dR(datos.marca, 37, 47.5); dR(datos.modelo, 37, 54.5);
-        dR(datos.color, 37, 61.5); dR(datos.vin, 59, 69.5); dR(datos.serie, 59, 76.5);
-        dR(datos.motor, 61, 83.5); dR(datos.carroceria, 59, 90.5); dR(datos.potencia, 45, 97.5);
-        dR(datos.formRod, 45, 104.5); dR(datos.combustible, 48, 111.5);
-        dR(datos.añoModelo, 225, 39); dR(datos.version, 148, 100);
-        dR(datos.asientos, 45, 122); dR(datos.pasajeros, 45, 129);
-        dR(datos.ruedas, 45, 134.9); dR(datos.ejes, 45, 141.9);
-        dR(datos.cilindros, 115, 121); dR(datos.longitud, 115, 127.8);
-        dR(datos.altura, 115, 134.6); dR(datos.ancho, 115, 141.4);
-        dR(datos.cilindrada, 203, 121); dR(datos.pBruto, 203, 127.8);
-        dR(datos.pNeto, 203, 134.6); dR(datos.cargaUtil, 203, 142);
 
-        const barText = formatearPdf417TiveCompleto({
-            ...datos,
-            zonaLimpia,
-            sedeLimpia,
-        });
-        const barImg = await pdfRev.embedPng(await bwipjs.toBuffer({ bcid: 'pdf417', text: barText, scale: 2, height: 12 }));
-        pageR.drawImage(barImg, { x: (wR / 2) - (246 / 2), y: 5, width: 170, height: 22 });
+        if (options.noQR) {
+            // ── TARJETA FÍSICA PVC — posiciones calibradas ──────────────
+            dR(datos.categoria,      32,   52   );
+            dR(datos.marca,          25,   60   );
+            dR(datos.modelo,         28,   69   );
+            dR(datos.color,          25,   77   );
+            dR(datos.ejes,          138,   77   );
+            dR(datos.motor,          25,   85   );
+            dR(datos.asientos,      138,   85   );
+            dR(datos.combustible,    38,   93   );
+            dR(datos.pasajeros,     138,   93.5 );
+            dR(datos.formRod,        42,  101.5 );
+            dR(datos.ruedas,        138,  102   );
+            dR(datos.vin,            21,  109.5 );
+            dR(datos.carroceria,    138,  110   );
+            dR(datos.serie,          37,  117.5 );
+            dR(datos.potencia,      138,  118   );
+            dR(datos.añoFabricacion,138,   52.5 );
+            dR(datos.añoModelo,     138,   60.5 );
+            dR(datos.version,       138,   69   );
+            dR(datos.cilindros,     225,   52.5 );
+            dR(datos.cilindrada,    225,   60.5 );
+            dR(datos.pBruto,        225,   69   );
+            dR(datos.pNeto,         225,   77.5 );
+            dR(datos.cargaUtil,     225,   85.5 );
+            dR(datos.longitud,      225,   93.5 );
+            dR(datos.altura,        225,  102   );
+            dR(datos.ancho,         225,  110   );
+            // PDF417
+            const barText = formatearPdf417TiveCompleto({ ...datos, zonaLimpia, sedeLimpia });
+            const barImg = await pdfRev.embedPng(await bwipjs.toBuffer({ bcid: 'pdf417', text: barText, scale: 2, height: 12 }));
+            pageR.drawImage(barImg, { x: 12, y: 11, width: 225, height: 35 });
+        } else {
+            // ── TIVE PVC NORMAL — posiciones originales ─────────────────
+            dR(datos.categoria, 37, 40.5); dR(datos.marca, 37, 47.5); dR(datos.modelo, 37, 54.5);
+            dR(datos.color, 37, 61.5); dR(datos.vin, 59, 69.5); dR(datos.serie, 59, 76.5);
+            dR(datos.motor, 61, 83.5); dR(datos.carroceria, 59, 90.5); dR(datos.potencia, 45, 97.5);
+            dR(datos.formRod, 45, 104.5); dR(datos.combustible, 48, 111.5);
+            dR(datos.añoModelo, 225, 39); dR(datos.version, 148, 100);
+            dR(datos.asientos, 45, 122); dR(datos.pasajeros, 45, 129);
+            dR(datos.ruedas, 45, 134.9); dR(datos.ejes, 45, 141.9);
+            dR(datos.cilindros, 115, 121); dR(datos.longitud, 115, 127.8);
+            dR(datos.altura, 115, 134.6); dR(datos.ancho, 115, 141.4);
+            dR(datos.cilindrada, 203, 121); dR(datos.pBruto, 203, 127.8);
+            dR(datos.pNeto, 203, 134.6); dR(datos.cargaUtil, 203, 142);
+            // PDF417
+            const barText = formatearPdf417TiveCompleto({ ...datos, zonaLimpia, sedeLimpia });
+            const barImg = await pdfRev.embedPng(await bwipjs.toBuffer({ bcid: 'pdf417', text: barText, scale: 2, height: 12 }));
+            pageR.drawImage(barImg, { x: (wR / 2) - (246 / 2), y: 5, width: 170, height: 22 });
+        }
 
         if (originalBuffer) {
             try {

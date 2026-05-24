@@ -84,7 +84,7 @@ module.exports = function registerCommands(bot, state, deps) {
         } else if (data === "gen_tarjeta_fisica_pvc_completar") {
             bot.editMessageText(`💳 *Extrayendo datos para TARJETA FISICA PVC PARA COMPLETAR...*`, { chat_id: chatId, message_id: messageId, parse_mode: 'Markdown' }).catch(handleEditError);
             try {
-                const datos = await extraerTiveCompletoConLibreria(buffer);
+                const datos = await extraerConIA(buffer, userPdfNames.get(chatId));
                 await iniciarCapturaFaltantesFisicaPvcCompletar(chatId, datos, buffer);
             } catch (e) {
                 bot.sendMessage(chatId, `❌ Error: ${e.message}`);
