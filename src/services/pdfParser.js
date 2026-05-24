@@ -436,7 +436,7 @@ function extraerDatosTiveDesdeTexto(text, logPrefix = 'TIVE TEXTO', sourceName =
         partida: buscarPrimerValorTive(cleanText, ['Partida Registral', 'Partida']),
         dua: limpiarDua(buscarPrimerValorTive(cleanText, ['DUA/DAM', 'DUA', 'DAM'])),
         titulo: tituloNormalizado || buscarTituloValorTive(cleanText),
-        fechaTitulo: fechaTitulo ? fechaTitulo.split(/\s+/)[0] : '',
+        fechaTitulo: fechaTitulo || '',
         categoria: limpiarCategoria(buscarPrimerValorTive(cleanText, ['Categoría', 'Categoria'])),
         marca: buscarPrimerValorTive(cleanText, ['Marca']),
         modelo: buscarPrimerValorTive(cleanText, ['Modelo']),

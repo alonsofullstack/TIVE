@@ -13,7 +13,7 @@ const QR_Y = parseFloat(process.env.QR_Y) || 10.2;
 const QR_SIZE = parseFloat(process.env.QR_SIZE) || 72;
 const COMPLETE_TEMPLATE_NAME = 'BASE ELECTRONICA TIVE PDF SIN RELLENO PDF.pdf';
 const TIVE_COMPLETO_BODY_CODE = { x: 81, y: 323, width: 80, height: 18 };
-const TIVE_COMPLETO_TECH_CODE = { x: 60, y: 15, width: 260, height: 40 };
+const TIVE_COMPLETO_TECH_CODE = { x: 60, y: 17, width: 260, height: 40 };
 
 const uploadDir = path.join(__dirname, '..', 'servicio', 'verCertificado', 'Tive');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });

@@ -56,10 +56,10 @@ const TIVE_COMPLETO_FIELDS = [
     { key: 'potencia', dataKey: 'potencia', x: 99.6, y: 164, dx: -10, dy: -7, size: 8, bold: false },
     { key: 'form_rod', dataKey: 'formRod', x: 107.6, y: 150.7, dx: -10, dy: -6, size: 8, bold: false },
     { key: 'combusble', dataKey: 'combustible', x: 108.6, y: 138.4, dx: -6.5, dy: -8, size: 8, bold: false },
-    { key: 'asientos', dataKey: 'asientos', x: 104.1, y: 108.5, dx: -7, dy: -4, size: 8, bold: false },
-    { key: 'pasajeros', dataKey: 'pasajeros', x: 103.1, y: 96.4, dx: -7, dy: -6, size: 8, bold: false },
-    { key: 'ruedas', dataKey: 'ruedas', x: 103.9, y: 67, dx: -7.5, dy: -4, size: 8, bold: false },
-    { key: 'ejes', dataKey: 'ejes', x: 103.5, y: 81.8, dx: -7, dy: -5, size: 8, bold: false },
+    { key: 'asientos', dataKey: 'asientos', x: 104.1, y: 108.5, dx: -7, dy: -3, size: 8, bold: false },
+    { key: 'pasajeros', dataKey: 'pasajeros', x: 104.1, y: 96.4, dx: -7, dy: -5, size: 8, bold: false },
+    { key: 'ruedas', dataKey: 'ruedas', x: 104.1, y: 67, dx: -7, dy: -3, size: 8, bold: false },
+    { key: 'ejes', dataKey: 'ejes', x: 104.1, y: 81.8, dx: -7, dy: -4, size: 8, bold: false },
     { key: 'placa', dataKey: 'placa', x: 317.9, y: 406.9, dx: -6, dy: -6, size: 25, bold: true },
     { key: 'año_fabricacion', dataKey: 'añoFabricacion', x: 392.6, y: 272.6, dx: -7.5, dy: -6, size: 8, bold: false },
     { key: 'cilindros', dataKey: 'cilindros', x: 208.6, y: 114.2, dx: 7, dy: -9, size: 8, bold: false },
@@ -67,9 +67,9 @@ const TIVE_COMPLETO_FIELDS = [
     { key: 'altura', dataKey: 'altura', x: 213.9, y: 86.2, dx: 2, dy: -8.5, size: 8, bold: false },
     { key: 'ancho', dataKey: 'ancho', x: 212.6, y: 71.6, dx: 3.5, dy: -8, size: 8, bold: false },
     { key: 'cilindro', dataKey: 'cilindrada', x: 333.9, y: 109.6, dx: 24, dy: -5, size: 8, bold: false },
-    { key: 'p_bruto', dataKey: 'pBruto', x: 326.6, y: 97.6, dx: 32, dy: -6, size: 8, bold: false },
-    { key: 'campo_30', dataKey: 'pNeto', x: 329.9, y: 82.9, dx: 29, dy: -4, size: 8, bold: false },
-    { key: 'campo_31', dataKey: 'cargaUtil', x: 322.6, y: 71.6, dx: 37, dy: -6, size: 8, bold: false },
+    { key: 'p_bruto', dataKey: 'pBruto', x: 333.9, y: 97.6, dx: 24, dy: -6, size: 8, bold: false },
+    { key: 'campo_30', dataKey: 'pNeto', x: 333.9, y: 82.9, dx: 24, dy: -4, size: 8, bold: false },
+    { key: 'campo_31', dataKey: 'cargaUtil', x: 333.9, y: 71.6, dx: 24, dy: -6, size: 8, bold: false },
     { key: 'version', dataKey: 'version', x: 273.4, y: 155.9, dx: -6.5, dy: -8, size: 8, bold: false },
     { key: 'año_modelo', dataKey: 'añoModelo', x: 392.6, y: 259.1, dx: -1.5, dy: -3, size: 8, bold: false },
     { key: 'titulo_numero', dataKey: 'tituloNo', x: 190.6, y: 590.2, dx: -13, dy: 2.5, size: 8, bold: false },
@@ -207,6 +207,9 @@ function prepararDatosTiveCompleto(datos) {
     prepared.placa = fmtPlaca(prepared.placa || '');
     prepared.codVerif = safe(prepared.codVerif) || generarCodigoVerificacion();
     prepared.fechaFinal = safe(prepared.fechaFinal) || generarFechaHoraTive();
+    if (prepared.fechaFinal && !prepared.fechaFinal.includes(':')) {
+        prepared.fechaFinal += ' ' + generarFechaHoraTive().split(' ')[1];
+    }
     prepared.añoFabricacion = safe(prepared.añoFabricacion);
     prepared.añoModelo = safe(prepared.añoModelo);
     prepared.potencia = limpiarPotencia(prepared.potencia || '');
@@ -241,6 +244,7 @@ function obtenerCamposFaltantesTiveCompletar(datos) {
         { key: 'añoModelo', label: 'AÑO DE MODELO' },
         { key: 'añoTitulo', label: 'AÑO DE TÍTULO' },
         { key: 'fechaTitulo', label: 'FECHA DE TÍTULO' },
+        { key: 'fechaFinal', label: 'FECHA DE EMISIÓN (debajo del Título N°)' },
         { key: 'tituloNo', label: 'TÍTULO N° (solo número o completo)' }
     ];
 

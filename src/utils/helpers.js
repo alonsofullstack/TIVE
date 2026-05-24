@@ -361,6 +361,13 @@ function normalizarTituloDesdeTituloNo(tituloNo = '') {
     if (!match) return limpio;
     return `${match[1]}-${match[2]}`;
 }
+function nombreArchivoFirma(nombre = '', mimeType = '') {
+    const ext = String(mimeType).toLowerCase().includes('png') ? '.png' : '.jpg';
+    const cleanName = safe(nombre).toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]/g, '');
+    return `firma de ${cleanName}${ext}`;
+}
 
 module.exports = {
     SEDE_TO_ZONA,
@@ -379,5 +386,6 @@ module.exports = {
     generarFechaHoraTive,
     generarHashVerificacion,
     escapeMarkdown,
-    normalizarTituloDesdeTituloNo
+    normalizarTituloDesdeTituloNo,
+    nombreArchivoFirma
 };
