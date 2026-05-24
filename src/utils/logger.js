@@ -5,7 +5,19 @@ function _ts() {
 }
 
 function logInfo(mod, emoji, msg, extra = null) {
-    const extraStr = extra ? ' | ' + (typeof extra === 'string' ? extra : Object.entries(extra).map(([k, v]) => `${k}=${v}`).join(', ')) : '';
+    let extraStr = '';
+    if (extra) {
+        if (typeof extra === 'string') {
+            extraStr = ' | ' + extra;
+        } else {
+            const entries = Object.entries(extra).map(([k, v]) => {
+                const valStr = String(v);
+                const truncated = valStr.length > 50 ? valStr.substring(0, 50) + '...' : valStr;
+                return `${k}=${truncated}`;
+            });
+            extraStr = ' | ' + entries.join(', ');
+        }
+    }
     console.log(`[${_ts()}] [${mod}] ${emoji} ${msg}${extraStr}`);
 }
 

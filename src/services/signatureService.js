@@ -56,11 +56,11 @@ module.exports = function(bot) {
 
         if (bestMatch) {
             const matchedPath = path.join(firmasDir, bestMatch);
-            logInfo('FIRMA', '✅', `Firma encontrada para sede`, { sede, archivoFirma: bestMatch, rutaCompleta: matchedPath });
+            logInfo('FIRMA', '✅', `Firma encontrada`, { sede, archivo: bestMatch });
             return matchedPath;
         }
 
-        logInfo('FIRMA', '⚠️', `No se encontró firma para la sede — se pedirá al usuario`, { sede, sedeNormalizada: cleanSede, archivosDisponibles: files.length });
+        logInfo('FIRMA', '⚠️', `Firma no encontrada`, { sede, archivosDisponibles: files.length });
         return null;
     }
 
@@ -83,6 +83,7 @@ module.exports = function(bot) {
     async function guardarFirmaPendienteDesdeMensaje(chatId, msg) {
         const pending = userFirmaPendienteData.get(chatId);
         if (!pending) {
+            logInfo('FIRMA', '⚠️', 'No hay firma pendiente para este chatId', { chatId });
             userState.delete(chatId);
             await bot.sendMessage(chatId, "⚠️ No hay una firma pendiente. Vuelve a generar el TIVE.");
             return;
@@ -108,19 +109,27 @@ module.exports = function(bot) {
         if (!fs.existsSync(firmasDir)) fs.mkdirSync(firmasDir, { recursive: true });
 
         const nameToUse = pending.firmaNombre || pending.sedeInput;
-        const firmaFileName = nombreArchivoFirma(nameToUse, mimeType);
-        const firmaPath = path.join(firmasDir, firmaFileName);
-        const firmaBuffer = await descargarArchivoTelegram(fileId);
-        fs.writeFileSync(firmaPath, firmaBuffer);
-        logInfo('FIRMA', '✅', `Nueva firma guardada exitosamente`, { firmaPath, nombre: pending.firmaNombre || '(sin nombre)', sede: pending.sedeInput || '(sin sede)', tamaño: `${firmaBuffer.length} bytes` });
 
-        userFirmaPendienteData.delete(chatId);
-        userState.delete(chatId);
-        await bot.sendMessage(chatId, `✅ Firma guardada como \`${firmaFileName}\`.\nGenerando TIVE...`, { parse_mode: 'Markdown' });
-        
-        // Import dynamically to avoid circular references
-        const cardGenerator = require('./cardGenerator')(bot);
-        await cardGenerator.generarTiveCompleto(chatId, pending.datos, pending.qrCustomLink, pending.verificationHash, firmaPath);
+        try {
+            const firmaFileName = nombreArchivoFirma(nameToUse, mimeType);
+            const firmaPath = path.join(firmasDir, firmaFileName);
+            const firmaBuffer = await descargarArchivoTelegram(fileId);
+            fs.writeFileSync(firmaPath, firmaBuffer);
+            
+            logInfo('FIRMA', '✅', `Firma guardada`, { nombre: pending.firmaNombre || pending.sedeInput, archivo: firmaFileName, tamaño: `${(firmaBuffer.length / 1024).toFixed(1)} KB` });
+
+            userFirmaPendienteData.delete(chatId);
+            userState.delete(chatId);
+            await bot.sendMessage(chatId, `✅ Firma guardada como \`${firmaFileName}\`.\nGenerando TIVE...`, { parse_mode: 'Markdown' });
+            
+            // Import dynamically to avoid circular references
+            const cardGenerator = require('./cardGenerator')(bot);
+            await cardGenerator.generarTiveCompleto(chatId, pending.datos, pending.qrCustomLink, pending.verificationHash, firmaPath);
+        } catch (error) {
+            logError('FIRMA', '❌', 'Error guardando firma', error);
+            await bot.sendMessage(chatId, "❌ Error guardando la firma: " + error.message);
+            throw error;
+        }
     }
 
     return {

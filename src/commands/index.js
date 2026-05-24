@@ -319,6 +319,26 @@ module.exports = function registerCommands(bot, state, deps) {
             userAntiguaData.get(chatId).sedeDomicilio = msg.text.trim().toUpperCase();
             userState.set(chatId, "awaiting_antigua_domicilio");
             bot.sendMessage(chatId, "🏠 Introduce la **DIRECCIÓN (DOMICILIO)** (o /skip):", { parse_mode: 'Markdown' });
+        } else if (state === "awaiting_antigua_placa_confirm" && msg.text) {
+            const data = userAntiguaData.get(chatId);
+            const response = msg.text.trim();
+            
+            if (response.toLowerCase() === '/ok') {
+                // User confirmed the plate, format it
+                data.placa = fmtPlaca(data.datosIA.placa || '');
+            } else {
+                // User provided a corrected plate
+                data.placa = fmtPlaca(response);
+            }
+            
+            const fechaSugerida = data.datosIA.fechaAsiento || data.datosIA.fechaInferior || "";
+            userState.set(chatId, "awaiting_antigua_fecha");
+            bot.sendMessage(chatId,
+                `✅ **Placa confirmada:** \`${data.placa}\`\n\n` +
+                `📅 **Fecha Detectada:** \`${fechaSugerida}\`\n\n` +
+                `Introduce **LA FECHA** (o escribe /ok para usar la detectada):`,
+                { parse_mode: 'Markdown' }
+            );
         } else if (state === "awaiting_antigua_domicilio" && msg.text) {
             let domicilio = msg.text.trim();
             if (domicilio.startsWith('/skip')) domicilio = "";
@@ -331,6 +351,22 @@ module.exports = function registerCommands(bot, state, deps) {
                     while (!data.datosIA) { await new Promise(r => setTimeout(r, 1000)); }
                     bot.deleteMessage(chatId, status.message_id).catch(() => { });
                 }
+                
+                // Check if IA extracted plate without hyphen
+                const placaIA = data.datosIA.placa || '';
+                const placaNormalizada = placaIA.replace(/[–—]/g, '-');
+                if (placaIA && !placaNormalizada.includes('-')) {
+                    userState.set(chatId, "awaiting_antigua_placa_confirm");
+                    bot.sendMessage(chatId,
+                        `⚠️ **Placa detectada por IA:** \`${placaIA}\`\n\n` +
+                        `La placa no tiene guión. ¿Es correcta?\n\n` +
+                        `Si es correcta, escribe /ok\n` +
+                        `Si no, escribe la placa correcta con guión (ej: MX-69796):`,
+                        { parse_mode: 'Markdown' }
+                    );
+                    return;
+                }
+                
                 const fechaSugerida = data.datosIA.fechaAsiento || data.datosIA.fechaInferior || "";
                 userState.set(chatId, "awaiting_antigua_fecha");
                 bot.sendMessage(chatId,

@@ -37,10 +37,10 @@ const {
 const C128_PATTERNS = { '0': '11011001100', '1': '11001101100', '2': '11001100110', '3': '10001101100', '4': '10001100110', '5': '10110001100', '6': '10110000110', '7': '10110110000', '8': '10110011011', '9': '11001011000', 'A': '11000101100', 'B': '11000100110', 'C': '11011000100', 'D': '11011000010', 'E': '11011011000', 'F': '11011001101', 'G': '11011011011', 'H': '11001101101', 'I': '11001101111', 'J': '11011110110', 'K': '11011111011', 'L': '11110110110', 'M': '11110110111', 'N': '11110111101', 'O': '11110111111', 'P': '11001101101', 'Q': '11001101111', 'R': '11011110110', 'S': '11011111011', 'T': '11110110110', 'U': '11110110111', 'V': '11110111101', 'W': '11110111111', 'X': '11001101101', 'Y': '11001101111', 'Z': '11011110110', '-': '11000111010', '.': '11011011110', ' ': '11011011011', ':': '11011111010' };
 
 const TIVE_COMPLETO_FIELDS = [
-    { key: 'codigo_de_verificacion', dataKey: 'codVerif', x: 231, y: 615, dx: -7.3, dy: -10.3, size: 8, bold: false },
+    { key: 'codigo_de_verificacion', dataKey: 'codVerif', x: 231, y: 615, dx: -8.6, dy: -10.3, size: 8, bold: false },
     { key: 'fecha', dataKey: 'fechaFinal', x: 180.8, y: 579.5, dx: -13, dy: 1, size: 8, bold: false },
-    { key: 'zona_registral', dataKey: 'zonaLimpia', x: 144.0, y: 482.0, dx: -16, dy: 6, size: 9, bold: true },
-    { key: 'sede_registral', dataKey: 'sedeLimpia', x: 141.0, y: 467.0, dx: -22.5, dy: 3, size: 9, bold: true },
+    { key: 'zona_registral', dataKey: 'zonaLimpia', x: 144.0, y: 482.0, dx: -17.5, dy: 7, size: 9, bold: true },
+    { key: 'sede_registral', dataKey: 'sedeLimpia', x: 141.0, y: 467.0, dx: -24.5, dy: 11.5, size: 9, bold: true },
     { key: 'parda_registral', dataKey: 'partida', x: 120.9, y: 452.9, dx: -6, dy: -5.5, size: 8, bold: false },
     { key: 'duadam', dataKey: 'dua', x: 103.1, y: 438, dx: -10.5, dy: -7, size: 8, bold: false },
     { key: 'titulo', dataKey: 'titulo', x: 89.3, y: 422.3, dx: -13, dy: -7, size: 8, bold: false },
@@ -50,7 +50,7 @@ const TIVE_COMPLETO_FIELDS = [
     { key: 'modelo', dataKey: 'modelo', x: 96.8, y: 246.8, dx: -12.5, dy: -6, size: 8, bold: false },
     { key: 'color', dataKey: 'color', x: 88.4, y: 233.2, dx: -12, dy: -6, size: 8, bold: false },
     { key: 'numero_de_vin', dataKey: 'vin', x: 120.5, y: 220.2, dx: -8.5, dy: -7, size: 8, bold: false },
-    { key: 'numero_de_serie', dataKey: 'serie', x: 128.3, y: 206.2, dx: -11, dy: -7, size: 8, bold: false },
+    { key: 'numero_de_serie', dataKey: 'serie', x: 128.3, y: 206.2, dx: -9.5, dy: -7, size: 8, bold: false },
     { key: 'numero_motor', dataKey: 'motor', x: 118, y: 191.9, dx: -11, dy: -7, size: 8, bold: false },
     { key: 'carroceria', dataKey: 'carroceria', x: 104.5, y: 178.6, dx: -8.5, dy: -7, size: 8, bold: false },
     { key: 'potencia', dataKey: 'potencia', x: 99.6, y: 164, dx: -10, dy: -7, size: 8, bold: false },
@@ -119,10 +119,9 @@ function getTemplatePath(name) {
         path.join(process.cwd(), 'tarjeta', name),
         path.join(process.cwd(), name)
     ];
-    logInfo('TEMPLATE', '🔍', `Buscando plantilla: "${name}"`, { rutasCandidatas: p.length });
     for (const pathFound of p) {
         if (fs.existsSync(pathFound)) {
-            logInfo('TEMPLATE', '✅', `Plantilla encontrada exitosamente`, { nombre: name, ruta: pathFound });
+            logInfo('TEMPLATE', '✅', `Plantilla: "${name}" encontrada`, { ruta: pathFound });
             return pathFound;
         }
     }
@@ -501,12 +500,7 @@ module.exports = function(bot) {
 
     async function generarTiveCompleto(chatId, datos, qrCustomLink = null, verificationHash = null, firmaPathOverride = null) {
         const timerCompleto = logTimer('TIVE COMPLETO', `Generación PDF completo para ${safe(datos.placa)}`);
-        logInfo('TIVE COMPLETO', '🎨', `Generando PDF completo`, {
-            placa: safe(datos.placa),
-            tieneQRCustom: !!qrCustomLink,
-            tieneHash: !!verificationHash,
-            tieneFirmaOverride: !!firmaPathOverride
-        });
+        logInfo('TIVE COMPLETO', '🎨', `Generando PDF`, { placa: safe(datos.placa) });
 
         const templatePath = getTemplatePath(COMPLETE_TEMPLATE_NAME);
         const templateBytes = fs.readFileSync(templatePath);
@@ -552,7 +546,7 @@ module.exports = function(bot) {
             });
             drawnFields.push(`${field.dataKey}=${value}`);
         }
-        logInfo('TIVE COMPLETO', '🖨️', `Campos impresos en PDF (${drawnFields.length}/${TIVE_COMPLETO_FIELDS.length})`, `${drawnFields.join(' | ')}`);
+        logInfo('TIVE COMPLETO', '🖨️', `Campos impresos (${drawnFields.length}/${TIVE_COMPLETO_FIELDS.length})`);
 
         const qrHeaderText = safe(datosCompletos.placa) || 'SIN-PLACA';
         const hash = verificationHash || generarHashVerificacion(null, datosCompletos);
@@ -614,7 +608,7 @@ module.exports = function(bot) {
                     width: 100,
                     height: 50
                 });
-                logInfo('TIVE COMPLETO', '✍️', `Firma de la sede incrustada exitosamente en el PDF`, { sede: sedeInput, firmaPath, posicion: 'x=330, y=9, w=100, h=50' });
+                logInfo('TIVE COMPLETO', '✍️', `Firma incrustada`, { sede: sedeInput, archivo: path.basename(firmaPath) });
             }
         } catch (err) {
             logError('TIVE COMPLETO', '❌', `Error incrustando firma de la sede en el PDF`, err);
@@ -625,12 +619,10 @@ module.exports = function(bot) {
 
         const finalPath = path.join(uploadDir, `${hash}.pdf`);
         fs.writeFileSync(finalPath, Buffer.from(securedBytes));
-        logInfo('TIVE COMPLETO', '✅', `PDF verificable guardado exitosamente`, {
-            ruta: finalPath,
+        logInfo('TIVE COMPLETO', '✅', `PDF guardado`, { 
+            placa: safe(datosCompletos.placa), 
             hash: hash.substring(0, 16) + '...',
-            tamaño: `${securedBytes.length} bytes`,
-            tamañoKB: `${(securedBytes.length / 1024).toFixed(1)} KB`,
-            placa: safe(datosCompletos.placa)
+            tamaño: `${(securedBytes.length / 1024).toFixed(1)} KB`
         });
         timerCompleto.end(`hash=${hash.substring(0, 16)}...`);
 
