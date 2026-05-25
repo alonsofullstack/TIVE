@@ -262,13 +262,13 @@ async function removeWhiteBackground(imageBuffer) {
             const r = data[i];
             const g = data[i + 1];
             const b = data[i + 2];
-            
+
             // Si el color es muy claro/blanco, hacerlo transparente.
             // Usamos un degradado suave entre 200 y 240 de brillo mínimo
             const thresholdLow = 200;
             const thresholdHigh = 240;
             const minColor = Math.min(r, g, b);
-            
+
             if (minColor > thresholdLow) {
                 if (minColor >= thresholdHigh) {
                     data[i + 3] = 0; // Totalmente transparente
@@ -286,8 +286,8 @@ async function removeWhiteBackground(imageBuffer) {
                 channels: 4
             }
         })
-        .png()
-        .toBuffer();
+            .png()
+            .toBuffer();
     } catch (e) {
         logError('SHARP', '⚠️', 'Error al remover fondo blanco de la firma', e);
         return imageBuffer;
@@ -420,28 +420,28 @@ module.exports = function (bot) {
         if (options.noQR) {
             // ── TARJETA FÍSICA PVC — posiciones calibradas ──────────────
             const pA = (val, x, y, size) => { if (safe(val)) pageA.drawText(safe(val), { x, y: hA - y, size, font: fontBAnt, color: negro }); };
-            pA(zonaLimpia,          68,    57.5,  6  );  // Zona Registral No.
-            pA(sedeLimpia,         136,    57.5,  6  );  // Oficina Registral
-            pA(datos.placa,         45,    70.5,  7.5);  // Placa No. (grande)
-            pA(datos.partida,      136,    70.5,  5.5);  // Partida Registral
-            pA(datos.dua,           45,    87.5,  5.5);  // DUA/DAM
-            pA(datos.titulo,        38,   100.8,  5.5);  // Título
-            pA(datos.fechaTitulo,  132,   100.5,  5.5);  // Fecha del Título
+            pA(zonaLimpia, 68, 57.5, 6);  // Zona Registral No.
+            pA(sedeLimpia, 136, 57.5, 6);  // Oficina Registral
+            pA(datos.placa, 45, 70.5, 7.5);  // Placa No. (grande)
+            pA(datos.partida, 136, 70.5, 5.5);  // Partida Registral
+            pA(datos.dua, 45, 87.5, 5.5);  // DUA/DAM
+            pA(datos.titulo, 38, 100.8, 5.5);  // Título
+            pA(datos.fechaTitulo, 132, 100.5, 5.5);  // Fecha del Título
             // Código de barras
             const barImgAnv = await bwipjs.toBuffer({ bcid: 'code128', text: safe(datos.placa), scale: 4, height: 15, includetext: false });
-            pageA.drawImage(await pdfAnt.embedPng(barImgAnv), { x: 25.5, y: hA - 152.5, width: 68, height: 17 });
+            pageA.drawImage(await pdfAnt.embedPng(barImgAnv), { x: 23.5, y: hA - 155.5, width: 68, height: 17 });
         } else {
             // ── TIVE PVC NORMAL — posiciones originales ─────────────────
-            pageA.drawText(zonaLimpia,           { x: 58,   y: hA - 55.5,  size: 5.2, font: fontBAnt, color: gris  });
-            pageA.drawText(sedeLimpia,           { x: 53,   y: hA - 63.5,  size: 5.2, font: fontBAnt, color: gris  });
-            pageA.drawText(safe(datos.partida),  { x: 65,   y: hA - 75,    size: 6.8, font: fontBAnt, color: negro });
-            pageA.drawText(safe(datos.dua),      { x: 50,   y: hA - 89,    size: 6.8, font: fontBAnt, color: negro });
-            pageA.drawText(safe(datos.titulo),   { x: 34.5, y: hA - 104,   size: 6.8, font: fontBAnt, color: negro });
-            pageA.drawText(safe(datos.fechaTitulo), { x: 62, y: hA - 117,  size: 6.8, font: fontBAnt, color: negro });
-            pageA.drawText(safe(datos.placa),    { x: 159,  y: hA - 115,   size: 17.9,font: fontBAnt, color: negro });
-            pageA.drawText(safe(datos.codVerif), { x: 213,  y: hA - 142,   size: 4.5, font: fontBAnt, color: negro });
-            pageA.drawText(safe(datos.tituloNo), { x: 183,  y: hA - 149.5, size: 4.5, font: fontBAnt, color: negro });
-            pageA.drawText(safe(datos.fechaFinal),{ x: 177, y: hA - 158,   size: 4.5, font: fontBAnt, color: negro });
+            pageA.drawText(zonaLimpia, { x: 58, y: hA - 55.5, size: 5.2, font: fontBAnt, color: gris });
+            pageA.drawText(sedeLimpia, { x: 53, y: hA - 63.5, size: 5.2, font: fontBAnt, color: gris });
+            pageA.drawText(safe(datos.partida), { x: 65, y: hA - 75, size: 6.8, font: fontBAnt, color: negro });
+            pageA.drawText(safe(datos.dua), { x: 50, y: hA - 89, size: 6.8, font: fontBAnt, color: negro });
+            pageA.drawText(safe(datos.titulo), { x: 34.5, y: hA - 104, size: 6.8, font: fontBAnt, color: negro });
+            pageA.drawText(safe(datos.fechaTitulo), { x: 62, y: hA - 117, size: 6.8, font: fontBAnt, color: negro });
+            pageA.drawText(safe(datos.placa), { x: 159, y: hA - 115, size: 17.9, font: fontBAnt, color: negro });
+            pageA.drawText(safe(datos.codVerif), { x: 213, y: hA - 142, size: 4.5, font: fontBAnt, color: negro });
+            pageA.drawText(safe(datos.tituloNo), { x: 183, y: hA - 149.5, size: 4.5, font: fontBAnt, color: negro });
+            pageA.drawText(safe(datos.fechaFinal), { x: 177, y: hA - 158, size: 4.5, font: fontBAnt, color: negro });
             const barImgAnv = await bwipjs.toBuffer({ bcid: 'code128', text: safe(datos.placa), scale: 4, height: 15, includetext: false });
             pageA.drawImage(await pdfAnt.embedPng(barImgAnv), { x: 10, y: hA - 168, width: 82, height: 18 });
         }
@@ -462,32 +462,32 @@ module.exports = function (bot) {
 
         if (options.noQR) {
             // ── TARJETA FÍSICA PVC — posiciones calibradas ──────────────
-            dR(datos.categoria,      43,   41   );
-            dR(datos.marca,          36.5, 49.5 );
-            dR(datos.modelo,         36.5, 58.2 );
-            dR(datos.color,          36.5, 66.5 );
-            dR(datos.ejes,          148,   67   );
-            dR(datos.motor,          37,   74.6 );
-            dR(datos.asientos,      148,   75.2 );
-            dR(datos.combustible,    50,   83   );
-            dR(datos.pasajeros,     148,   83.2 );
-            dR(datos.formRod,        50,   91.5 );
-            dR(datos.ruedas,        148,   91   );
-            dR(datos.vin,            28,   98.9 );
-            dR(datos.carroceria,    148,  100   );
-            dR(datos.serie,          50,  107.5 );
-            dR(datos.potencia,      148,  108   );
-            dR(datos.añoFabricacion,148,   42.5 );
-            dR(datos.añoModelo,     148,   50.5 );
-            dR(datos.version,       148,   58.7 );
-            dR(datos.cilindros,     225,   42.5 );
-            dR(datos.cilindrada,    225,   50.9 );
-            dR(datos.pBruto,        225,   58.7 );
-            dR(datos.pNeto,         225,   67.5 );
-            dR(datos.cargaUtil,     225,   75.5 );
-            dR(datos.longitud,      225,   83.2 );
-            dR(datos.altura,        225,   92   );
-            dR(datos.ancho,         225,  100   );
+            dR(datos.categoria, 43, 41);
+            dR(datos.marca, 36.5, 49.5);
+            dR(datos.modelo, 36.5, 58.2);
+            dR(datos.color, 36.5, 66.5);
+            dR(datos.ejes, 148, 67);
+            dR(datos.motor, 37, 74.6);
+            dR(datos.asientos, 148, 75.2);
+            dR(datos.combustible, 50, 83);
+            dR(datos.pasajeros, 148, 83.2);
+            dR(datos.formRod, 50, 91.5);
+            dR(datos.ruedas, 148, 91);
+            dR(datos.vin, 28, 98.9);
+            dR(datos.carroceria, 148, 100);
+            dR(datos.serie, 50, 107.5);
+            dR(datos.potencia, 148, 108);
+            dR(datos.añoFabricacion, 148, 42.5);
+            dR(datos.añoModelo, 148, 50.5);
+            dR(datos.version, 148, 58.7);
+            dR(datos.cilindros, 225, 42.5);
+            dR(datos.cilindrada, 225, 50.9);
+            dR(datos.pBruto, 225, 58.7);
+            dR(datos.pNeto, 225, 67.5);
+            dR(datos.cargaUtil, 225, 75.5);
+            dR(datos.longitud, 225, 83.2);
+            dR(datos.altura, 225, 92);
+            dR(datos.ancho, 225, 100);
             // PDF417
             const barText = formatearPdf417TiveCompleto({ ...datos, zonaLimpia, sedeLimpia });
             const barImg = await pdfRev.embedPng(await bwipjs.toBuffer({ bcid: 'pdf417', text: barText, scale: 2, height: 12 }));
@@ -702,7 +702,7 @@ module.exports = function (bot) {
             }
             if (firmaPath && fs.existsSync(firmaPath)) {
                 let signatureImgBytes = fs.readFileSync(firmaPath);
-                
+
                 try {
                     signatureImgBytes = await removeWhiteBackground(signatureImgBytes);
                 } catch (sharpErr) {
