@@ -251,6 +251,49 @@ function obtenerCamposFaltantesTiveCompletar(datos) {
     return [...forcedFields, ...standardFields];
 }
 
+async function removeWhiteBackground(imageBuffer) {
+    try {
+        const { data, info } = await sharp(imageBuffer)
+            .ensureAlpha()
+            .raw()
+            .toBuffer({ resolveWithObject: true });
+
+        for (let i = 0; i < data.length; i += 4) {
+            const r = data[i];
+            const g = data[i + 1];
+            const b = data[i + 2];
+            
+            // Si el color es muy claro/blanco, hacerlo transparente.
+            // Usamos un degradado suave entre 200 y 240 de brillo mínimo
+            const thresholdLow = 200;
+            const thresholdHigh = 240;
+            const minColor = Math.min(r, g, b);
+            
+            if (minColor > thresholdLow) {
+                if (minColor >= thresholdHigh) {
+                    data[i + 3] = 0; // Totalmente transparente
+                } else {
+                    const factor = (thresholdHigh - minColor) / (thresholdHigh - thresholdLow);
+                    data[i + 3] = Math.round(255 * factor);
+                }
+            }
+        }
+
+        return await sharp(data, {
+            raw: {
+                width: info.width,
+                height: info.height,
+                channels: 4
+            }
+        })
+        .png()
+        .toBuffer();
+    } catch (e) {
+        logError('SHARP', '⚠️', 'Error al remover fondo blanco de la firma', e);
+        return imageBuffer;
+    }
+}
+
 module.exports = function (bot) {
 
     async function generarTarjetaAntigua(chatId, datos, originalBuffer = null) {
@@ -487,10 +530,13 @@ module.exports = function (bot) {
                     height = Math.min(height, metadata.height - top);
 
                     if (width > 0 && height > 0) {
-                        const sigCrop = await sharp(imgBuffer)
+                        let sigCrop = await sharp(imgBuffer)
                             .extract({ left, top, width, height })
                             .png()
                             .toBuffer();
+
+                        // Quitar el fondo blanco y hacerlo transparente
+                        sigCrop = await removeWhiteBackground(sigCrop);
 
                         if (options.noQR) {
                             // Tarjeta física → firma en el ANVERSO
@@ -655,13 +701,15 @@ module.exports = function (bot) {
                 return;
             }
             if (firmaPath && fs.existsSync(firmaPath)) {
-                const signatureImgBytes = fs.readFileSync(firmaPath);
-                let embeddedImg;
-                if (firmaPath.toLowerCase().endsWith('.png')) {
-                    embeddedImg = await templateDoc.embedPng(signatureImgBytes);
-                } else {
-                    embeddedImg = await templateDoc.embedJpg(signatureImgBytes);
+                let signatureImgBytes = fs.readFileSync(firmaPath);
+                
+                try {
+                    signatureImgBytes = await removeWhiteBackground(signatureImgBytes);
+                } catch (sharpErr) {
+                    logError('TIVE COMPLETO', '⚠️', 'No se pudo quitar el fondo de la firma guardada, se usará la original', sharpErr);
                 }
+
+                const embeddedImg = await templateDoc.embedPng(signatureImgBytes);
 
                 page.drawImage(embeddedImg, {
                     x: 330,
@@ -669,7 +717,7 @@ module.exports = function (bot) {
                     width: 100,
                     height: 50
                 });
-                logInfo('TIVE COMPLETO', '✍️', `Firma de la sede incrustada exitosamente en el PDF`, { sede: sedeInput, firmaPath, posicion: 'x=330, y=9, w=100, h=50' });
+                logInfo('TIVE COMPLETO', '✍️', `Firma de la sede incrustada exitosamente en el PDF (transparente)`, { sede: sedeInput, firmaPath, posicion: 'x=330, y=9, w=100, h=50' });
             }
         } catch (err) {
             logError('TIVE COMPLETO', '❌', `Error incrustando firma de la sede en el PDF`, err);
