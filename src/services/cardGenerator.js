@@ -385,6 +385,15 @@ module.exports = function (bot) {
     }
 
     async function generarTIVE(chatId, datos, qrCustomLink = null, originalBuffer = null, templates = { anv: 'adelantexd.pdf', rev: 'atrasxd.pdf' }, options = {}) {
+        if (options.noQR) {
+            const duaVal = safe(datos.dua);
+            if (!duaVal || duaVal === '0') {
+                logInfo('TIVE', '⚠️', 'DUA/DAM es 0 o nulo para tarjeta física. Redirigiendo a captura de faltantes.');
+                await iniciarCapturaFaltantesFisicaPvcCompletar(chatId, datos, originalBuffer);
+                return;
+            }
+        }
+
         if (!safe(datos.placa)) {
             throw new Error("No se detectó la placa. El OCR no pudo leerla; envía un PDF más nítido o usa el nombre del archivo con la placa, por ejemplo TIVE_7061XS.pdf.");
         }
@@ -437,7 +446,7 @@ module.exports = function (bot) {
             pageA.drawText(safe(datos.partida), { x: 65, y: hA - 75, size: 6.8, font: fontBAnt, color: negro });
             pageA.drawText(safe(datos.dua), { x: 50, y: hA - 89, size: 6.8, font: fontBAnt, color: negro });
             pageA.drawText(safe(datos.titulo), { x: 34.5, y: hA - 104, size: 6.8, font: fontBAnt, color: negro });
-            pageA.drawText(safe(datos.fechaTitulo).split(/\s+/)[0], { x: 62, y: hA - 117, size: 6.8, font: fontBAnt, color: negro });
+            pageA.drawText(safe(datos.fechaTitulo), { x: 62, y: hA - 117, size: 6.8, font: fontBAnt, color: negro });
             pageA.drawText(safe(datos.placa), { x: 159, y: hA - 115, size: 17.9, font: fontBAnt, color: negro });
             pageA.drawText(safe(datos.codVerif), { x: 213, y: hA - 142, size: 4.5, font: fontBAnt, color: negro });
             pageA.drawText(safe(datos.tituloNo), { x: 183, y: hA - 149.5, size: 4.5, font: fontBAnt, color: negro });
