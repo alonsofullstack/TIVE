@@ -438,7 +438,7 @@ module.exports = function (bot) {
             pA(safe(datos.fechaTitulo).split(/\s+/)[0], 132, 100.5, 5.5);  // Fecha del Título
             // Código de barras
             const barImgAnv = await bwipjs.toBuffer({ bcid: 'code128', text: safe(datos.placa), scale: 4, height: 15, includetext: false });
-            pageA.drawImage(await pdfAnt.embedPng(barImgAnv), { x: 21, y: hA - 156.5, width: 68, height: 17 });
+            pageA.drawImage(await pdfAnt.embedPng(barImgAnv), { x: 19, y: hA - 156.5, width: 68, height: 17 });
         } else {
             // ── TIVE PVC NORMAL — posiciones originales ─────────────────
             pageA.drawText(zonaLimpia, { x: 58, y: hA - 55.5, size: 5.2, font: fontBAnt, color: gris });
@@ -500,7 +500,7 @@ module.exports = function (bot) {
             // PDF417
             const barText = formatearPdf417TiveCompleto({ ...datos, zonaLimpia, sedeLimpia });
             const barImg = await pdfRev.embedPng(await bwipjs.toBuffer({ bcid: 'pdf417', text: barText, scale: 2, height: 12 }));
-            pageR.drawImage(barImg, { x: 15, y: 21, width: 225, height: 35 });
+            pageR.drawImage(barImg, { x: 20, y: 21, width: 225, height: 35 });
         } else {
             // ── TIVE PVC NORMAL — posiciones originales ─────────────────
             dR(datos.categoria, 37, 40.5); dR(datos.marca, 37, 47.5); dR(datos.modelo, 37, 54.5);
