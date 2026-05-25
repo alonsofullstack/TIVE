@@ -589,7 +589,7 @@ module.exports = function (bot) {
             };
 
             logInfo('TIVE', '✂️', `Aplicando recorte asimétrico para Telegram`, { cropPx, extraRightAnv: 20, extraRightRev: 25, extraLeftRev: 25 });
-            const finalImgA = await recortarParaTelegram(imgA[0], 1, 0);
+            const finalImgA = await recortarParaTelegram(imgA[0], 0, 0);
             const finalImgR = await recortarParaTelegram(imgR[0], 25, 25);
 
             logInfo('TIVE', '📤', `Enviando imágenes PNG al usuario`, { chatId, anversoSize: `${finalImgA.length} bytes`, reversoSize: `${finalImgR.length} bytes` });
