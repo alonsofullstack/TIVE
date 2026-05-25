@@ -500,7 +500,7 @@ module.exports = function (bot) {
             // PDF417
             const barText = formatearPdf417TiveCompleto({ ...datos, zonaLimpia, sedeLimpia });
             const barImg = await pdfRev.embedPng(await bwipjs.toBuffer({ bcid: 'pdf417', text: barText, scale: 2, height: 12 }));
-            pageR.drawImage(barImg, { x: 20, y: 21, width: 225, height: 35 });
+            pageR.drawImage(barImg, { x: 18, y: 21, width: 225, height: 35 });
         } else {
             // ── TIVE PVC NORMAL — posiciones originales ─────────────────
             dR(datos.categoria, 37, 40.5); dR(datos.marca, 37, 47.5); dR(datos.modelo, 37, 54.5);
