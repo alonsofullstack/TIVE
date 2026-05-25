@@ -438,7 +438,7 @@ module.exports = function (bot) {
             pA(safe(datos.fechaTitulo).split(/\s+/)[0], 132, 100.5, 5.5);  // Fecha del Título
             // Código de barras
             const barImgAnv = await bwipjs.toBuffer({ bcid: 'code128', text: safe(datos.placa), scale: 4, height: 15, includetext: false });
-            pageA.drawImage(await pdfAnt.embedPng(barImgAnv), { x: 22.5, y: hA - 156.5, width: 68, height: 17 });
+            pageA.drawImage(await pdfAnt.embedPng(barImgAnv), { x: 21, y: hA - 156.5, width: 68, height: 17 });
         } else {
             // ── TIVE PVC NORMAL — posiciones originales ─────────────────
             pageA.drawText(zonaLimpia, { x: 58, y: hA - 55.5, size: 5.2, font: fontBAnt, color: gris });
@@ -544,13 +544,12 @@ module.exports = function (bot) {
                             .png()
                             .toBuffer();
 
-                        // Quitar el fondo blanco y hacerlo transparente
-                        sigCrop = await removeWhiteBackground(sigCrop);
-
                         if (options.noQR) {
                             // Tarjeta física → firma en el ANVERSO
+                            // Quitar el fondo blanco y hacerlo transparente
+                            sigCrop = await removeWhiteBackground(sigCrop);
                             const sigImg = await pdfAnt.embedPng(sigCrop);
-                            pageA.drawImage(sigImg, { x: 180, y: 10, width: 55, height: 24 });
+                            pageA.drawImage(sigImg, { x: 165, y: 10, width: 55, height: 24 });
                         } else {
                             // TIVE normal → firma en el REVERSO
                             const sigImg = await pdfRev.embedPng(sigCrop);
