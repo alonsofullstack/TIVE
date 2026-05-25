@@ -497,7 +497,7 @@ module.exports = function (bot) {
             dR(datos.categoria, 37, 40.5); dR(datos.marca, 37, 47.5); dR(datos.modelo, 37, 54.5);
             dR(datos.color, 37, 61.5); dR(datos.vin, 59, 69.5); dR(datos.serie, 59, 76.5);
             dR(datos.motor, 61, 83.5); dR(datos.carroceria, 59, 90.5); dR(datos.potencia, 45, 97.5);
-            dR(datos.formRod, 45, 104.5); dR(datos.combustible, 48, 111.5);
+            dR(datos.formRod, 47, 103.5); dR(datos.combustible, 48, 111.5);
             dR(datos.añoModelo, 225, 39); dR(datos.version, 148, 100);
             dR(datos.asientos, 45, 122); dR(datos.pasajeros, 45, 129);
             dR(datos.ruedas, 45, 134.9); dR(datos.ejes, 45, 141.9);
