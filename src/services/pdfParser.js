@@ -252,6 +252,8 @@ function buscarPlacaEnTexto(texto = '') {
     const cleanText = texto.toUpperCase().replace(/[–—]/g, '-');
     
     const regexesEstandar = [
+        /\b([A-Z]{2}-\d{5})\b/g,
+        /\b([A-Z]{2}\d{5})\b/g,
         /\b([A-Z]{3}-\d{3})\b/g,
         /\b([A-Z]{3}\d{3})\b/g,
         /\b(\d{4}-[A-Z]{2})\b/g,
@@ -313,7 +315,7 @@ function buscarPlacaEnTexto(texto = '') {
 
 function buscarPlacaEnNombreArchivo(fileName = '') {
     const normalized = safe(fileName).toUpperCase();
-    const match = normalized.match(/(?:^|[^A-Z0-9])([A-Z0-9]{3}-?[A-Z0-9]{3}|\d{4}-?[A-Z0-9]{2})(?=$|[^A-Z0-9])/);
+    const match = normalized.match(/(?:^|[^A-Z0-9])([A-Z]{2,3}-?\d{3,5}|\d{4,5}-?[A-Z]{1,2}|\d{4}-?\d[A-Z])(?=$|[^A-Z0-9])/);
     return match ? fmtPlaca(match[1]) : '';
 }
 

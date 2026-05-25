@@ -282,7 +282,7 @@ const fmtPlaca = (p) => {
     if (normalized.includes("-")) {
         let parts = normalized.split("-");
         let alnumOnly = normalized.replace(/[^A-Z0-9]/g, "");
-        if (alnumOnly.length === 6 && parts.length === 2) {
+        if (alnumOnly.length >= 5 && alnumOnly.length <= 7 && parts.length === 2) {
             return normalized;
         }
     }
@@ -292,13 +292,30 @@ const fmtPlaca = (p) => {
         if (/^\d{4}/.test(clean)) return `${clean.substring(0, 4)}-${clean.substring(4)}`;
         return `${clean.substring(0, 3)}-${clean.substring(3)}`;
     }
+    if (clean.length === 7) {
+        if (/^[A-Z]{2}\d{5}$/.test(clean)) {
+            return `${clean.substring(0, 2)}-${clean.substring(2)}`;
+        }
+        if (/^\d{5}[A-Z]{2}$/.test(clean)) {
+            return `${clean.substring(0, 5)}-${clean.substring(5)}`;
+        }
+        return `${clean.substring(0, 3)}-${clean.substring(3)}`;
+    }
+    if (clean.length === 5) {
+        if (/^\d{4}[A-Z]$/.test(clean)) {
+            return `${clean.substring(0, 4)}-${clean.substring(4)}`;
+        }
+        if (/^[A-Z]\d{4}$/.test(clean)) {
+            return `${clean.substring(0, 1)}-${clean.substring(1)}`;
+        }
+    }
     return clean;
 };
 
 function validarPlacaExtraida(valor = '') {
     const placa = fmtPlaca(valor);
     const clean = placa.replace(/[^A-Z0-9]/gi, '');
-    return clean.length === 6 ? placa : '';
+    return (clean.length >= 5 && clean.length <= 7) ? placa : '';
 }
 
 function limpiarEtiquetaRegistral(valor = '') {
