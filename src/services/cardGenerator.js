@@ -623,7 +623,7 @@ module.exports = function (bot) {
 
         const useSinAnio = !!datos.sinAnioFabricacion;
         const shiftX = useSinAnio ? 9 : 0;
-        const shiftY = useSinAnio ? 7 : 0;
+        const shiftY = useSinAnio ? 9 : 0;
         const templatePath = getTemplatePath(useSinAnio ? 'TIVE SIN AÑO FABRIC.pdf' : COMPLETE_TEMPLATE_NAME);
         const templateBytes = fs.readFileSync(templatePath);
         const templateDoc = await PDFDocument.load(templateBytes);
@@ -662,9 +662,15 @@ module.exports = function (bot) {
             }
             const value = valorCompleto(datosCompletos, field.dataKey);
             if (!value) continue;
+
+            let extraShiftY = 0;
+            if (useSinAnio && field.key === 'año_modelo') {
+                extraShiftY = 3.5;
+            }
+
             page.drawText(value, {
                 x: field.x + field.dx + shiftX,
-                y: field.y + field.dy + shiftY,
+                y: field.y + field.dy + shiftY + extraShiftY,
                 size: field.size,
                 font: field.bold ? fontBold : fontRegular,
                 color: ['zona_registral', 'sede_registral'].includes(field.key.trim()) ? gris : negro,
