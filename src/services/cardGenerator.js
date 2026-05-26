@@ -665,7 +665,7 @@ module.exports = function (bot) {
 
             let extraShiftY = 0;
             if (useSinAnio && field.key === 'año_modelo') {
-                extraShiftY = 7.5;
+                extraShiftY = 14.5;
             }
 
             page.drawText(value, {
