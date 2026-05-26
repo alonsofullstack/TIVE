@@ -58,17 +58,57 @@ module.exports = function registerCommands(bot, state, deps) {
                 bot.sendMessage(chatId, `❌ Error: ${e.message}`);
             }
         } else if (data === "gen_tive_completo") {
+            bot.editMessageText(
+                `❓ *¿Deseas incluir el Año de Fabricación en el PDF completo?*\n\n` +
+                `Si eliges *NO*, se usará la plantilla sin este campo y se omitirá en la generación.`,
+                {
+                    chat_id: chatId,
+                    message_id: messageId,
+                    parse_mode: 'Markdown',
+                    reply_markup: {
+                        inline_keyboard: [
+                            [
+                                { text: "✅ SÍ, incluir Año", callback_data: "tive_completo_con_anio" },
+                                { text: "❌ NO, omitir Año", callback_data: "tive_completo_sin_anio" }
+                            ]
+                        ]
+                    }
+                }
+            ).catch(handleEditError);
+        } else if (data === "tive_completo_con_anio" || data === "tive_completo_sin_anio") {
+            const sinAnio = data.includes("sin_anio");
             bot.editMessageText(`📄 *Extrayendo datos para TIVE COMPLETO...*`, { chat_id: chatId, message_id: messageId, parse_mode: 'Markdown' }).catch(handleEditError);
             try {
                 const datos = await extraerTiveCompletoConLibreria(buffer);
+                datos.sinAnioFabricacion = sinAnio;
                 await iniciarCapturaFaltantesTiveCompleto(chatId, datos, buffer);
             } catch (e) {
                 bot.sendMessage(chatId, `❌ Error: ${e.message}`);
             }
         } else if (data === "gen_tive_completar") {
+            bot.editMessageText(
+                `❓ *¿Deseas incluir el Año de Fabricación en el PDF?*\n\n` +
+                `Si eliges *NO*, se usará la plantilla sin este campo y se omitirá en la generación.`,
+                {
+                    chat_id: chatId,
+                    message_id: messageId,
+                    parse_mode: 'Markdown',
+                    reply_markup: {
+                        inline_keyboard: [
+                            [
+                                { text: "✅ SÍ, incluir Año", callback_data: "tive_completar_con_anio" },
+                                { text: "❌ NO, omitir Año", callback_data: "tive_completar_sin_anio" }
+                            ]
+                        ]
+                    }
+                }
+            ).catch(handleEditError);
+        } else if (data === "tive_completar_con_anio" || data === "tive_completar_sin_anio") {
+            const sinAnio = data.includes("sin_anio");
             bot.editMessageText(`📄 *Extrayendo datos para TIVE PARA COMPLETAR...*`, { chat_id: chatId, message_id: messageId, parse_mode: 'Markdown' }).catch(handleEditError);
             try {
                 const datos = await extraerTiveCompletoConLibreria(buffer);
+                datos.sinAnioFabricacion = sinAnio;
                 await iniciarCapturaFaltantesTiveCompletar(chatId, datos, buffer);
             } catch (e) {
                 bot.sendMessage(chatId, `❌ Error: ${e.message}`);

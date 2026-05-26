@@ -221,6 +221,7 @@ function prepararDatosTiveCompleto(datos) {
 
 function obtenerCamposFaltantesTiveCompleto(datos) {
     return TIVE_COMPLETO_REQUIRED_FIELDS.filter(field => {
+        if (datos.sinAnioFabricacion && field.key === 'añoFabricacion') return false;
         if (field.key === 'placa') return placaRequiereConfirmacion(datos.placaOriginal);
         const val = safe(datos[field.key]);
         if (field.key === 'dua' && (val === '0' || !val.includes('-'))) return true;
@@ -239,14 +240,17 @@ function obtenerCamposFaltantesTiveCompletar(datos) {
         return !val;
     });
 
-    const forcedFields = [
-        { key: 'añoFabricacion', label: 'AÑO DE FABRICACIÓN' },
+    const forcedFields = [];
+    if (!datos.sinAnioFabricacion) {
+        forcedFields.push({ key: 'añoFabricacion', label: 'AÑO DE FABRICACIÓN' });
+    }
+    forcedFields.push(
         { key: 'añoModelo', label: 'AÑO DE MODELO' },
         { key: 'añoTitulo', label: 'AÑO DE TÍTULO' },
         { key: 'fechaTitulo', label: 'FECHA DE TÍTULO' },
         { key: 'fechaFinal', label: 'FECHA DE EMISIÓN (debajo del Título N°)' },
         { key: 'tituloNo', label: 'TÍTULO N° (solo número o completo)' }
-    ];
+    );
 
     return [...forcedFields, ...standardFields];
 }
@@ -617,7 +621,8 @@ module.exports = function (bot) {
             tieneFirmaOverride: !!firmaPathOverride
         });
 
-        const templatePath = getTemplatePath(COMPLETE_TEMPLATE_NAME);
+        const useSinAnio = !!datos.sinAnioFabricacion;
+        const templatePath = getTemplatePath(useSinAnio ? 'TIVE SIN AÑO FABRIC.pdf' : COMPLETE_TEMPLATE_NAME);
         const templateBytes = fs.readFileSync(templatePath);
         const templateDoc = await PDFDocument.load(templateBytes);
         templateDoc.registerFontkit(fontkit);
@@ -650,6 +655,9 @@ module.exports = function (bot) {
 
         const drawnFields = [];
         for (const field of TIVE_COMPLETO_FIELDS) {
+            if (useSinAnio && field.key === 'año_fabricacion') {
+                continue;
+            }
             const value = valorCompleto(datosCompletos, field.dataKey);
             if (!value) continue;
             page.drawText(value, {
