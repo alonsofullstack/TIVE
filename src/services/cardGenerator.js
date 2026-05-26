@@ -622,8 +622,8 @@ module.exports = function (bot) {
         });
 
         const useSinAnio = !!datos.sinAnioFabricacion;
-        const shiftX = useSinAnio ? 7 : 0;
-        const shiftY = useSinAnio ? 5 : 0;
+        const shiftX = useSinAnio ? 9 : 0;
+        const shiftY = useSinAnio ? 7 : 0;
         const templatePath = getTemplatePath(useSinAnio ? 'TIVE SIN AÑO FABRIC.pdf' : COMPLETE_TEMPLATE_NAME);
         const templateBytes = fs.readFileSync(templatePath);
         const templateDoc = await PDFDocument.load(templateBytes);
