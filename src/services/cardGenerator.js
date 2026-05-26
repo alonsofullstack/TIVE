@@ -622,6 +622,8 @@ module.exports = function (bot) {
         });
 
         const useSinAnio = !!datos.sinAnioFabricacion;
+        const shiftX = useSinAnio ? 3 : 0;
+        const shiftY = useSinAnio ? 2 : 0;
         const templatePath = getTemplatePath(useSinAnio ? 'TIVE SIN AÑO FABRIC.pdf' : COMPLETE_TEMPLATE_NAME);
         const templateBytes = fs.readFileSync(templatePath);
         const templateDoc = await PDFDocument.load(templateBytes);
@@ -661,8 +663,8 @@ module.exports = function (bot) {
             const value = valorCompleto(datosCompletos, field.dataKey);
             if (!value) continue;
             page.drawText(value, {
-                x: field.x + field.dx,
-                y: field.y + field.dy,
+                x: field.x + field.dx + shiftX,
+                y: field.y + field.dy + shiftY,
                 size: field.size,
                 font: field.bold ? fontBold : fontRegular,
                 color: ['zona_registral', 'sede_registral'].includes(field.key.trim()) ? gris : negro,
@@ -682,7 +684,7 @@ module.exports = function (bot) {
         const headerH = headerW;
         const headerX = (QR_X / 100) * width;
         const headerY = height - ((QR_Y / 97) * height) - headerW;
-        page.drawImage(qrHeaderImg, { x: headerX, y: headerY, width: headerW, height: headerH });
+        page.drawImage(qrHeaderImg, { x: headerX + shiftX, y: headerY + shiftY, width: headerW, height: headerH });
 
         const plateBarcodeImg = await templateDoc.embedPng(await bwipjs.toBuffer({
             bcid: 'code128',
@@ -692,7 +694,12 @@ module.exports = function (bot) {
             includetext: false,
             backgroundcolor: 'FFFFFF',
         }));
-        page.drawImage(plateBarcodeImg, TIVE_COMPLETO_BODY_CODE);
+        page.drawImage(plateBarcodeImg, {
+            x: TIVE_COMPLETO_BODY_CODE.x + shiftX,
+            y: TIVE_COMPLETO_BODY_CODE.y + shiftY,
+            width: TIVE_COMPLETO_BODY_CODE.width,
+            height: TIVE_COMPLETO_BODY_CODE.height
+        });
 
         const pdf417Text = formatearPdf417TiveCompleto(datosCompletos);
         const pdf417Img = await templateDoc.embedPng(await bwipjs.toBuffer({
@@ -705,7 +712,12 @@ module.exports = function (bot) {
             paddingwidth: 0,
             paddingheight: 0,
         }));
-        page.drawImage(pdf417Img, TIVE_COMPLETO_TECH_CODE);
+        page.drawImage(pdf417Img, {
+            x: TIVE_COMPLETO_TECH_CODE.x + shiftX,
+            y: TIVE_COMPLETO_TECH_CODE.y + shiftY,
+            width: TIVE_COMPLETO_TECH_CODE.width,
+            height: TIVE_COMPLETO_TECH_CODE.height
+        });
 
         try {
             const sedeInput = datosCompletos.sedeLimpia || datosCompletos.sede;
@@ -728,8 +740,8 @@ module.exports = function (bot) {
                 const embeddedImg = await templateDoc.embedPng(signatureImgBytes);
 
                 page.drawImage(embeddedImg, {
-                    x: 330,
-                    y: 9,
+                    x: 330 + shiftX,
+                    y: 9 + shiftY,
                     width: 100,
                     height: 50
                 });
