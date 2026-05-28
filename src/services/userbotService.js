@@ -9,19 +9,19 @@ const { StringSession } = require('telegram/sessions');
 const { NewMessage } = require('telegram/events');
 const { logInfo, logError } = require('../utils/logger');
 
-const API_ID = 33222502;
+const API_ID   = 33222502;
 const API_HASH = 'b2f2a2532045bb4b928082ab7243d8a6';
 
-// Tiempo máximo esperando respuesta del bot del grupo (ms)
-const TIMEOUT_MS = 30000;
-// Tiempo esperando más mensajes tras recibir el primero (ms)
+const TIMEOUT_MS   = 30000;
 const WAIT_MORE_MS = 4000;
 
-let client = null;
-let isReady = false;
-let grupoEntityId = null; // ID numérico del grupo para enviar mensajes
+let client        = null;
+let isReady       = false;
+let grupoEntityId = null;
 
 const pendingQueries = new Map();
+
+// ── Inicialización ────────────────────────────────────────────────────────────
 
 async function iniciarUserbot() {
     const sessionStr = (process.env.TELEGRAM_SESSION || '').replace(/\\/g, '');
@@ -47,16 +47,12 @@ async function iniciarUserbot() {
         isReady = true;
         logInfo('USERBOT', '✅', 'Userbot conectado correctamente');
 
-        // Resolver el grupo buscando en diálogos
-        const grupoIdRaw = process.env.GRUPO_CONSULTAS_ID; // -1003854880657
+        const grupoIdRaw = process.env.GRUPO_CONSULTAS_ID;
         const grupoIdNum = Math.abs(parseInt(grupoIdRaw));
 
         logInfo('USERBOT', '🔍', `Buscando grupo ID: ${grupoIdRaw}`);
         const dialogs = await client.getDialogs({ limit: 200 });
-        const dialog = dialogs.find(d => {
-            const dId = Math.abs(parseInt(d.id?.toString() || '0'));
-            return dId === grupoIdNum;
-        });
+        const dialog  = dialogs.find(d => Math.abs(parseInt(d.id?.toString() || '0')) === grupoIdNum);
 
         if (!dialog) {
             logError('USERBOT', '❌', `Grupo no encontrado. IDs disponibles:`);
@@ -69,21 +65,16 @@ async function iniciarUserbot() {
         grupoEntityId = dialog.inputEntity || dialog.entity || dialog.id;
         logInfo('USERBOT', '📌', `Grupo listo`, { titulo: dialog.title });
 
-        // Escuchar mensajes del grupo — sin filtro de chat para evitar el crash
         client.addEventHandler(async (event) => {
             try {
                 const msg = event.message;
                 if (!msg) return;
-
-                // Verificar que el mensaje viene del grupo correcto
                 const msgChatId = Math.abs(parseInt(msg.chatId?.toString() || msg.peerId?.channelId?.toString() || '0'));
                 if (msgChatId !== grupoIdNum) return;
 
-                // Distribuir a consultas pendientes
                 for (const [, pending] of pendingQueries.entries()) {
                     if (pending.resolved) continue;
                     pending.messages.push(msg);
-
                     if (pending.waitTimer) clearTimeout(pending.waitTimer);
                     pending.waitTimer = setTimeout(() => {
                         if (!pending.resolved) {
@@ -92,10 +83,8 @@ async function iniciarUserbot() {
                         }
                     }, WAIT_MORE_MS);
                 }
-            } catch (e) {
-                // ignorar errores en el handler
-            }
-        }, new NewMessage({})); // sin filtro de chats para evitar el crash
+            } catch (_) {}
+        }, new NewMessage({}));
 
     } catch (err) {
         logError('USERBOT', '❌', 'Error iniciando userbot', err);
@@ -104,6 +93,8 @@ async function iniciarUserbot() {
         setTimeout(() => iniciarUserbot(), 30000);
     }
 }
+
+// ── Consulta normal al grupo ──────────────────────────────────────────────────
 
 async function consultarEnGrupo(comando) {
     if (!isReady || !client || !grupoEntityId) {
@@ -148,75 +139,51 @@ async function consultarEnGrupo(comando) {
     });
 }
 
-/**
- * Limpia y rebrandea el texto del bot Selene → Orion Bot
- */
+// ── Helpers de texto ──────────────────────────────────────────────────────────
+
 function limpiarTexto(texto) {
     if (!texto) return texto;
-
     return texto
-        // Reemplazar marca Selene por Orion
         .replace(/\[#SELENE_BOT\]/gi, '[#ORION_BOT]')
         .replace(/#SELENE_BOT/gi, '#ORION_BOT')
         .replace(/SELENE BOT/gi, 'ORION BOT')
         .replace(/SELENE/gi, 'ORION')
-        // Ocultar líneas de créditos y usuario (cualquier símbolo separador)
         .replace(/CREDITOS\s*.+(\n|$)/gi, '')
         .replace(/CRÉDITOS\s*.+(\n|$)/gi, '')
         .replace(/USUARIO\s*.+(\n|$)/gi, '')
         .replace(/\[\s*⚡\s*\]\s*ESTADO DE CUENTA[\s\S]*?(\n\n|$)/gi, '')
-        // Limpiar líneas vacías dobles al final
         .replace(/\n{3,}/g, '\n\n')
         .trim();
 }
 
-/**
- * Filtra mensajes que no son útiles para reenviar al usuario
- * (mensajes de bienvenida, procesando, etc.)
- */
 function esMensajeUtil(msg) {
     const texto = (msg.message || '').toLowerCase();
-
-    // Ignorar mensajes de "procesando" o "bienvenido"
     const ignorar = [
-        'estamos procesando',
-        'un momento por favor',
-        'bienvenido',
-        'procesando tu solicitud',
-        '[ ⏳ ]',
-        '[ 🔄 ]',
+        'estamos procesando', 'un momento por favor', 'bienvenido',
+        'procesando tu solicitud', '[ ⏳ ]', '[ 🔄 ]',
     ];
-
     for (const frase of ignorar) {
         if (texto.includes(frase.toLowerCase())) return false;
     }
-
-    // Si es solo una foto sin texto útil (bienvenida de Selene), ignorar
     if (msg.photo && !texto) return false;
     if (msg.photo && ignorar.some(f => texto.includes(f.toLowerCase()))) return false;
-
     return true;
 }
 
 async function reenviarRespuestas(bot, chatId, mensajes) {
-    // Filtrar solo mensajes útiles
     const utiles = mensajes.filter(esMensajeUtil);
     logInfo('USERBOT', '📨', `Mensajes a reenviar`, { total: mensajes.length, utiles: utiles.length });
 
     for (const msg of utiles) {
         try {
             const caption = limpiarTexto(msg.message || '');
-
             if (msg.photo) {
                 const photoBuffer = await client.downloadMedia(msg);
-                if (photoBuffer) {
-                    await bot.sendPhoto(chatId, Buffer.from(photoBuffer), { caption });
-                }
+                if (photoBuffer) await bot.sendPhoto(chatId, Buffer.from(photoBuffer), { caption });
             } else if (msg.document) {
                 const docBuffer = await client.downloadMedia(msg);
                 if (docBuffer) {
                     const fileName = msg.document.attributes?.find(a => a.fileName)?.fileName || 'archivo';
-                    // Renombrar archivo quitando referencia a Selene
                     const cleanFileName = fileName.replace(/selene/gi, 'ORION');
                     await bot.sendDocument(chatId, Buffer.from(docBuffer), { caption }, { filename: cleanFileName });
                 }
@@ -229,45 +196,66 @@ async function reenviarRespuestas(bot, chatId, mensajes) {
     }
 }
 
+// ── Exploración del panel /cmds ───────────────────────────────────────────────
+
 /**
- * Espera mensajes del grupo por timeoutMs, con ventana de waitMoreMs tras el primero.
- * Devuelve array de mensajes. Uso interno para exploración.
+ * Espera mensajes nuevos del grupo durante timeoutMs.
+ * Reinicia el timer waitMoreMs cada vez que llega un mensaje.
  */
-function _esperarMensajesGrupo(grupoIdNum, timeoutMs = 15000, waitMoreMs = 4000) {
+function _esperarMensajesGrupo(grupoIdNum, timeoutMs, waitMoreMs) {
     return new Promise((resolve) => {
-        const mensajes = [];
+        const mensajes  = [];
         let waitTimer   = null;
         let timeoutTimer = null;
+
+        const finish = () => {
+            clearTimeout(timeoutTimer);
+            if (waitTimer) clearTimeout(waitTimer);
+            client.removeEventHandler(handler);
+            resolve(mensajes);
+        };
 
         const handler = async (event) => {
             const msg = event.message;
             if (!msg) return;
             const msgChatId = Math.abs(parseInt(msg.chatId?.toString() || msg.peerId?.channelId?.toString() || '0'));
             if (msgChatId !== grupoIdNum) return;
-
             mensajes.push(msg);
             if (waitTimer) clearTimeout(waitTimer);
-            waitTimer = setTimeout(() => {
-                clearTimeout(timeoutTimer);
-                client.removeEventHandler(handler);
-                resolve(mensajes);
-            }, waitMoreMs);
+            waitTimer = setTimeout(finish, waitMoreMs);
         };
 
-        timeoutTimer = setTimeout(() => {
-            client.removeEventHandler(handler);
-            resolve(mensajes);
-        }, timeoutMs);
-
+        timeoutTimer = setTimeout(finish, timeoutMs);
         client.addEventHandler(handler, new NewMessage({}));
     });
 }
 
 /**
- * Explora el panel /cmds del grupo:
- *  1. Envía /cmds y captura el mensaje con botones inline
- *  2. Hace click en cada botón y captura la respuesta
- *  3. Devuelve { botones: [{nombre, texto}], raw: {categoria: [textos]} }
+ * Hace click en un botón inline (callback) y espera la respuesta.
+ */
+async function _clickBoton(msgId, botonData, grupoIdNum) {
+    const { functions } = require('telegram/tl');
+    const promesa = _esperarMensajesGrupo(grupoIdNum, 12000, 2500);
+    try {
+        await client.invoke(
+            new functions.messages.GetBotCallbackAnswerRequest({
+                peer:  grupoEntityId,
+                msgId: msgId,
+                data:  botonData,
+            })
+        );
+    } catch (err) {
+        logError('EXPLORAR', '❌', 'Error invocando callback', err);
+    }
+    return promesa;
+}
+
+/**
+ * Explora el panel /cmds del grupo completo:
+ *  1. Envía /cmds → captura el mensaje con botones de categorías
+ *  2. Click en cada categoría → captura texto de la página 1
+ *  3. Navega con → hasta agotar las páginas
+ *  4. Devuelve { tieneBotones, botones, categorias: { nombre: [textos] } }
  */
 async function explorarCmdsGrupo() {
     if (!isReady || !client || !grupoEntityId) {
@@ -275,6 +263,7 @@ async function explorarCmdsGrupo() {
     }
 
     const grupoIdNum = Math.abs(parseInt(process.env.GRUPO_CONSULTAS_ID));
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
 
     // ── Paso 1: Enviar /cmds ─────────────────────────────────────────────────
     logInfo('EXPLORAR', '📤', 'Enviando /cmds al grupo...');
@@ -284,60 +273,106 @@ async function explorarCmdsGrupo() {
 
     if (mensajesInicio.length === 0) throw new Error('El grupo no respondió a /cmds');
 
-    // Buscar mensaje con botones inline
-    let mensajeConBotones = mensajesInicio.find(m => m.replyMarkup?.rows?.length > 0);
-    if (!mensajeConBotones) {
-        // Devolver solo el texto si no hay botones
+    const mensajePrincipal = mensajesInicio.find(m => m.replyMarkup?.rows?.length > 0);
+    if (!mensajePrincipal) {
         return {
             tieneBotones: false,
             textos: mensajesInicio.map(m => m.message || '').filter(Boolean),
         };
     }
 
-    // Extraer botones
-    const botones = [];
-    for (const row of mensajeConBotones.replyMarkup.rows) {
+    // Extraer botones de categoría (ignorar navegación)
+    const IGNORAR_BTN = ['regresar', 'comprar', 'menu', 'volver', 'inicio'];
+    const botonesCategorias = [];
+    for (const row of mensajePrincipal.replyMarkup.rows) {
         for (const btn of row.buttons) {
-            botones.push({ nombre: btn.text, data: btn.data });
+            const nombre = (btn.text || '').replace(/[\[\]]/g, '').trim();
+            const esNav  = IGNORAR_BTN.some(ig => nombre.toLowerCase().includes(ig));
+            if (!esNav && btn.data) {
+                botonesCategorias.push({ nombre, data: btn.data });
+            }
         }
     }
 
-    logInfo('EXPLORAR', '🔘', `Botones encontrados: ${botones.length}`);
+    logInfo('EXPLORAR', '🔘', `Categorías a explorar: ${botonesCategorias.length}`);
 
-    // ── Paso 2: Click en cada botón ──────────────────────────────────────────
-    const { functions } = require('telegram/tl');
-    const resultados = {};
+    // ── Paso 2: Click en cada categoría + navegar páginas ───────────────────
+    const categorias = {};
 
-    for (const boton of botones) {
-        const nombre = boton.nombre.replace(/[\[\]]/g, '').trim();
-        logInfo('EXPLORAR', '🖱️', `Clickeando: "${nombre}"`);
+    for (const boton of botonesCategorias) {
+        const nombre = boton.nombre;
+        logInfo('EXPLORAR', '🖱️', `Explorando: "${nombre}"`);
+        const textosTotales = [];
 
         try {
-            const promesa = _esperarMensajesGrupo(grupoIdNum, 15000, 3000);
+            // Click en la categoría
+            const respuestas = await _clickBoton(mensajePrincipal.id, boton.data, grupoIdNum);
+            await sleep(800);
 
-            await client.invoke(
-                new functions.messages.GetBotCallbackAnswerRequest({
-                    peer:  grupoEntityId,
-                    msgId: mensajeConBotones.id,
-                    data:  boton.data,
-                })
-            );
+            // El bot puede editar el mensaje principal o enviar uno nuevo
+            // Buscamos el mensaje con contenido (texto + posibles botones de paginación)
+            let msgActual = respuestas.find(m => m.message && m.message.length > 10) || null;
 
-            const respuestas = await promesa;
-            const textos = respuestas.map(m => m.message || '').filter(Boolean);
-            resultados[nombre] = textos;
-            logInfo('EXPLORAR', '✅', `"${nombre}" → ${textos.length} mensaje(s)`);
+            if (!msgActual) {
+                // El bot editó el mensaje original — intentar obtenerlo
+                logInfo('EXPLORAR', '⚠️', `"${nombre}" sin mensaje nuevo (posible edición)`);
+                categorias[nombre] = [];
+                await sleep(2000);
+                continue;
+            }
+
+            if (msgActual.message) textosTotales.push(msgActual.message);
+
+            // ── Navegar páginas con → ────────────────────────────────────────
+            const MAX_PAGINAS = 15;
+            let pagina = 1;
+
+            while (pagina < MAX_PAGINAS) {
+                const markup = msgActual.replyMarkup;
+                if (!markup?.rows) break;
+
+                // Buscar botón de siguiente página
+                let btnSig = null;
+                for (const row of markup.rows) {
+                    for (const btn of row.buttons) {
+                        const t = (btn.text || '').trim();
+                        if ((t === '→' || t === '▶️' || t === '>') && btn.data) {
+                            btnSig = btn;
+                            break;
+                        }
+                    }
+                    if (btnSig) break;
+                }
+
+                if (!btnSig) break; // No hay más páginas
+
+                logInfo('EXPLORAR', '➡️', `"${nombre}" → página ${pagina + 1}`);
+                await sleep(1500);
+
+                const respPag = await _clickBoton(msgActual.id, btnSig.data, grupoIdNum);
+                await sleep(600);
+
+                const msgPag = respPag.find(m => m.message && m.message.length > 10);
+                if (!msgPag) break;
+                if (textosTotales.includes(msgPag.message)) break; // Evitar loop
+
+                textosTotales.push(msgPag.message);
+                msgActual = msgPag;
+                pagina++;
+            }
+
+            categorias[nombre] = textosTotales;
+            logInfo('EXPLORAR', '✅', `"${nombre}" → ${textosTotales.length} página(s)`);
 
         } catch (err) {
             logError('EXPLORAR', '❌', `Error en "${nombre}"`, err);
-            resultados[nombre] = [];
+            categorias[nombre] = [];
         }
 
-        // Pausa entre botones para no spamear
-        await new Promise(r => setTimeout(r, 2500));
+        await sleep(2500);
     }
 
-    return { tieneBotones: true, botones, resultados };
+    return { tieneBotones: true, botones: botonesCategorias, categorias };
 }
 
 module.exports = { iniciarUserbot, consultarEnGrupo, reenviarRespuestas, explorarCmdsGrupo };

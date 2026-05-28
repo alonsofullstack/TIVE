@@ -1,12 +1,10 @@
 /**
  * explorar_cmds.js
  * 
- * Comando /explorar_cmds — solo admin
+ * /explorar_cmds — solo admin
  * 
  * Hace que el userbot entre al grupo, presione cada botón del panel /cmds,
- * capture todos los comandos reales y los reenvíe al admin organizados por categoría.
- * 
- * Uso: /explorar_cmds
+ * navega todas las páginas de cada categoría y reenvía el contenido real al admin.
  */
 
 const { logInfo, logError } = require('../utils/logger');
@@ -24,65 +22,59 @@ module.exports = {
 
             const status = await bot.sendMessage(chatId,
                 `🔍 *Explorando panel de comandos del grupo...*\n` +
-                `_Esto puede tardar 1-2 minutos mientras presiono cada botón._`,
+                `_Presionando cada categoría y navegando páginas._\n` +
+                `_Puede tardar 2-3 minutos._`,
                 { parse_mode: 'Markdown' }
             );
 
             try {
                 const resultado = await explorarCmdsGrupo();
-
                 bot.deleteMessage(chatId, status.message_id).catch(() => {});
 
-                // ── Sin botones: solo texto ──────────────────────────────────
+                // ── Sin botones ──────────────────────────────────────────────
                 if (!resultado.tieneBotones) {
-                    const texto = resultado.textos.join('\n\n---\n\n') || '(sin respuesta)';
-                    await bot.sendMessage(chatId,
-                        `📋 *Respuesta del grupo (sin botones):*\n\n${texto}`,
-                        { parse_mode: 'Markdown' }
-                    );
+                    const texto = resultado.textos.join('\n\n') || '(sin respuesta)';
+                    await bot.sendMessage(chatId, `📋 *Respuesta del grupo:*\n\n${texto}`, { parse_mode: 'Markdown' });
                     return;
                 }
 
-                // ── Con botones: una categoría por mensaje ───────────────────
-                const { botones, resultados } = resultado;
+                const { botones, categorias } = resultado;
 
+                // Resumen de categorías encontradas
                 await bot.sendMessage(chatId,
                     `✅ *Exploración completa*\n` +
                     `━━━━━━━━━━━━━━━━━━━━\n` +
-                    `🔘 *Categorías encontradas:* ${botones.length}\n\n` +
-                    botones.map(b => `• ${b.nombre.replace(/[\[\]]/g, '').trim()}`).join('\n'),
+                    `🔘 *Categorías:* ${botones.length}\n\n` +
+                    botones.map(b => `• ${b.nombre}`).join('\n'),
                     { parse_mode: 'Markdown' }
                 );
 
-                // Enviar cada categoría como mensaje separado
-                for (const [categoria, textos] of Object.entries(resultados)) {
-                    if (textos.length === 0) {
+                // Enviar cada categoría con todas sus páginas
+                for (const [categoria, paginas] of Object.entries(categorias)) {
+                    if (paginas.length === 0) {
                         await bot.sendMessage(chatId,
                             `📂 *${categoria}*\n_(sin respuesta del grupo)_`,
                             { parse_mode: 'Markdown' }
-                        );
+                        ).catch(() => {});
                         continue;
                     }
 
-                    for (const texto of textos) {
-                        // Enviar el texto tal cual viene del grupo
+                    for (let i = 0; i < paginas.length; i++) {
+                        const paginaLabel = paginas.length > 1 ? ` — Página ${i + 1}/${paginas.length}` : '';
+                        const header = `📂 *${categoria}*${paginaLabel}\n${'━'.repeat(20)}\n`;
+                        const contenido = paginas[i];
+
                         try {
-                            await bot.sendMessage(chatId,
-                                `📂 *[ ${categoria} ]*\n━━━━━━━━━━━━━━━━━━━━\n${texto}`,
-                                { parse_mode: 'Markdown' }
-                            );
+                            await bot.sendMessage(chatId, header + contenido, { parse_mode: 'Markdown' });
                         } catch (_) {
-                            // Si falla con Markdown (caracteres especiales), enviar sin formato
-                            await bot.sendMessage(chatId,
-                                `📂 [ ${categoria} ]\n${'─'.repeat(20)}\n${texto}`
-                            );
+                            // Fallback sin Markdown si hay caracteres especiales
+                            await bot.sendMessage(chatId, `📂 ${categoria}${paginaLabel}\n${'─'.repeat(20)}\n${contenido}`).catch(() => {});
                         }
                     }
                 }
 
                 await bot.sendMessage(chatId,
-                    `✅ *Exploración finalizada.*\n` +
-                    `_Copia los comandos de arriba para actualizar la lista._`,
+                    `✅ *Exploración finalizada.*\n_Todos los comandos del grupo están arriba._`,
                     { parse_mode: 'Markdown' }
                 );
 
@@ -90,7 +82,7 @@ module.exports = {
                 logError('EXPLORAR', '❌', 'Error en /explorar_cmds', err);
                 bot.deleteMessage(chatId, status.message_id).catch(() => {});
                 bot.sendMessage(chatId,
-                    `❌ *Error explorando el grupo:*\n\`${err.message}\``,
+                    `❌ *Error:* \`${err.message}\``,
                     { parse_mode: 'Markdown' }
                 );
             }
