@@ -117,28 +117,35 @@ module.exports = {
                 }
 
                 const welcome =
-                    `✨ *TIVE AI PRO* ✨\n` +
-                    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-                    `👋 Hola, *${first_name || 'usuario'}*\n` +
-                    creditsLine +
-                    `\n` +
-                    `🚀 *Capacidades del sistema:*\n` +
-                    `• Extracción inteligente de datos _(Gemini AI)_\n` +
-                    `• Generación de anverso/reverso en alta definición\n` +
-                    `• QR y código de barras dinámicos\n` +
-                    `• Recorte automático de firma original\n` +
-                    `• Tarjeta física PVC y tarjeta antigua\n\n` +
-                    `📥 *Para comenzar:* Envía el PDF original de SUNARP.\n\n` +
+                    `╔═══════════════════════════╗\n` +
+                    `       🌟 *TIVE AI PRO* 🌟\n` +
+                    `╚═══════════════════════════╝\n\n` +
+                    `👋 Bienvenido, *${first_name || 'usuario'}*\n\n` +
+                    `${creditsLine}\n` +
+                    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+                    `⚡ *¿Qué puedo hacer por ti?*\n\n` +
+                    `🪪 *CONSULTAS* — DNI, placa, RUC y más\n` +
+                    `   _Escribe el comando directo, ej:_ \`/dni 44443333\`\n\n` +
+                    `🖨️ *TARJETAS TIVE* — Generación con IA\n` +
+                    `   _Sube el PDF de SUNARP y elige la opción_\n\n` +
                     `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
                     `📋 /cmds — Ver todos los comandos\n` +
-                    `💳 /credits — Consultar tu saldo`;
+                    `💳 /credits — Consultar tu saldo\n` +
+                    `📥 /register — Crear tu cuenta`;
 
                 bot.sendMessage(msg.chat.id, welcome, { parse_mode: 'Markdown' })
                     .catch(err => logError('BOT', '❌', 'Error enviando /start', err));
 
             } catch (err) {
                 logError('BOT', '❌', 'Error en /start', err);
-                bot.sendMessage(msg.chat.id, '✨ *TIVE AI PRO* — Bot activo. Usa /register para comenzar.', { parse_mode: 'Markdown' });
+                bot.sendMessage(msg.chat.id, 
+                    `╔═══════════════════════════╗\n` +
+                    `       🌟 *TIVE AI PRO* 🌟\n` +
+                    `╚═══════════════════════════╝\n\n` +
+                    `👋 Bienvenido, *${first_name || 'usuario'}*\n\n` +
+                    `📋 /cmds — Ver todos los comandos\n` +
+                    `📥 /register — Crear tu cuenta`,
+                    { parse_mode: 'Markdown' });
             }
         });
     },
