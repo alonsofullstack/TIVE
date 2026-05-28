@@ -14,7 +14,7 @@ module.exports = {
             bot.editMessageText(`💳 *Procesando datos localmente...*`, { chat_id: chatId, message_id: messageId, parse_mode: 'Markdown' }).catch(handleEditError);
             try {
                 const datos = await extraerConIA(buffer, userPdfNames.get(chatId));
-                await generarTIVE(chatId, datos, null, buffer, { anv: 'TARJETA FISICA ADELANTE.pdf', rev: 'TARJETA FISICA ATRAS.pdf' }, { noQR: true, cropPx: 20 });
+                await generarTIVE(chatId, datos, null, buffer, { anv: 'TARJETA FISICA ADELANTE.pdf', rev: 'TARJETA FISICA ATRAS.pdf' }, { noQR: true, cropTop: 35, cropBottom: 35, cropLeft: 35, cropRight: 35 });
             } catch (e) {
                 bot.sendMessage(chatId, `❌ Error: ${e.message}`);
             }
@@ -75,7 +75,7 @@ module.exports = {
                 
                 await bot.sendMessage(chatId, "✅ Datos faltantes completados. Generando *TARJETA FISICA PVC PARA COMPLETAR*...", { parse_mode: 'Markdown' });
                 try {
-                    await generarTIVE(chatId, pending.datos, null, pending.sourceBuffer, { anv: 'TARJETA FISICA ADELANTE.pdf', rev: 'TARJETA FISICA ATRAS.pdf' }, { noQR: true });
+                    await generarTIVE(chatId, pending.datos, null, pending.sourceBuffer, { anv: 'TARJETA FISICA ADELANTE.pdf', rev: 'TARJETA FISICA ATRAS.pdf' }, { noQR: true, cropTop: 35, cropBottom: 35, cropLeft: 35, cropRight: 35 });
                 } catch (e) {
                     logError('BOT', '❌', 'Error generando TARJETA FISICA PVC PARA COMPLETAR', e);
                     bot.sendMessage(chatId, "❌ Error: " + e.message);

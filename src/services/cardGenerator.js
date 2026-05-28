@@ -572,14 +572,20 @@ module.exports = function (bot) {
             const imgR = await pdf2img.convert(bufR, { width: 1200 });
 
             const cropPx = options.cropPx !== undefined ? options.cropPx : 35;
+            // Si vienen los 4 lados individuales (ej: tarjeta física), úsalos; si no, usa cropPx para todos
+            const cropTop    = options.cropTop    !== undefined ? options.cropTop    : cropPx;
+            const cropBottom = options.cropBottom !== undefined ? options.cropBottom : cropPx;
+            const cropLeft   = options.cropLeft   !== undefined ? options.cropLeft   : cropPx;
+            const cropRight  = options.cropRight  !== undefined ? options.cropRight  : cropPx;
+
             const recortarParaTelegram = async (bufferImg, extraRight = 0, extraLeft = 0) => {
                 const buffer = Buffer.from(bufferImg);
                 const metadata = await sharp(buffer).metadata();
 
-                const left = cropPx + extraLeft;
-                const top = cropPx;
-                const right = cropPx + extraRight;
-                const bottom = cropPx;
+                const left   = cropLeft  + extraLeft;
+                const top    = cropTop;
+                const right  = cropRight + extraRight;
+                const bottom = cropBottom;
 
                 const finalW = metadata.width - left - right;
                 const finalH = metadata.height - top - bottom;
@@ -895,7 +901,7 @@ module.exports = function (bot) {
         if (missingFields.length === 0) {
             userFisicaPvcCompletarData.delete(chatId);
             userState.delete(chatId);
-            await generarTIVE(chatId, prepared, null, sourceBuffer, { anv: 'TARJETA FISICA ADELANTE.pdf', rev: 'TARJETA FISICA ATRAS.pdf' }, { noQR: true });
+            await generarTIVE(chatId, prepared, null, sourceBuffer, { anv: 'TARJETA FISICA ADELANTE.pdf', rev: 'TARJETA FISICA ATRAS.pdf' }, { noQR: true, cropTop: 35, cropBottom: 35, cropLeft: 35, cropRight: 35 });
             return;
         }
 
