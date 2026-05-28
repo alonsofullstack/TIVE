@@ -148,25 +148,48 @@ async function consultarEnGrupo(comando) {
     });
 }
 
+/**
+ * Limpia y rebrandea el texto del bot Selene → Orion Bot
+ */
+function limpiarTexto(texto) {
+    if (!texto) return texto;
+
+    return texto
+        // Reemplazar marca Selene por Orion
+        .replace(/\[#SELENE_BOT\]/gi, '[#ORION_BOT]')
+        .replace(/#SELENE_BOT/gi, '#ORION_BOT')
+        .replace(/SELENE BOT/gi, 'ORION BOT')
+        .replace(/SELENE/gi, 'ORION')
+        // Ocultar líneas de créditos y usuario
+        .replace(/CREDITOS\s*[=⇒►:]+.*(\n|$)/gi, '')
+        .replace(/CRÉDITOS\s*[=⇒►:]+.*(\n|$)/gi, '')
+        .replace(/USUARIO\s*[=⇒►:]+.*(\n|$)/gi, '')
+        .replace(/\[\s*⚡\s*\]\s*ESTADO DE CUENTA.*?(\n\n|\n(?=[A-Z]))/gis, '')
+        // Limpiar líneas vacías dobles al final
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+}
+
 async function reenviarRespuestas(bot, chatId, mensajes) {
     for (const msg of mensajes) {
         try {
+            const caption = limpiarTexto(msg.message || '');
+
             if (msg.photo) {
-                // Descargar foto correctamente
                 const photoBuffer = await client.downloadMedia(msg);
                 if (photoBuffer) {
-                    await bot.sendPhoto(chatId, Buffer.from(photoBuffer), { caption: msg.message || '' });
+                    await bot.sendPhoto(chatId, Buffer.from(photoBuffer), { caption });
                 }
             } else if (msg.document) {
-                // Descargar documento correctamente
                 const docBuffer = await client.downloadMedia(msg);
                 if (docBuffer) {
                     const fileName = msg.document.attributes?.find(a => a.fileName)?.fileName || 'archivo';
-                    await bot.sendDocument(chatId, Buffer.from(docBuffer), { caption: msg.message || '' }, { filename: fileName });
+                    // Renombrar archivo quitando referencia a Selene
+                    const cleanFileName = fileName.replace(/selene/gi, 'ORION');
+                    await bot.sendDocument(chatId, Buffer.from(docBuffer), { caption }, { filename: cleanFileName });
                 }
             } else if (msg.message) {
-                // Texto plano
-                await bot.sendMessage(chatId, msg.message);
+                await bot.sendMessage(chatId, limpiarTexto(msg.message));
             }
         } catch (err) {
             logError('USERBOT', '❌', 'Error reenviando mensaje', err);

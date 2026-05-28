@@ -7,6 +7,9 @@
 
 const { logInfo, logError } = require('../utils/logger');
 const { consultarEnGrupo, reenviarRespuestas } = require('../services/userbotService');
+const path = require('path');
+
+const CARGA_IMG = path.join(__dirname, '..', '..', 'tarjeta', 'carga.jpg');
 
 // Lista de comandos que se redirigen al grupo
 // Agrega o quita según los que tenga el grupo
@@ -38,9 +41,10 @@ module.exports = {
 
             logInfo('CONSULTA', '🔍', `Consulta al grupo`, { chatId, comando: texto });
 
-            const procesando = await bot.sendMessage(chatId,
-                `⏳ Consultando... espera un momento.`
-            );
+            const procesando = await bot.sendPhoto(chatId, CARGA_IMG, {
+                caption: `⏳ *Procesando tu solicitud...*`,
+                parse_mode: 'Markdown'
+            });
 
             try {
                 const respuestas = await consultarEnGrupo(texto);
