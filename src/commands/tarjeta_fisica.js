@@ -16,9 +16,16 @@ module.exports = {
                 const datos = await extraerConIA(buffer, userPdfNames.get(chatId));
                 await generarTIVE(chatId, datos, null, buffer, { anv: 'TARJETA FISICA ADELANTE.pdf', rev: 'TARJETA FISICA ATRAS.pdf' }, {
                     noQR: true,
-                    //                ↑ arriba          ↓ abajo           ← izquierda       → derecha
-                    cropTopAnv: 20, cropBottomAnv: 20, cropLeftAnv: 20, cropRightAnv: 20,  // ANVERSO (adelante)
-                    cropTopRev: 20, cropBottomRev: 20, cropLeftRev: 45, cropRightRev: 45   // REVERSO (atrás)
+                    // ── ANVERSO (cara de adelante) ──────────────────
+                    cropTopAnv:    24,  // ↑ arriba
+                    cropBottomAnv: 20,  // ↓ abajo
+                    cropLeftAnv:   20,  // ← izquierda
+                    cropRightAnv:  20,  // → derecha
+                    // ── REVERSO (cara de atrás) ─────────────────────
+                    cropTopRev:    20,  // ↑ arriba
+                    cropBottomRev: 20,  // ↓ abajo
+                    cropLeftRev:   45,  // ← izquierda
+                    cropRightRev:  45,  // → derecha
                 });
             } catch (e) {
                 bot.sendMessage(chatId, `❌ Error: ${e.message}`);
@@ -82,9 +89,16 @@ module.exports = {
                 try {
                     await generarTIVE(chatId, pending.datos, null, pending.sourceBuffer, { anv: 'TARJETA FISICA ADELANTE.pdf', rev: 'TARJETA FISICA ATRAS.pdf' }, {
                         noQR: true,
-                        //                ↑ arriba          ↓ abajo           ← izquierda       → derecha
-                        cropTopAnv: 20, cropBottomAnv: 20, cropLeftAnv: 20, cropRightAnv: 20,  // ANVERSO (adelante)
-                        cropTopRev: 20, cropBottomRev: 20, cropLeftRev: 45, cropRightRev: 45   // REVERSO (atrás)
+                        // ── ANVERSO (cara de adelante) ──────────────────
+                        cropTopAnv:    20,  // ↑ arriba
+                        cropBottomAnv: 20,  // ↓ abajo
+                        cropLeftAnv:   20,  // ← izquierda
+                        cropRightAnv:  20,  // → derecha
+                        // ── REVERSO (cara de atrás) ─────────────────────
+                        cropTopRev:    24,  // ↑ arriba
+                        cropBottomRev: 24,  // ↓ abajo
+                        cropLeftRev:   45,  // ← izquierda
+                        cropRightRev:  45,  // → derecha
                     });
                 } catch (e) {
                     logError('BOT', '❌', 'Error generando TARJETA FISICA PVC PARA COMPLETAR', e);

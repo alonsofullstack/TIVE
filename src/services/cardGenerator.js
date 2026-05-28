@@ -904,9 +904,16 @@ module.exports = function (bot) {
             userState.delete(chatId);
             await generarTIVE(chatId, prepared, null, sourceBuffer, { anv: 'TARJETA FISICA ADELANTE.pdf', rev: 'TARJETA FISICA ATRAS.pdf' }, {
                 noQR: true,
-                //                ↑ arriba          ↓ abajo           ← izquierda       → derecha
-                cropTopAnv: 24, cropBottomAnv: 20, cropLeftAnv: 20, cropRightAnv: 20,  // ANVERSO (adelante)
-                cropTopRev: 24, cropBottomRev: 20, cropLeftRev: 45, cropRightRev: 45   // REVERSO (atrás)
+                // ── ANVERSO (cara de adelante) ──────────────────
+                cropTopAnv:    24,  // ↑ arriba
+                cropBottomAnv: 20,  // ↓ abajo
+                cropLeftAnv:   20,  // ← izquierda
+                cropRightAnv:  20,  // → derecha
+                // ── REVERSO (cara de atrás) ─────────────────────
+                cropTopRev:    24,  // ↑ arriba
+                cropBottomRev: 20,  // ↓ abajo
+                cropLeftRev:   45,  // ← izquierda
+                cropRightRev:  45,  // → derecha
             });
             return;
         }
