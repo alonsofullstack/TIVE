@@ -59,8 +59,15 @@ async function checkAndConsumeCredits(bot, chatId, userId, operation, ADMIN_IDS)
             `━━━━━━━━━━━━━━━━━━━━\n` +
             `La herramienta *${OP_NAMES[operation] || operation}* requiere \`${result.cost}\` crédito(s).\n` +
             `Tu saldo actual es de: \`${result.remaining}\`\n\n` +
-            `Contacta a tu proveedor para adquirir más saldo.`,
-            { parse_mode: 'Markdown' }
+            `Recarga créditos con el comando /buy o contacta a tu proveedor.`,
+            {
+                parse_mode: 'Markdown',
+                reply_markup: {
+                    inline_keyboard: [[
+                        { text: '🛒 Comprar Créditos', url: 'https://t.me/odinosea' }
+                    ]]
+                }
+            }
         );
         return false;
     }
@@ -131,9 +138,17 @@ module.exports = {
                     `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
                     `📋 /cmds — Catálogo de herramientas\n` +
                     `💳 /credits — Estado de cuenta\n` +
+                    `🛒 /buy — Comprar créditos\n` +
                     `📥 /register — Alta en el sistema`;
 
-                bot.sendMessage(msg.chat.id, welcome, { parse_mode: 'Markdown' })
+                bot.sendMessage(msg.chat.id, welcome, {
+                    parse_mode: 'Markdown',
+                    reply_markup: {
+                        inline_keyboard: [[
+                            { text: '🛒 Comprar Créditos — ING. ORION BOT', url: 'https://t.me/odinosea' }
+                        ]]
+                    }
+                })
                     .catch(err => logError('BOT', '❌', 'Error enviando /start', err));
 
             } catch (err) {

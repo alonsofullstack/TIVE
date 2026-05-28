@@ -106,8 +106,17 @@ module.exports = {
                     `📊 \`${bar}\`\n` +
                     `📈 *Total usado:* \`${client.totalUsed}\`\n` +
                     `📅 *Registrado:* ${fmtDate(client.registeredAt)}\n\n` +
-                    `_Cada operación consume 1 crédito._`,
-                    { parse_mode: 'Markdown' }
+                    `_Cada operación consume 1 crédito._\n\n` +
+                    `🛒 Recarga con /buy`,
+                    {
+                        parse_mode: 'Markdown',
+                        reply_markup: {
+                            inline_keyboard: [[
+                                { text: '🛒 Comprar Créditos', url: 'https://t.me/Yxthc2' },
+                                { text: '🛒 ING. ORION BOT', url: 'https://t.me/odinosea' }
+                            ]]
+                        }
+                    }
                 );
             } catch (err) {
                 logError('CLIENTES', '❌', 'Error en /credits', err);

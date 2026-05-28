@@ -11,6 +11,7 @@ const consulta_grupo= require('./consulta_grupo');
 const cmds          = require('./cmds');
 const clientes      = require('./clientes');
 const explorar_cmds = require('./explorar_cmds');
+const buy           = require('./buy');
 
 const { checkAndConsumeCredits, PAID_OPERATIONS } = require('./start');
 const { ADMIN_IDS } = require('../config');
@@ -18,7 +19,7 @@ const { ADMIN_IDS } = require('../config');
 const modules = [
     ping, start, tive_completo, tive_completar, tarjeta_fisica,
     tarjeta_antigua, pvc_tive_qr, insert_qr_original, firma,
-    consulta_grupo, cmds, clientes, explorar_cmds
+    consulta_grupo, cmds, clientes, explorar_cmds, buy
 ];
 
 module.exports = function registerCommands(bot, state, deps) {

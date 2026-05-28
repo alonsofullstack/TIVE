@@ -1,7 +1,8 @@
 const { logInfo } = require('../utils/logger');
 
 const COMMANDS_PER_PAGE = 3;
-const BUY_URL = 'https://t.me/Yxthc2';
+const BUY_URL        = 'https://t.me/Yxthc2';
+const BUY_URL_ORION  = 'https://t.me/odinosea';
 
 const categories = {
     reniec: {
@@ -227,6 +228,7 @@ const categories = {
             { name: "Panel de Bienvenida", type: "Free", cmd: "/start", price: 0, result: "Muestra tu estado actual y opciones del sistema" },
             { name: "Alta en el Sistema", type: "Free", cmd: "/register", price: 0, result: "Registra tu cuenta para empezar a operar" },
             { name: "Consulta de Saldo", type: "Free", cmd: "/credits", price: 0, result: "Muestra tu saldo operativo disponible" },
+            { name: "Comprar Créditos", type: "Free", cmd: "/buy", price: 0, result: "Muestra los planes disponibles y redirige al operador de pagos" },
             { name: "Fotos TIVE PVC", type: "Standard", cmd: "/pvc (sube PDF primero)", price: 2, result: "Genera fotos TIVE PVC desde el PDF" },
             { name: "TIVE Completo", type: "Standard", cmd: "Sube PDF y elige la opción", price: 3, result: "Genera TIVE completo desde el PDF" },
             { name: "TIVE Para Completar", type: "Standard", cmd: "Sube PDF y elige la opción", price: 2, result: "Genera TIVE para completar desde el PDF" },
@@ -284,8 +286,12 @@ function buildCategoryPage(catKey, page) {
 
     // Nav row
     keyboard.push([
-        { text: '🔙 Volver al Menú', callback_data: 'cmds_main' },
-        { text: '🛒 Comprar Créditos', url: BUY_URL }
+        { text: '🔙 Volver al Menú', callback_data: 'cmds_main' }
+    ]);
+    // Botones de compra — dos operadores
+    keyboard.push([
+        { text: '🛒 Comprar Créditos', url: BUY_URL },
+        { text: '🛒 ING. ORION BOT', url: BUY_URL_ORION }
     ]);
 
     return { text, keyboard };
@@ -307,7 +313,11 @@ function getMainMenuKeyboard() {
         }
         keyboard.push(row);
     }
-    keyboard.push([{ text: '🛒 Comprar Créditos', url: BUY_URL }]);
+    // Dos botones de compra en la fila final
+    keyboard.push([
+        { text: '🛒 Comprar Créditos', url: BUY_URL },
+        { text: '🛒 ING. ORION BOT', url: BUY_URL_ORION }
+    ]);
     return keyboard;
 }
 
