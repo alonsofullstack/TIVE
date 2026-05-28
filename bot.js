@@ -54,7 +54,9 @@ registerCommands(bot, state, deps);
 
 // Iniciar userbot para consultas al grupo
 const { iniciarUserbot } = require('./src/services/userbotService');
-iniciarUserbot();
+iniciarUserbot()
+    .then(() => logInfo('BOT', '✅', 'Userbot iniciado correctamente'))
+    .catch((err) => logError('BOT', '❌', 'Userbot falló al iniciar', err));
 
 // ── NOTIFICACIÓN AL ADMIN de cada consulta en el grupo ──────────────────────
 bot.on('message', (msg) => {

@@ -25,11 +25,12 @@ let isReady = false;
 const pendingQueries = new Map();
 
 async function iniciarUserbot() {
-    const sessionStr = process.env.TELEGRAM_SESSION || '';
+    const sessionStr = (process.env.TELEGRAM_SESSION || '').replace(/\\/g, '');
     if (!sessionStr) {
         logError('USERBOT', '❌', 'No hay TELEGRAM_SESSION en .env — userbot desactivado');
         return;
     }
+    logInfo('USERBOT', '🔑', `Sesión cargada`, { longitud: sessionStr.length });
 
     try {
         client = new TelegramClient(
