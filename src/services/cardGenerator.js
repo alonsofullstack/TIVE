@@ -10,7 +10,7 @@ const zlib = require('zlib');
 
 const config = require('../config');
 const {
-    DOMAIN, QR_X, QR_Y, QR_SIZE, COMPLETE_TEMPLATE_NAME,
+    DOMAIN, QR_X, QR_Y, QR_Y_ORIGINAL, QR_SIZE, COMPLETE_TEMPLATE_NAME,
     TIVE_COMPLETO_BODY_CODE, TIVE_COMPLETO_TECH_CODE,
     uploadDir, FONT_BYTES
 } = config;
@@ -795,7 +795,7 @@ module.exports = function (bot) {
 
         const qrSize = QR_SIZE;
         const posX = (QR_X / 100) * width;
-        const posY = height - ((QR_Y / 100) * height) - qrSize;
+        const posY = height - ((QR_Y_ORIGINAL / 100) * height) - qrSize;
 
         logInfo('QR', '📍', `Pegando QR en PDF`, { posX: posX.toFixed(2), posY: posY.toFixed(2), qrSize, qrUrl: qrUrl.substring(0, 60) + '...' });
 
