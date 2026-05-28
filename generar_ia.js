@@ -21,7 +21,7 @@ const genAI = new GoogleGenerativeAI(API_KEY);
 const safe = (t) => t ? String(t).toUpperCase() : '';
 
 // --- TABLA CODE 128 ---
-const C128_PATTERNS = { '0': '11011001100', '1': '11001101100', '2': '11001100110', '3': '10001101100', '4': '10001100110', '5': '10110001100', '6': '10110000110', '7': '10110110000', '8': '10110011011', '9': '11001011000', 'A': '11000101100', 'B': '11000100110', 'C': '11011000100', 'D': '11011000010', 'E': '11011011000', 'F': '11011001101', 'G': '11011011011', 'H': '11001101101', 'I': '11001101111', 'J': '11011110110', 'K': '11011111011', 'L': '11110110110', 'M': '11110110111', 'N': '11110111101', 'O': '11110111111', 'P': '11001101101', 'Q': '11001101111', 'R': '11011110110', 'S': '11011111011', 'T': '11110110110', 'U': '11110110111', 'V': '11110111101', 'W': '11110111111', 'X': '11001101101', 'Y': '11001101111', 'Z': '11011110110', '-': '11000111010', '.': '11011011110', ' ': '11011011011', ':': '11011111010' };
+const C128_PATTERNS = { '0': '11011001100', '1': '11001101100', '2': '11001100110', '3': '10001101100', '4': '10001100110', '5': '10110001100', '6': '10110000110', '7': '10110110000', '8': '101100[...]
 
 function drawRealBarcode(page, text, x, y, width, height) {
     const startCode = '11010010000'; const stopCode = '1100011101011';
@@ -47,7 +47,7 @@ async function extraerConIA(pdfPath) {
     Extrae TODOS los datos tecnicos y registrales.
     Devuelve UNICAMENTE un objeto JSON con estas llaves exactas: 
     zona, sede, partida, dua, titulo, fechaTitulo, placa, codVerif, tituloNo, fechaFinal, 
-    categoria, marca, modelo, color, añoModelo, version, vin, serie, motor, carroceria, potencia, formRod, combustible, asientos, pasajeros, ruedas, ejes, cilindros, longitud, altura, ancho, cilindrada, pBruto, pNeto, cargaUtil. 
+    categoria, marca, modelo, color, añoModelo, version, vin, serie, motor, carroceria, potencia, formRod, combustible, asientos, pasajeros, ruedas, ejes, cilindros, longitud, altura, ancho, cili[...]
     Usa solo valores encontrados en el documento. No inventes datos.`;
 
     const result = await model.generateContent([
@@ -86,7 +86,7 @@ async function generarAnverso(datos) {
 
     drawRealBarcode(page, datos.placa, 10, height - 168, 80, 15);
     const qrImg = await pdfDoc.embedPng(await QRCode.toDataURL(`https://tive.sunarp.gob.pe/ver/${safe(datos.placa)}`, { margin: 1 }));
-    page.drawImage(qrImg, { x: 100, y: height - 170, width: 52, height: 52 });
+    page.drawImage(qrImg, { x: 100, y: height - 110, width: 52, height: 52 });
 
     fs.writeFileSync(`anverso_${safe(datos.placa) || 'final'}.pdf`, await pdfDoc.save());
 }
