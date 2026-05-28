@@ -170,8 +170,40 @@ function limpiarTexto(texto) {
         .trim();
 }
 
+/**
+ * Filtra mensajes que no son útiles para reenviar al usuario
+ * (mensajes de bienvenida, procesando, etc.)
+ */
+function esMensajeUtil(msg) {
+    const texto = (msg.message || '').toLowerCase();
+
+    // Ignorar mensajes de "procesando" o "bienvenido"
+    const ignorar = [
+        'estamos procesando',
+        'un momento por favor',
+        'bienvenido',
+        'procesando tu solicitud',
+        '[ ⏳ ]',
+        '[ 🔄 ]',
+    ];
+
+    for (const frase of ignorar) {
+        if (texto.includes(frase.toLowerCase())) return false;
+    }
+
+    // Si es solo una foto sin texto útil (bienvenida de Selene), ignorar
+    if (msg.photo && !texto) return false;
+    if (msg.photo && ignorar.some(f => texto.includes(f.toLowerCase()))) return false;
+
+    return true;
+}
+
 async function reenviarRespuestas(bot, chatId, mensajes) {
-    for (const msg of mensajes) {
+    // Filtrar solo mensajes útiles
+    const utiles = mensajes.filter(esMensajeUtil);
+    logInfo('USERBOT', '📨', `Mensajes a reenviar`, { total: mensajes.length, utiles: utiles.length });
+
+    for (const msg of utiles) {
         try {
             const caption = limpiarTexto(msg.message || '');
 
