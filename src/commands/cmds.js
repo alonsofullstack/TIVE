@@ -198,24 +198,26 @@ const categories = {
               `▪️ \`/actmat\` \`44443333\` ➔ Acta de matrimonio PDF _(30 cred)_\n` +
               `▪️ \`/actdef\` \`44443333\` ➔ Acta de defunción PDF _(30 cred)_`
     },
-    propios: {
-        title: "🤖 TIVE AI",
-        text: `🤖 *TIVE AI PRO — COMANDOS PROPIOS*\n\n` +
-              `👤 *MI CUENTA*\n` +
-              `▪️ \`/start\` ➔ Bienvenida y estado de cuenta\n` +
-              `▪️ \`/register\` ➔ Registrarte _(hazlo primero)_\n` +
-              `▪️ \`/credits\` ➔ Ver tu saldo de créditos\n\n` +
-              `📄 *TARJETAS* _(sube un PDF de SUNARP primero)_\n` +
+    imprenta: {
+        title: "🖨️ IMPRENTA",
+        text: `🖨️ *SISTEMA ORION — MÓDULO DE IMPRENTA*\n` +
+              `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+              `👤 *GESTIÓN DE CUENTA*\n` +
+              `▪️ \`/start\` ➔ Panel de bienvenida y estado actual\n` +
+              `▪️ \`/register\` ➔ Alta en el sistema _(Requerido)_\n` +
+              `▪️ \`/credits\` ➔ Consulta de saldo operativo\n\n` +
+              `📄 *PROCESAMIENTO DE TARJETAS* _(Requiere documento PDF)_\n` +
               `▪️ 🚀 Fotos TIVE PVC\n▪️ 🧾 TIVE Completo\n▪️ 🧾 TIVE Para Completar\n▪️ 💳 Tarjeta Física PVC\n▪️ 💳 Tarjeta Física PVC Para Completar\n▪️ 📜 Tarjeta Antigua\n▪️ 🔐 Insertar QR en PDF\n\n` +
-              `🛠️ *ADMIN*\n` +
+              `🛠️ *ADMINISTRACIÓN AVANZADA*\n` +
               `▪️ \`/clientes\` · \`/cliente <id>\`\n▪️ \`/addcredits <id> <n>\` · \`/removecredits <id> <n>\`\n\n` +
-              `_Los \`44443333\` son ejemplos — reemplázalos con el DNI/placa real_`
+              `_💡 Los parámetros como \`44443333\` son referenciales. Sustitúyalos por el valor real._`
     }
 };
 
-const MAIN_MENU_TEXT = `🌟 *MENÚ DE COMANDOS TIVE AI PRO* 🌟\n\n` +
-                       `_Selecciona una categoría para ver los comandos disponibles:_\n\n` +
-                       `💡 *Tip:* Usa los botones de abajo para navegar fácilmente.`;
+const MAIN_MENU_TEXT = `🌌 *SISTEMA ORION BOT v2.0* 🌌\n` +
+                       `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+                       `_Bienvenido al panel central de operaciones. Por favor, seleccione un módulo a continuación para desplegar el catálogo de herramientas._\n\n` +
+                       `💡 *Interfaz Dinámica:* Navegue utilizando el teclado interactivo inferior para un acceso rápido y seguro.`;
 
 function getMainMenuKeyboard() {
     const keys = Object.keys(categories);
