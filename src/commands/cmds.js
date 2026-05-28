@@ -13,6 +13,11 @@ module.exports = {
                 `📋 *LISTA DE COMANDOS DISPONIBLES*\n` +
                 `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
 
+                `🤖 *MI CUENTA*\n` +
+                `\`/start\` — Bienvenida y estado de cuenta\n` +
+                `\`/register\` — Registrarse en el sistema\n` +
+                `\`/credits\` — Ver saldo de créditos\n\n` +
+
                 `👤 *PERSONAS*\n` +
                 `\`/nm\` — Búsqueda por nombre\n` +
                 `\`/fiscanm\` — Fiscalía por nombre\n` +
@@ -85,6 +90,12 @@ module.exports = {
                 `\`/sunedupdf\` — SUNEDU PDF\n` +
                 `\`/cor\` — COR\n` +
                 `\`/sis\` — SIS\n\n` +
+
+                `🛠️ *ADMIN*\n` +
+                `\`/clientes\` — Lista de clientes registrados\n` +
+                `\`/cliente <id>\` — Detalle de un cliente\n` +
+                `\`/addcredits <id> <n>\` — Asignar créditos\n` +
+                `\`/removecredits <id> <n>\` — Quitar créditos\n\n` +
 
                 `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
                 `💡 _Uso: \`/comando parámetro\`_\n` +

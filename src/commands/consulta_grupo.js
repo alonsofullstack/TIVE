@@ -7,6 +7,8 @@
 
 const { logInfo, logError } = require('../utils/logger');
 const { consultarEnGrupo, reenviarRespuestas } = require('../services/userbotService');
+const { consumeCredits } = require('../services/clientService');
+const { ADMIN_IDS } = require('../config');
 const path = require('path');
 
 const CARGA_IMG = path.join(__dirname, '..', '..', 'tarjeta', 'carga.jpg');
@@ -40,6 +42,35 @@ module.exports = {
             if (!esComandoGrupo) return;
 
             logInfo('CONSULTA', '🔍', `Consulta al grupo`, { chatId, comando: texto });
+
+            // ── Guard de créditos ────────────────────────────────────────
+            if (!ADMIN_IDS.includes(String(msg.from.id))) {
+                const credit = consumeCredits(msg.from.id, 'consulta_grupo');
+                if (credit.error === 'no_registered') {
+                    return bot.sendMessage(chatId,
+                        `🚫 *Acceso Denegado*\n` +
+                        `━━━━━━━━━━━━━━━━━━━━\n` +
+                        `No estás registrado. Usa /register para crear tu cuenta.`,
+                        { parse_mode: 'Markdown' }
+                    );
+                }
+                if (credit.error === 'no_credits') {
+                    return bot.sendMessage(chatId,
+                        `💳 *Sin Créditos*\n` +
+                        `━━━━━━━━━━━━━━━━━━━━\n` +
+                        `No tienes créditos para realizar consultas.\n` +
+                        `Saldo actual: \`0\`\n\n` +
+                        `Contacta al administrador para recargar.`,
+                        { parse_mode: 'Markdown' }
+                    );
+                }
+                if (credit.ok && credit.remaining <= 3 && credit.remaining > 0) {
+                    bot.sendMessage(chatId,
+                        `⚠️ _Saldo bajo: te quedan \`${credit.remaining}\` crédito(s)._`,
+                        { parse_mode: 'Markdown' }
+                    ).catch(() => {});
+                }
+            }
 
             const procesando = await bot.sendPhoto(chatId, CARGA_IMG, {
                 caption: `⏳ *Procesando tu solicitud...*`,
