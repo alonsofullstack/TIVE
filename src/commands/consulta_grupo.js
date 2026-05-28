@@ -16,16 +16,48 @@ const CARGA_IMG = path.join(__dirname, '..', '..', 'tarjeta', 'carga.jpg');
 // Lista de comandos que se redirigen al grupo
 // Agrega o quita según los que tenga el grupo
 const COMANDOS_GRUPO = [
-    '/fiscanm', '/nm', '/den', '/denuncias', '/denpla',
-    '/rqh', '/rq', '/rqv', '/antpolv', '/antjudv', '/jne',
-    '/sunat', '/consu', '/reptrib', '/tra', '/suel', '/sueld',
-    '/pla', '/revtec', '/revtecpdf', '/hsoat', '/soat',
-    '/tive', '/tivep', '/brevete', '/paptrud',
-    '/antpen', '/antpol', '/antjud', '/sentinel',
-    '/financiero', '/sbs', '/sbsv', '/sbsvp', '/seeker',
-    '/sekcel', '/seekerpdf', '/meta', '/sunedu', '/sunedupdf',
-    '/cor', '/sis', '/facial', '/migra', '/migrace', '/migra2',
-    '/mtc', '/cerjov', '/utp', '/dpm', '/actnac', '/actmat', '/actdef'
+    // RENIEC
+    '/dnim', '/dni', '/dnif', '/dnit', '/nm', '/dir', '/dnidb', '/dnifdb', '/dnitdb', '/nmdb',
+    // TELEFONÍA
+    '/telp', '/tel', '/stel', '/cel', '/telpdb', '/claro', '/bitel', '/movistar', '/entel', '/lineas', '/operador',
+    // DELITOS
+    '/fiscapdf', '/fiscacs', '/fiscanm', '/den', '/denuncias', '/denpla',
+    '/rqh', '/rq', '/rqv', '/rqant', '/antpenv', '/antpolv', '/antjudv', '/jne',
+    // POLICÍA
+    '/pnp',
+    // SUNAT
+    '/ruc', '/sunat', '/consu', '/consumos', '/reptrib', '/tra', '/suel', '/sueld',
+    // SUNARP
+    '/pro', '/propdf', '/partida',
+    // VEHÍCULOS
+    '/vec', '/pla', '/plat', '/revtec', '/revtecpdf', '/boi',
+    '/hsoat', '/soat', '/tive', '/tivep', '/tivev', '/tivevpdf', '/paptrud', '/brevete',
+    // GENERADORES
+    '/c4a', '/c4b', '/c4i', '/dniv', '/dnivel',
+    // CERTIFICADOS
+    '/antpen', '/antpol', '/antjud',
+    // FAMILIARES
+    '/ag', '/agv', '/agvp', '/fam', '/her', '/hogar', '/hogardb',
+    // FINANCIERO
+    '/sentinel', '/financiero', '/sbs', '/sbsv', '/sbsvp',
+    // SPAM
+    '/spm', '/spm2', '/spm3',
+    // SEEKER
+    '/seeker', '/sekcel', '/seekerpdf',
+    // BAUCHER
+    '/yape', '/plin', '/ibk', '/bcp',
+    // EXTRAS
+    '/meta', '/sunedu', '/sunedupdf', '/cor', '/sis', '/essa2',
+    // VIP
+    '/facial', '/migra', '/migrace', '/migra2', '/migrace2', '/minedu', '/mtc', '/cerjov', '/ceradu',
+    // MUNDIAL
+    '/cedula', '/nmv', '/mtel', '/ssn',
+    // TEMPORAL
+    '/utp', '/dpm',
+    // MÉDICO
+    '/minsa', '/const', '/reminsa', '/cliluz', '/essalud', '/certmed', '/reessalud',
+    // ACTAS
+    '/actnac', '/actmat', '/actdef',
 ];
 
 module.exports = {
