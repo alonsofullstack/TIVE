@@ -574,15 +574,15 @@ module.exports = function (bot) {
             const cropPx = options.cropPx !== undefined ? options.cropPx : 35;
             // Si vienen los 4 lados individuales (ej: tarjeta física), úsalos; si no, usa cropPx para todos
             // Anverso
-            const cropTopAnv    = options.cropTopAnv    !== undefined ? options.cropTopAnv    : (options.cropTop    !== undefined ? options.cropTop    : cropPx);
-            const cropBottomAnv = options.cropBottomAnv !== undefined ? options.cropBottomAnv : (options.cropBottom !== undefined ? options.cropBottom : cropPx);
-            const cropLeftAnv   = options.cropLeftAnv   !== undefined ? options.cropLeftAnv   : (options.cropLeft   !== undefined ? options.cropLeft   : cropPx);
-            const cropRightAnv  = options.cropRightAnv  !== undefined ? options.cropRightAnv  : (options.cropRight  !== undefined ? options.cropRight  : cropPx);
+            const cropTopAnv    = Math.round(options.cropTopAnv    !== undefined ? options.cropTopAnv    : (options.cropTop    !== undefined ? options.cropTop    : cropPx));
+            const cropBottomAnv = Math.round(options.cropBottomAnv !== undefined ? options.cropBottomAnv : (options.cropBottom !== undefined ? options.cropBottom : cropPx));
+            const cropLeftAnv   = Math.round(options.cropLeftAnv   !== undefined ? options.cropLeftAnv   : (options.cropLeft   !== undefined ? options.cropLeft   : cropPx));
+            const cropRightAnv  = Math.round(options.cropRightAnv  !== undefined ? options.cropRightAnv  : (options.cropRight  !== undefined ? options.cropRight  : cropPx));
             // Reverso
-            const cropTopRev    = options.cropTopRev    !== undefined ? options.cropTopRev    : (options.cropTop    !== undefined ? options.cropTop    : cropPx);
-            const cropBottomRev = options.cropBottomRev !== undefined ? options.cropBottomRev : (options.cropBottom !== undefined ? options.cropBottom : cropPx);
-            const cropLeftRev   = options.cropLeftRev   !== undefined ? options.cropLeftRev   : (options.cropLeft   !== undefined ? options.cropLeft   : cropPx);
-            const cropRightRev  = options.cropRightRev  !== undefined ? options.cropRightRev  : (options.cropRight  !== undefined ? options.cropRight  : cropPx);
+            const cropTopRev    = Math.round(options.cropTopRev    !== undefined ? options.cropTopRev    : (options.cropTop    !== undefined ? options.cropTop    : cropPx));
+            const cropBottomRev = Math.round(options.cropBottomRev !== undefined ? options.cropBottomRev : (options.cropBottom !== undefined ? options.cropBottom : cropPx));
+            const cropLeftRev   = Math.round(options.cropLeftRev   !== undefined ? options.cropLeftRev   : (options.cropLeft   !== undefined ? options.cropLeft   : cropPx));
+            const cropRightRev  = Math.round(options.cropRightRev  !== undefined ? options.cropRightRev  : (options.cropRight  !== undefined ? options.cropRight  : cropPx));
 
             const recortarParaTelegram = async (bufferImg, top, bottom, left, right) => {
                 const buffer = Buffer.from(bufferImg);
