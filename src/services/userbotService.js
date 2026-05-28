@@ -14,14 +14,13 @@ const API_HASH = 'b2f2a2532045bb4b928082ab7243d8a6';
 
 // Tiempo máximo esperando respuesta del bot del grupo (ms)
 const TIMEOUT_MS = 30000;
-// Tiempo mínimo esperando más mensajes tras recibir el primero (ms)
-// por si el bot del grupo manda varios mensajes seguidos
+// Tiempo esperando más mensajes tras recibir el primero (ms)
 const WAIT_MORE_MS = 4000;
 
 let client = null;
 let isReady = false;
+let grupoEntityId = null; // ID numérico del grupo para enviar mensajes
 
-// Cola de consultas pendientes: Map<messageId_en_grupo, { resolve, timer }>
 const pendingQueries = new Map();
 
 async function iniciarUserbot() {
@@ -42,97 +41,75 @@ async function iniciarUserbot() {
 
         await client.connect();
 
-        // Verificar que la sesión es válida
         const me = await client.getMe();
         logInfo('USERBOT', '👤', `Autenticado como`, { nombre: me.firstName, username: me.username, id: me.id?.toString() });
 
         isReady = true;
         logInfo('USERBOT', '✅', 'Userbot conectado correctamente');
 
-        // Resolver la entidad del grupo una vez al inicio
-        const grupoIdRaw = process.env.GRUPO_CONSULTAS_ID;
-        let grupoEntity;
-        try {
-            // Intentar diferentes formatos del ID
-            const intentos = [
-                grupoIdRaw,                          // -3854880657
-                grupoIdRaw.replace('-', ''),          // 3854880657
-                `${grupoIdRaw}`.replace('-100', ''), // sin prefijo -100
-            ];
+        // Resolver el grupo buscando en diálogos
+        const grupoIdRaw = process.env.GRUPO_CONSULTAS_ID; // -1003854880657
+        const grupoIdNum = Math.abs(parseInt(grupoIdRaw));
 
-            for (const intento of intentos) {
-                try {
-                    grupoEntity = await client.getEntity(intento);
-                    logInfo('USERBOT', '📌', `Grupo encontrado con ID: ${intento}`, { titulo: grupoEntity.title });
-                    break;
-                } catch (_) {}
-            }
+        logInfo('USERBOT', '🔍', `Buscando grupo ID: ${grupoIdRaw}`);
+        const dialogs = await client.getDialogs({ limit: 200 });
+        const dialog = dialogs.find(d => {
+            const dId = Math.abs(parseInt(d.id?.toString() || '0'));
+            return dId === grupoIdNum;
+        });
 
-            // Si ninguno funcionó, buscar en los diálogos
-            if (!grupoEntity) {
-                logInfo('USERBOT', '🔍', 'Buscando grupo en diálogos...');
-                const dialogs = await client.getDialogs({ limit: 50 });
-                const grupoIdNum = Math.abs(parseInt(grupoIdRaw));
-                grupoEntity = dialogs.find(d =>
-                    Math.abs(parseInt(d.id?.toString())) === grupoIdNum
-                );
-                if (grupoEntity) {
-                    logInfo('USERBOT', '📌', `Grupo encontrado en diálogos`, { titulo: grupoEntity.title, id: grupoEntity.id?.toString() });
-                    grupoEntity = grupoEntity.entity || grupoEntity;
-                }
-            }
-
-            if (!grupoEntity) throw new Error(`No se encontró el grupo con ID ${grupoIdRaw}`);
-
-        } catch (e) {
-            logError('USERBOT', '❌', `No se pudo resolver el grupo ${grupoIdRaw}`, e);
+        if (!dialog) {
+            logError('USERBOT', '❌', `Grupo no encontrado. IDs disponibles:`);
+            dialogs.filter(d => d.isGroup || d.isChannel).forEach(d =>
+                logInfo('USERBOT', '📋', `${d.title} → ${d.id}`)
+            );
             return;
         }
 
-        // Escuchar mensajes nuevos en el grupo de consultas
+        grupoEntityId = dialog.inputEntity || dialog.entity || dialog.id;
+        logInfo('USERBOT', '📌', `Grupo listo`, { titulo: dialog.title });
+
+        // Escuchar mensajes del grupo — sin filtro de chat para evitar el crash
         client.addEventHandler(async (event) => {
-            const msg = event.message;
-            if (!msg || !msg.senderId) return;
+            try {
+                const msg = event.message;
+                if (!msg) return;
 
-            // Buscar si hay alguna consulta pendiente esperando respuesta
-            for (const [queryKey, pending] of pendingQueries.entries()) {
-                if (pending.resolved) continue;
-                pending.messages.push(msg);
+                // Verificar que el mensaje viene del grupo correcto
+                const msgChatId = Math.abs(parseInt(msg.chatId?.toString() || msg.peerId?.channelId?.toString() || '0'));
+                if (msgChatId !== grupoIdNum) return;
 
-                // Reiniciar el timer de "esperar más mensajes"
-                if (pending.waitTimer) clearTimeout(pending.waitTimer);
-                pending.waitTimer = setTimeout(() => {
-                    if (!pending.resolved) {
-                        pending.resolved = true;
-                        pending.resolve(pending.messages);
-                    }
-                }, WAIT_MORE_MS);
+                // Distribuir a consultas pendientes
+                for (const [, pending] of pendingQueries.entries()) {
+                    if (pending.resolved) continue;
+                    pending.messages.push(msg);
+
+                    if (pending.waitTimer) clearTimeout(pending.waitTimer);
+                    pending.waitTimer = setTimeout(() => {
+                        if (!pending.resolved) {
+                            pending.resolved = true;
+                            pending.resolve(pending.messages);
+                        }
+                    }, WAIT_MORE_MS);
+                }
+            } catch (e) {
+                // ignorar errores en el handler
             }
-        }, new NewMessage({ chats: [grupoEntity] }));
-
-        // Guardar entidad para usarla al enviar mensajes
-        client._grupoEntity = grupoEntity;
+        }, new NewMessage({})); // sin filtro de chats para evitar el crash
 
     } catch (err) {
         logError('USERBOT', '❌', 'Error iniciando userbot', err);
         isReady = false;
-        // Reintentar en 30 segundos
-        logInfo('USERBOT', '🔄', 'Reintentando conexión en 30 segundos...');
+        logInfo('USERBOT', '🔄', 'Reintentando en 30 segundos...');
         setTimeout(() => iniciarUserbot(), 30000);
     }
 }
 
-/**
- * Envía un comando al grupo y espera la(s) respuesta(s)
- * @param {string} comando - ej: "/tive ABC123"
- * @returns {Promise<Array>} - array de mensajes recibidos
- */
 async function consultarEnGrupo(comando) {
-    if (!isReady || !client) {
-        throw new Error('Userbot no está conectado');
+    if (!isReady || !client || !grupoEntityId) {
+        throw new Error('Userbot no está conectado o grupo no resuelto');
     }
 
-    const grupoEntity = client._grupoEntity;
     const queryKey = `${Date.now()}_${Math.random()}`;
 
     return new Promise(async (resolve, reject) => {
@@ -146,7 +123,6 @@ async function consultarEnGrupo(comando) {
             }
         };
 
-        // Timeout máximo
         const timeoutTimer = setTimeout(() => {
             if (!pending.resolved) {
                 pending.resolved = true;
@@ -162,7 +138,7 @@ async function consultarEnGrupo(comando) {
         pendingQueries.set(queryKey, pending);
 
         try {
-            await client.sendMessage(grupoEntity, { message: comando });
+            await client.sendMessage(grupoEntityId, { message: comando });
             logInfo('USERBOT', '📤', `Comando enviado al grupo`, { comando });
         } catch (err) {
             clearTimeout(timeoutTimer);
@@ -172,32 +148,17 @@ async function consultarEnGrupo(comando) {
     });
 }
 
-/**
- * Reenvía los mensajes recibidos del grupo al usuario en el bot
- * @param {object} bot - instancia del bot de Telegram
- * @param {number} chatId - ID del usuario que consultó
- * @param {Array} mensajes - mensajes recibidos del grupo
- */
 async function reenviarRespuestas(bot, chatId, mensajes) {
-    const grupoId = parseInt(process.env.GRUPO_CONSULTAS_ID);
-
     for (const msg of mensajes) {
         try {
             if (msg.photo) {
-                // Es una foto
                 const photoBuffer = await client.downloadMedia(msg, { outputFile: Buffer });
-                await bot.sendPhoto(chatId, photoBuffer, {
-                    caption: msg.message || ''
-                });
+                await bot.sendPhoto(chatId, photoBuffer, { caption: msg.message || '' });
             } else if (msg.document) {
-                // Es un documento/archivo
                 const docBuffer = await client.downloadMedia(msg, { outputFile: Buffer });
                 const fileName = msg.document.attributes?.find(a => a.fileName)?.fileName || 'archivo';
-                await bot.sendDocument(chatId, docBuffer, {
-                    caption: msg.message || ''
-                }, { filename: fileName });
+                await bot.sendDocument(chatId, docBuffer, { caption: msg.message || '' }, { filename: fileName });
             } else if (msg.message) {
-                // Es texto
                 await bot.sendMessage(chatId, msg.message);
             }
         } catch (err) {
