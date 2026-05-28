@@ -41,6 +41,11 @@ async function iniciarUserbot() {
         );
 
         await client.connect();
+
+        // Verificar que la sesión es válida
+        const me = await client.getMe();
+        logInfo('USERBOT', '👤', `Autenticado como`, { nombre: me.firstName, username: me.username, id: me.id?.toString() });
+
         isReady = true;
         logInfo('USERBOT', '✅', 'Userbot conectado correctamente');
 
@@ -82,6 +87,9 @@ async function iniciarUserbot() {
     } catch (err) {
         logError('USERBOT', '❌', 'Error iniciando userbot', err);
         isReady = false;
+        // Reintentar en 30 segundos
+        logInfo('USERBOT', '🔄', 'Reintentando conexión en 30 segundos...');
+        setTimeout(() => iniciarUserbot(), 30000);
     }
 }
 
