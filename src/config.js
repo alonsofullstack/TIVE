@@ -23,15 +23,9 @@ if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 const FONT_PATH = path.join(__dirname, '..', 'tarjeta', 'font_bold.ttf');
 const FONT_BYTES = fs.readFileSync(FONT_PATH);
 
-const isAuthorized = (msg) => {
-    if (ADMIN_IDS.length === 0) return true;
-    const userId = (msg.from.id || "").toString();
-    const authorized = ADMIN_IDS.includes(userId);
-    if (!authorized) {
-        console.log(`[AUTH] 🚫 Intento de acceso denegado para ID: ${userId} (${msg.from.username || 'sin_username'})`);
-    }
-    return authorized;
-};
+// El acceso al bot es abierto — el control real lo maneja el sistema de créditos.
+// Los admins tienen créditos ilimitados; los demás necesitan registro y créditos asignados.
+const isAuthorized = (_msg) => true;
 
 module.exports = {
     BOT_TOKEN, ADMIN_IDS, API_KEYS, DOMAIN, QR_X, QR_Y, QR_X_ORIGINAL, QR_Y_ORIGINAL, QR_SIZE,
