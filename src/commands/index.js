@@ -7,10 +7,11 @@ const tarjeta_antigua = require('./tarjeta_antigua');
 const pvc_tive_qr = require('./pvc_tive_qr');
 const insert_qr_original = require('./insert_qr_original');
 const firma = require('./firma');
+const consulta_grupo = require('./consulta_grupo');
 
 const modules = [
     ping, start, tive_completo, tive_completar, tarjeta_fisica,
-    tarjeta_antigua, pvc_tive_qr, insert_qr_original, firma
+    tarjeta_antigua, pvc_tive_qr, insert_qr_original, firma, consulta_grupo
 ];
 
 module.exports = function registerCommands(bot, state, deps) {
