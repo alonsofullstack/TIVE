@@ -17,10 +17,10 @@ module.exports = {
                 await generarTIVE(chatId, datos, null, buffer, { anv: 'TARJETA FISICA ADELANTE.pdf', rev: 'TARJETA FISICA ATRAS.pdf' }, {
                     noQR: true,
                     // ── ANVERSO (cara de adelante) ──────────────────
-                    cropTopAnv:    24,  // ↑ arriba
-                    cropBottomAnv: 20,  // ↓ abajo
-                    cropLeftAnv:   20,  // ← izquierda
-                    cropRightAnv:  20,  // → derecha
+                    cropTopAnv:     0,  // ↑ arriba
+                    cropBottomAnv:  0,  // ↓ abajo
+                    cropLeftAnv:    0,  // ← izquierda
+                    cropRightAnv:   0,  // → derecha
                     // ── REVERSO (cara de atrás) ─────────────────────
                     cropTopRev:    20,  // ↑ arriba
                     cropBottomRev: 20,  // ↓ abajo
