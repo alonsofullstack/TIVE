@@ -1,107 +1,77 @@
-const { logInfo } = require('../utils/logger');
+/**
+ * cmds.js
+ * Cuando el usuario escribe /cmds o /menu:
+ *  1. Envía /cmds al grupo real y reenvía la respuesta (comandos del grupo)
+ *  2. Agrega al final los comandos propios de este bot
+ */
+
+const { logInfo, logError } = require('../utils/logger');
+const { consultarEnGrupo, reenviarRespuestas } = require('../services/userbotService');
 
 module.exports = {
     registerCommands(bot, state, deps) {
-        bot.on('message', (msg) => {
+        bot.on('message', async (msg) => {
             if (!msg.text) return;
             const texto = msg.text.trim().toLowerCase();
-            if (texto !== '/cmds' && texto !== '/menu' && !texto.startsWith('/cmds ') && !texto.startsWith('/menu ')) return;
+            if (
+                texto !== '/cmds' &&
+                texto !== '/menu' &&
+                !texto.startsWith('/cmds ') &&
+                !texto.startsWith('/menu ')
+            ) return;
 
+            const chatId = msg.chat.id;
             logInfo('BOT', '📋', 'Comando /cmds recibido', { id: msg.from.id });
 
-            const menu =
-                `📋 *LISTA DE COMANDOS DISPONIBLES*\n` +
+            // ── 1. Obtener comandos del grupo en tiempo real ─────────────────
+            const procesando = await bot.sendMessage(chatId,
+                '⏳ _Cargando lista de comandos..._',
+                { parse_mode: 'Markdown' }
+            );
+
+            try {
+                const respuestas = await consultarEnGrupo('/cmds');
+                bot.deleteMessage(chatId, procesando.message_id).catch(() => {});
+
+                if (respuestas && respuestas.length > 0) {
+                    await reenviarRespuestas(bot, chatId, respuestas);
+                }
+            } catch (err) {
+                logError('BOT', '❌', 'Error obteniendo /cmds del grupo', err);
+                bot.deleteMessage(chatId, procesando.message_id).catch(() => {});
+                // Si el grupo no responde, no bloqueamos — igual mostramos los propios
+            }
+
+            // ── 2. Comandos propios de este bot ──────────────────────────────
+            const propios =
+                `\n🤖 *TIVE AI PRO — COMANDOS PROPIOS*\n` +
                 `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
 
-                `🤖 *MI CUENTA*\n` +
+                `👤 *MI CUENTA*\n` +
                 `\`/start\` — Bienvenida y estado de cuenta\n` +
-                `\`/register\` — Registrarse en el sistema\n` +
-                `\`/credits\` — Ver saldo de créditos\n\n` +
+                `\`/register\` — Registrarte _(hazlo primero)_\n` +
+                `\`/credits\` — Ver tu saldo de créditos\n\n` +
 
-                `👤 *PERSONAS*\n` +
-                `\`/nm\` — Búsqueda por nombre\n` +
-                `\`/fiscanm\` — Fiscalía por nombre\n` +
-                `\`/fiscanmDELITOS\` — Fiscalía delitos\n` +
-                `\`/den\` — Denuncias\n` +
-                `\`/denuncias\` — Denuncias completo\n` +
-                `\`/denpla\` — Denuncias por placa\n` +
-                `\`/jne\` — JNE\n` +
-                `\`/actnac\` — Acta de nacimiento\n` +
-                `\`/actmat\` — Acta de matrimonio\n` +
-                `\`/actdef\` — Acta de defunción\n\n` +
-
-                `🏦 *SUNAT / TRIBUTARIO*\n` +
-                `\`/sunat\` — Consulta con DNI\n` +
-                `\`/sunat\` — Consulta con RUC\n` +
-                `\`/consu\` — Consulta con DNI\n` +
-                `\`/consu\` — Consulta con RUT\n` +
-                `\`/reptrib\` — Reporte tributario\n` +
-                `\`/tra\` — Trabajadores\n` +
-                `\`/suel\` — Sueldo\n` +
-                `\`/sueld\` — Sueldo detallado\n\n` +
-
-                `🚗 *VEHÍCULOS*\n` +
-                `\`/pla\` — Consulta por placa\n` +
-                `\`/tive\` — TIVE por placa\n` +
-                `\`/tivep\` — TIVE PDF\n` +
-                `\`/revtec\` — Revisión técnica\n` +
-                `\`/revtecpdf\` — Revisión técnica PDF\n` +
-                `\`/hsoat\` — Historial SOAT\n` +
-                `\`/soat\` — SOAT vigente\n` +
-                `\`/brevete\` — Brevete\n` +
-                `\`/paptrud\` — Papeletas TRUD\n` +
-                `\`/mtc\` — MTC\n\n` +
-
-                `📜 *CERTIFICADOS*\n` +
-                `\`/antpen\` — Antecedentes penales\n` +
-                `\`/antpol\` — Antecedentes policiales\n` +
-                `\`/antpolv\` — Antecedentes pol. (v2)\n` +
-                `\`/antjud\` — Antecedentes judiciales\n` +
-                `\`/antjudv\` — Antecedentes jud. (v2)\n` +
-                `\`/rqh\` — RQ historial\n` +
-                `\`/rq\` — RQ\n` +
-                `\`/rqv\` — RQ verificado\n\n` +
-
-                `💰 *FINANCIERO*\n` +
-                `\`/sentinel\` — Sentinel\n` +
-                `\`/financiero\` — Financiero\n` +
-                `\`/sbs\` — SBS\n` +
-                `\`/sbsv\` — SBS verificado\n` +
-                `\`/sbsvp\` — SBS PDF\n` +
-                `\`/sbsFINANCIERO\` — SBS financiero\n\n` +
-
-                `🔍 *SEEKER*\n` +
-                `\`/seeker\` — Búsqueda general\n` +
-                `\`/sekcel\` — Búsqueda celular\n` +
-                `\`/seekerpdf\` — Búsqueda PDF\n\n` +
-
-                `⭐ *VIP*\n` +
-                `\`/facial\` — Reconocimiento facial\n` +
-                `\`/migra\` — Migraciones\n` +
-                `\`/migrace\` — Migraciones CE\n` +
-                `\`/migra2\` — Migraciones v2\n` +
-                `\`/cerjov\` — Certificado joven\n` +
-                `\`/utp\` — UTP\n` +
-                `\`/dpm\` — DPM\n\n` +
-
-                `🎓 *EXTRAS*\n` +
-                `\`/meta\` — Meta\n` +
-                `\`/sunedu\` — SUNEDU\n` +
-                `\`/sunedupdf\` — SUNEDU PDF\n` +
-                `\`/cor\` — COR\n` +
-                `\`/sis\` — SIS\n\n` +
+                `📄 *TARJETAS* _(sube un PDF de SUNARP primero)_\n` +
+                `  🚀 *Fotos TIVE PVC* — QR personalizado u oficial\n` +
+                `  🧾 *TIVE Completo* — PDF listo para imprimir\n` +
+                `  🧾 *TIVE Para Completar* — Plantilla con campos en blanco\n` +
+                `  💳 *Tarjeta Física PVC* — Imágenes recortadas para PVC\n` +
+                `  💳 *Tarjeta Física PVC Para Completar*\n` +
+                `  📜 *Tarjeta Antigua* — Flujo manual con datos extra\n` +
+                `  🔐 *Insertar QR en PDF Original*\n\n` +
 
                 `🛠️ *ADMIN*\n` +
-                `\`/clientes\` — Lista de clientes registrados\n` +
-                `\`/cliente <id>\` — Detalle de un cliente\n` +
+                `\`/clientes\` — Lista de clientes\n` +
+                `\`/cliente <id o @user>\` — Detalle de cliente\n` +
                 `\`/addcredits <id> <n>\` — Asignar créditos\n` +
                 `\`/removecredits <id> <n>\` — Quitar créditos\n\n` +
 
+                `🏓 \`/ping\` — Verificar que el bot está activo\n\n` +
                 `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-                `💡 _Uso: \`/comando parámetro\`_\n` +
-                `_Ejemplo: \`/tive ABC123\`_`;
+                `_Cada operación consume 1 crédito_`;
 
-            bot.sendMessage(msg.chat.id, menu, { parse_mode: 'Markdown' });
+            bot.sendMessage(chatId, propios, { parse_mode: 'Markdown' }).catch(() => {});
         });
     }
 };

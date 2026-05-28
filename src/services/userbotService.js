@@ -229,4 +229,115 @@ async function reenviarRespuestas(bot, chatId, mensajes) {
     }
 }
 
-module.exports = { iniciarUserbot, consultarEnGrupo, reenviarRespuestas };
+/**
+ * Espera mensajes del grupo por timeoutMs, con ventana de waitMoreMs tras el primero.
+ * Devuelve array de mensajes. Uso interno para exploración.
+ */
+function _esperarMensajesGrupo(grupoIdNum, timeoutMs = 15000, waitMoreMs = 4000) {
+    return new Promise((resolve) => {
+        const mensajes = [];
+        let waitTimer   = null;
+        let timeoutTimer = null;
+
+        const handler = async (event) => {
+            const msg = event.message;
+            if (!msg) return;
+            const msgChatId = Math.abs(parseInt(msg.chatId?.toString() || msg.peerId?.channelId?.toString() || '0'));
+            if (msgChatId !== grupoIdNum) return;
+
+            mensajes.push(msg);
+            if (waitTimer) clearTimeout(waitTimer);
+            waitTimer = setTimeout(() => {
+                clearTimeout(timeoutTimer);
+                client.removeEventHandler(handler);
+                resolve(mensajes);
+            }, waitMoreMs);
+        };
+
+        timeoutTimer = setTimeout(() => {
+            client.removeEventHandler(handler);
+            resolve(mensajes);
+        }, timeoutMs);
+
+        client.addEventHandler(handler, new NewMessage({}));
+    });
+}
+
+/**
+ * Explora el panel /cmds del grupo:
+ *  1. Envía /cmds y captura el mensaje con botones inline
+ *  2. Hace click en cada botón y captura la respuesta
+ *  3. Devuelve { botones: [{nombre, texto}], raw: {categoria: [textos]} }
+ */
+async function explorarCmdsGrupo() {
+    if (!isReady || !client || !grupoEntityId) {
+        throw new Error('Userbot no está conectado o grupo no resuelto');
+    }
+
+    const grupoIdNum = Math.abs(parseInt(process.env.GRUPO_CONSULTAS_ID));
+
+    // ── Paso 1: Enviar /cmds ─────────────────────────────────────────────────
+    logInfo('EXPLORAR', '📤', 'Enviando /cmds al grupo...');
+    const promesa1 = _esperarMensajesGrupo(grupoIdNum, 20000, 4000);
+    await client.sendMessage(grupoEntityId, { message: '/cmds' });
+    const mensajesInicio = await promesa1;
+
+    if (mensajesInicio.length === 0) throw new Error('El grupo no respondió a /cmds');
+
+    // Buscar mensaje con botones inline
+    let mensajeConBotones = mensajesInicio.find(m => m.replyMarkup?.rows?.length > 0);
+    if (!mensajeConBotones) {
+        // Devolver solo el texto si no hay botones
+        return {
+            tieneBotones: false,
+            textos: mensajesInicio.map(m => m.message || '').filter(Boolean),
+        };
+    }
+
+    // Extraer botones
+    const botones = [];
+    for (const row of mensajeConBotones.replyMarkup.rows) {
+        for (const btn of row.buttons) {
+            botones.push({ nombre: btn.text, data: btn.data });
+        }
+    }
+
+    logInfo('EXPLORAR', '🔘', `Botones encontrados: ${botones.length}`);
+
+    // ── Paso 2: Click en cada botón ──────────────────────────────────────────
+    const { functions } = require('telegram/tl');
+    const resultados = {};
+
+    for (const boton of botones) {
+        const nombre = boton.nombre.replace(/[\[\]]/g, '').trim();
+        logInfo('EXPLORAR', '🖱️', `Clickeando: "${nombre}"`);
+
+        try {
+            const promesa = _esperarMensajesGrupo(grupoIdNum, 15000, 3000);
+
+            await client.invoke(
+                new functions.messages.GetBotCallbackAnswerRequest({
+                    peer:  grupoEntityId,
+                    msgId: mensajeConBotones.id,
+                    data:  boton.data,
+                })
+            );
+
+            const respuestas = await promesa;
+            const textos = respuestas.map(m => m.message || '').filter(Boolean);
+            resultados[nombre] = textos;
+            logInfo('EXPLORAR', '✅', `"${nombre}" → ${textos.length} mensaje(s)`);
+
+        } catch (err) {
+            logError('EXPLORAR', '❌', `Error en "${nombre}"`, err);
+            resultados[nombre] = [];
+        }
+
+        // Pausa entre botones para no spamear
+        await new Promise(r => setTimeout(r, 2500));
+    }
+
+    return { tieneBotones: true, botones, resultados };
+}
+
+module.exports = { iniciarUserbot, consultarEnGrupo, reenviarRespuestas, explorarCmdsGrupo };
