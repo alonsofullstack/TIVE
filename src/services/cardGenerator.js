@@ -905,10 +905,10 @@ module.exports = function (bot) {
             await generarTIVE(chatId, prepared, null, sourceBuffer, { anv: 'TARJETA FISICA ADELANTE.pdf', rev: 'TARJETA FISICA ATRAS.pdf' }, {
                 noQR: true,
                 // ── ANVERSO (cara de adelante) ──────────────────
-                cropTopAnv:    24,  // ↑ arriba
-                cropBottomAnv: 20,  // ↓ abajo
-                cropLeftAnv:   20,  // ← izquierda
-                cropRightAnv:  20,  // → derecha
+                cropTopAnv:    1,  // ↑ arriba
+                cropBottomAnv: 1,  // ↓ abajo
+                cropLeftAnv:   1,  // ← izquierda
+                cropRightAnv:  1,  // → derecha
                 // ── REVERSO (cara de atrás) ─────────────────────
                 cropTopRev:    24,  // ↑ arriba
                 cropBottomRev: 20,  // ↓ abajo
