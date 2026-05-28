@@ -2,11 +2,8 @@ const { logInfo } = require('../utils/logger');
 
 module.exports = {
     registerCommands(bot, state, deps) {
-        const { isAuthorized } = deps;
-
         bot.onText(/\/cmds/, (msg) => {
             logInfo('BOT', '📋', 'Comando /cmds recibido', { id: msg.from.id });
-            if (!isAuthorized(msg)) return;
 
             const menu =
                 `📋 *LISTA DE COMANDOS DISPONIBLES*\n` +
