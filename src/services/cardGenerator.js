@@ -573,19 +573,20 @@ module.exports = function (bot) {
 
             const cropPx = options.cropPx !== undefined ? options.cropPx : 35;
             // Si vienen los 4 lados individuales (ej: tarjeta física), úsalos; si no, usa cropPx para todos
-            const cropTop    = options.cropTop    !== undefined ? options.cropTop    : cropPx;
-            const cropBottom = options.cropBottom !== undefined ? options.cropBottom : cropPx;
-            const cropLeft   = options.cropLeft   !== undefined ? options.cropLeft   : cropPx;
-            const cropRight  = options.cropRight  !== undefined ? options.cropRight  : cropPx;
+            // Anverso
+            const cropTopAnv    = options.cropTopAnv    !== undefined ? options.cropTopAnv    : (options.cropTop    !== undefined ? options.cropTop    : cropPx);
+            const cropBottomAnv = options.cropBottomAnv !== undefined ? options.cropBottomAnv : (options.cropBottom !== undefined ? options.cropBottom : cropPx);
+            const cropLeftAnv   = options.cropLeftAnv   !== undefined ? options.cropLeftAnv   : (options.cropLeft   !== undefined ? options.cropLeft   : cropPx);
+            const cropRightAnv  = options.cropRightAnv  !== undefined ? options.cropRightAnv  : (options.cropRight  !== undefined ? options.cropRight  : cropPx);
+            // Reverso
+            const cropTopRev    = options.cropTopRev    !== undefined ? options.cropTopRev    : (options.cropTop    !== undefined ? options.cropTop    : cropPx);
+            const cropBottomRev = options.cropBottomRev !== undefined ? options.cropBottomRev : (options.cropBottom !== undefined ? options.cropBottom : cropPx);
+            const cropLeftRev   = options.cropLeftRev   !== undefined ? options.cropLeftRev   : (options.cropLeft   !== undefined ? options.cropLeft   : cropPx);
+            const cropRightRev  = options.cropRightRev  !== undefined ? options.cropRightRev  : (options.cropRight  !== undefined ? options.cropRight  : cropPx);
 
-            const recortarParaTelegram = async (bufferImg, extraRight = 0, extraLeft = 0) => {
+            const recortarParaTelegram = async (bufferImg, top, bottom, left, right) => {
                 const buffer = Buffer.from(bufferImg);
                 const metadata = await sharp(buffer).metadata();
-
-                const left   = cropLeft  + extraLeft;
-                const top    = cropTop;
-                const right  = cropRight + extraRight;
-                const bottom = cropBottom;
 
                 const finalW = metadata.width - left - right;
                 const finalH = metadata.height - top - bottom;
@@ -598,9 +599,9 @@ module.exports = function (bot) {
                 return buffer;
             };
 
-            logInfo('TIVE', '✂️', `Aplicando recorte asimétrico para Telegram`, { cropPx, extraRightAnv: 20, extraRightRev: 25, extraLeftRev: 25 });
-            const finalImgA = await recortarParaTelegram(imgA[0], 0, 0);
-            const finalImgR = await recortarParaTelegram(imgR[0], 25, 25);
+            logInfo('TIVE', '✂️', `Aplicando recorte asimétrico para Telegram`, { cropTopAnv, cropBottomAnv, cropLeftAnv, cropRightAnv, cropTopRev, cropBottomRev, cropLeftRev, cropRightRev });
+            const finalImgA = await recortarParaTelegram(imgA[0], cropTopAnv, cropBottomAnv, cropLeftAnv, cropRightAnv);
+            const finalImgR = await recortarParaTelegram(imgR[0], cropTopRev, cropBottomRev, cropLeftRev, cropRightRev);
 
             logInfo('TIVE', '📤', `Enviando imágenes PNG al usuario`, { chatId, anversoSize: `${finalImgA.length} bytes`, reversoSize: `${finalImgR.length} bytes` });
 
@@ -901,7 +902,11 @@ module.exports = function (bot) {
         if (missingFields.length === 0) {
             userFisicaPvcCompletarData.delete(chatId);
             userState.delete(chatId);
-            await generarTIVE(chatId, prepared, null, sourceBuffer, { anv: 'TARJETA FISICA ADELANTE.pdf', rev: 'TARJETA FISICA ATRAS.pdf' }, { noQR: true, cropTop: 35, cropBottom: 35, cropLeft: 35, cropRight: 35 });
+            await generarTIVE(chatId, prepared, null, sourceBuffer, { anv: 'TARJETA FISICA ADELANTE.pdf', rev: 'TARJETA FISICA ATRAS.pdf' }, {
+                noQR: true,
+                cropTopAnv: 35, cropBottomAnv: 35, cropLeftAnv: 30, cropRightAnv: 30,  // recorte ANVERSO
+                cropTopRev: 35, cropBottomRev: 35, cropLeftRev: 30, cropRightRev: 30   // recorte REVERSO
+            });
             return;
         }
 
