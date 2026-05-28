@@ -152,13 +152,20 @@ async function reenviarRespuestas(bot, chatId, mensajes) {
     for (const msg of mensajes) {
         try {
             if (msg.photo) {
-                const photoBuffer = await client.downloadMedia(msg, { outputFile: Buffer });
-                await bot.sendPhoto(chatId, photoBuffer, { caption: msg.message || '' });
+                // Descargar foto correctamente
+                const photoBuffer = await client.downloadMedia(msg);
+                if (photoBuffer) {
+                    await bot.sendPhoto(chatId, Buffer.from(photoBuffer), { caption: msg.message || '' });
+                }
             } else if (msg.document) {
-                const docBuffer = await client.downloadMedia(msg, { outputFile: Buffer });
-                const fileName = msg.document.attributes?.find(a => a.fileName)?.fileName || 'archivo';
-                await bot.sendDocument(chatId, docBuffer, { caption: msg.message || '' }, { filename: fileName });
+                // Descargar documento correctamente
+                const docBuffer = await client.downloadMedia(msg);
+                if (docBuffer) {
+                    const fileName = msg.document.attributes?.find(a => a.fileName)?.fileName || 'archivo';
+                    await bot.sendDocument(chatId, Buffer.from(docBuffer), { caption: msg.message || '' }, { filename: fileName });
+                }
             } else if (msg.message) {
+                // Texto plano
                 await bot.sendMessage(chatId, msg.message);
             }
         } catch (err) {
