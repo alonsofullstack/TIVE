@@ -43,8 +43,18 @@ async function iniciarUserbot() {
         isReady = true;
         logInfo('USERBOT', '✅', 'Userbot conectado correctamente');
 
+        // Resolver la entidad del grupo una vez al inicio
+        const grupoIdRaw = process.env.GRUPO_CONSULTAS_ID;
+        let grupoEntity;
+        try {
+            grupoEntity = await client.getEntity(grupoIdRaw);
+            logInfo('USERBOT', '📌', `Grupo encontrado`, { titulo: grupoEntity.title, id: grupoEntity.id?.toString() });
+        } catch (e) {
+            logError('USERBOT', '❌', `No se pudo resolver el grupo ${grupoIdRaw}`, e);
+            return;
+        }
+
         // Escuchar mensajes nuevos en el grupo de consultas
-        const grupoId = parseInt(process.env.GRUPO_CONSULTAS_ID);
         client.addEventHandler(async (event) => {
             const msg = event.message;
             if (!msg || !msg.senderId) return;
@@ -63,7 +73,10 @@ async function iniciarUserbot() {
                     }
                 }, WAIT_MORE_MS);
             }
-        }, new NewMessage({ chats: [grupoId] }));
+        }, new NewMessage({ chats: [grupoEntity] }));
+
+        // Guardar entidad para usarla al enviar mensajes
+        client._grupoEntity = grupoEntity;
 
     } catch (err) {
         logError('USERBOT', '❌', 'Error iniciando userbot', err);
@@ -81,7 +94,7 @@ async function consultarEnGrupo(comando) {
         throw new Error('Userbot no está conectado');
     }
 
-    const grupoId = parseInt(process.env.GRUPO_CONSULTAS_ID);
+    const grupoEntity = client._grupoEntity;
     const queryKey = `${Date.now()}_${Math.random()}`;
 
     return new Promise(async (resolve, reject) => {
@@ -111,7 +124,7 @@ async function consultarEnGrupo(comando) {
         pendingQueries.set(queryKey, pending);
 
         try {
-            await client.sendMessage(grupoId, { message: comando });
+            await client.sendMessage(grupoEntity, { message: comando });
             logInfo('USERBOT', '📤', `Comando enviado al grupo`, { comando });
         } catch (err) {
             clearTimeout(timeoutTimer);
