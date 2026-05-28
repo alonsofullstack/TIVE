@@ -1,147 +1,249 @@
 /**
  * clientService.js
- * Gestión de clientes y créditos — persistencia en JSON local
+ * Gestión de clientes y créditos — persistencia en MySQL
  */
 
-const fs   = require('fs');
-const path = require('path');
-
-const DB_PATH = path.join(__dirname, '..', '..', 'data', 'clients.json');
+require('dotenv').config();
+const mysql = require('mysql2/promise');
+const { logInfo, logError } = require('../utils/logger');
 
 // ── Costos por operación ────────────────────────────────────────────────────
 const CREDIT_COSTS = {
-    ask_qr:                          1,   // Fotos TIVE PVC
-    gen_tive_completo:               1,   // TIVE Completo
-    gen_tive_completar:              1,   // TIVE Para Completar
-    gen_tarjeta_fisica_pvc:          1,   // Tarjeta Física PVC
-    gen_tarjeta_fisica_pvc_completar:1,   // Tarjeta Física PVC Para Completar
-    gen_antigua:                     1,   // Tarjeta Antigua
-    insert_qr_only:                  1,   // Insertar QR en PDF Original
-    consulta_grupo:                  1,   // Consulta al grupo (comandos externos)
+    ask_qr:                           1,
+    use_official:                     1,
+    gen_tive_completo:                1,
+    tive_completo_con_anio:           1,
+    tive_completo_sin_anio:           1,
+    gen_tive_completar:               1,
+    tive_completar_con_anio:          1,
+    tive_completar_sin_anio:          1,
+    gen_tarjeta_fisica_pvc:           1,
+    gen_tarjeta_fisica_pvc_completar: 1,
+    gen_antigua:                      1,
+    insert_qr_only:                   1,
+    consulta_grupo:                   1,
 };
 
-// ── Helpers de persistencia ─────────────────────────────────────────────────
-function _load() {
-    try {
-        if (!fs.existsSync(DB_PATH)) return {};
-        return JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
-    } catch {
-        return {};
+// ── Pool de conexiones ──────────────────────────────────────────────────────
+let pool = null;
+
+function getPool() {
+    if (!pool) {
+        pool = mysql.createPool({
+            host:               process.env.DB_HOST     || 'localhost',
+            port:               parseInt(process.env.DB_PORT || '3306', 10),
+            database:           process.env.DB_NAME     || 'mysql',
+            user:               process.env.DB_USER     || 'mysql',
+            password:           process.env.DB_PASSWORD || '',
+            waitForConnections: true,
+            connectionLimit:    10,
+            queueLimit:         0,
+            timezone:           '+00:00',
+        });
     }
+    return pool;
 }
 
-function _save(db) {
-    const dir = path.dirname(DB_PATH);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2), 'utf8');
+// ── Inicialización de tabla ─────────────────────────────────────────────────
+async function initDB() {
+    const db = getPool();
+    await db.execute(`
+        CREATE TABLE IF NOT EXISTS clients (
+            user_id       BIGINT       NOT NULL PRIMARY KEY,
+            username      VARCHAR(64)  DEFAULT NULL,
+            first_name    VARCHAR(128) NOT NULL DEFAULT 'Sin nombre',
+            credits       INT          NOT NULL DEFAULT 0,
+            total_used    INT          NOT NULL DEFAULT 0,
+            registered_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            last_activity DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+    logInfo('DB', '✅', 'Tabla clients lista');
 }
 
 // ── API pública ─────────────────────────────────────────────────────────────
 
 /**
- * Registra un nuevo cliente. Si ya existe devuelve false.
- * @returns {{ ok: boolean, client?: object, alreadyExists?: boolean }}
+ * Registra un nuevo cliente. Si ya existe devuelve alreadyExists: true.
  */
-function registerClient(userId, username, firstName) {
-    const db = _load();
-    const id = String(userId);
-    if (db[id]) return { ok: false, alreadyExists: true, client: db[id] };
+async function registerClient(userId, username, firstName) {
+    const db = getPool();
+    const id = BigInt(userId);
 
-    db[id] = {
-        userId:    id,
-        username:  username  || null,
-        firstName: firstName || 'Sin nombre',
-        credits:   0,
-        totalUsed: 0,
-        registeredAt: new Date().toISOString(),
-        lastActivity: new Date().toISOString(),
-    };
-    _save(db);
-    return { ok: true, client: db[id] };
+    const [rows] = await db.execute(
+        'SELECT * FROM clients WHERE user_id = ?', [id]
+    );
+    if (rows.length > 0) {
+        return { ok: false, alreadyExists: true, client: _row(rows[0]) };
+    }
+
+    await db.execute(
+        'INSERT INTO clients (user_id, username, first_name, credits, total_used) VALUES (?, ?, ?, 0, 0)',
+        [id, username || null, firstName || 'Sin nombre']
+    );
+    const [newRows] = await db.execute('SELECT * FROM clients WHERE user_id = ?', [id]);
+    return { ok: true, client: _row(newRows[0]) };
 }
 
 /**
  * Devuelve el cliente o null si no existe.
  */
-function getClient(userId) {
-    const db = _load();
-    return db[String(userId)] || null;
+async function getClient(userId) {
+    const db = getPool();
+    const [rows] = await db.execute(
+        'SELECT * FROM clients WHERE user_id = ?', [BigInt(userId)]
+    );
+    return rows.length > 0 ? _row(rows[0]) : null;
 }
 
 /**
  * Devuelve todos los clientes como array.
  */
-function getAllClients() {
-    const db = _load();
-    return Object.values(db);
+async function getAllClients() {
+    const db = getPool();
+    const [rows] = await db.execute(
+        'SELECT * FROM clients ORDER BY credits DESC, registered_at ASC'
+    );
+    return rows.map(_row);
+}
+
+/**
+ * Busca un cliente por userId o username (sin @).
+ */
+async function findClientByRef(ref) {
+    const db = getPool();
+    const clean = ref.replace(/^@/, '');
+
+    // Intentar por ID numérico
+    if (/^\d+$/.test(clean)) {
+        const [rows] = await db.execute(
+            'SELECT * FROM clients WHERE user_id = ?', [BigInt(clean)]
+        );
+        if (rows.length > 0) return _row(rows[0]);
+    }
+
+    // Por username (case-insensitive)
+    const [rows] = await db.execute(
+        'SELECT * FROM clients WHERE LOWER(username) = LOWER(?)', [clean]
+    );
+    return rows.length > 0 ? _row(rows[0]) : null;
 }
 
 /**
  * Agrega créditos a un cliente existente.
- * @returns {{ ok: boolean, credits?: number, error?: string }}
  */
-function addCredits(userId, amount) {
-    const db = _load();
-    const id = String(userId);
-    if (!db[id]) return { ok: false, error: 'Cliente no registrado.' };
+async function addCredits(userId, amount) {
+    const db = getPool();
+    const id = BigInt(userId);
     if (amount <= 0) return { ok: false, error: 'La cantidad debe ser mayor a 0.' };
 
-    db[id].credits += amount;
-    _save(db);
-    return { ok: true, credits: db[id].credits };
+    const [rows] = await db.execute('SELECT credits FROM clients WHERE user_id = ?', [id]);
+    if (rows.length === 0) return { ok: false, error: 'Cliente no registrado.' };
+
+    await db.execute(
+        'UPDATE clients SET credits = credits + ? WHERE user_id = ?', [amount, id]
+    );
+    const [updated] = await db.execute('SELECT credits FROM clients WHERE user_id = ?', [id]);
+    return { ok: true, credits: updated[0].credits };
 }
 
 /**
- * Quita créditos a un cliente existente (admin puede forzar negativo).
- * @returns {{ ok: boolean, credits?: number, error?: string }}
+ * Quita créditos a un cliente (mínimo 0).
  */
-function removeCredits(userId, amount) {
-    const db = _load();
-    const id = String(userId);
-    if (!db[id]) return { ok: false, error: 'Cliente no registrado.' };
+async function removeCredits(userId, amount) {
+    const db = getPool();
+    const id = BigInt(userId);
     if (amount <= 0) return { ok: false, error: 'La cantidad debe ser mayor a 0.' };
 
-    db[id].credits = Math.max(0, db[id].credits - amount);
-    _save(db);
-    return { ok: true, credits: db[id].credits };
+    const [rows] = await db.execute('SELECT credits FROM clients WHERE user_id = ?', [id]);
+    if (rows.length === 0) return { ok: false, error: 'Cliente no registrado.' };
+
+    await db.execute(
+        'UPDATE clients SET credits = GREATEST(0, credits - ?) WHERE user_id = ?', [amount, id]
+    );
+    const [updated] = await db.execute('SELECT credits FROM clients WHERE user_id = ?', [id]);
+    return { ok: true, credits: updated[0].credits };
 }
 
 /**
  * Intenta consumir créditos para una operación.
- * @returns {{ ok: boolean, remaining?: number, cost?: number, error?: string }}
+ * Usa transacción para evitar race conditions.
  */
-function consumeCredits(userId, operation) {
-    const db = _load();
-    const id = String(userId);
-    if (!db[id]) return { ok: false, error: 'no_registered' };
-
+async function consumeCredits(userId, operation) {
+    const db = getPool();
+    const id = BigInt(userId);
     const cost = CREDIT_COSTS[operation] ?? 1;
-    if (db[id].credits < cost) return { ok: false, error: 'no_credits', cost, remaining: db[id].credits };
 
-    db[id].credits   -= cost;
-    db[id].totalUsed += cost;
-    db[id].lastActivity = new Date().toISOString();
-    _save(db);
-    return { ok: true, remaining: db[id].credits, cost };
+    const conn = await db.getConnection();
+    try {
+        await conn.beginTransaction();
+
+        const [rows] = await conn.execute(
+            'SELECT credits FROM clients WHERE user_id = ? FOR UPDATE', [id]
+        );
+        if (rows.length === 0) {
+            await conn.rollback();
+            return { ok: false, error: 'no_registered' };
+        }
+
+        const current = rows[0].credits;
+        if (current < cost) {
+            await conn.rollback();
+            return { ok: false, error: 'no_credits', cost, remaining: current };
+        }
+
+        await conn.execute(
+            'UPDATE clients SET credits = credits - ?, total_used = total_used + ?, last_activity = NOW() WHERE user_id = ?',
+            [cost, cost, id]
+        );
+        await conn.commit();
+
+        const [updated] = await db.execute('SELECT credits FROM clients WHERE user_id = ?', [id]);
+        return { ok: true, remaining: updated[0].credits, cost };
+
+    } catch (err) {
+        await conn.rollback();
+        logError('DB', '❌', 'Error en consumeCredits', err);
+        return { ok: false, error: err.message };
+    } finally {
+        conn.release();
+    }
 }
 
 /**
  * Actualiza username/firstName si cambiaron.
  */
-function touchClient(userId, username, firstName) {
-    const db = _load();
-    const id = String(userId);
-    if (!db[id]) return;
-    db[id].username     = username  || db[id].username;
-    db[id].firstName    = firstName || db[id].firstName;
-    db[id].lastActivity = new Date().toISOString();
-    _save(db);
+async function touchClient(userId, username, firstName) {
+    const db = getPool();
+    try {
+        await db.execute(
+            'UPDATE clients SET username = ?, first_name = ?, last_activity = NOW() WHERE user_id = ?',
+            [username || null, firstName || 'Sin nombre', BigInt(userId)]
+        );
+    } catch (err) {
+        // No crítico — ignorar silenciosamente
+    }
+}
+
+// ── Helper interno ──────────────────────────────────────────────────────────
+function _row(r) {
+    return {
+        userId:       String(r.user_id),
+        username:     r.username     || null,
+        firstName:    r.first_name   || 'Sin nombre',
+        credits:      r.credits,
+        totalUsed:    r.total_used,
+        registeredAt: r.registered_at instanceof Date ? r.registered_at.toISOString() : r.registered_at,
+        lastActivity: r.last_activity instanceof Date ? r.last_activity.toISOString() : r.last_activity,
+    };
 }
 
 module.exports = {
+    initDB,
     registerClient,
     getClient,
     getAllClients,
+    findClientByRef,
     addCredits,
     removeCredits,
     consumeCredits,

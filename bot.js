@@ -16,6 +16,7 @@ const TelegramBot = require('node-telegram-bot-api');
 
 const { BOT_TOKEN, ADMIN_IDS, API_KEYS, DOMAIN, isAuthorized } = require('./src/config');
 const { logInfo, logError } = require('./src/utils/logger');
+const { initDB } = require('./src/services/clientService');
 const state = require('./src/state');
 
 const helpers = require('./src/utils/helpers');
@@ -26,6 +27,11 @@ const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 
 // Limpieza inicial silenciosa de Webhook
 bot.deleteWebHook({ drop_pending_updates: true }).catch(() => { });
+
+// Inicializar tabla de clientes en MySQL
+initDB()
+    .then(() => logInfo('DB', '✅', 'Base de datos MySQL conectada y lista'))
+    .catch((err) => logError('DB', '❌', 'Error conectando a MySQL — el sistema de créditos no funcionará', err));
 
 const signatureService = require('./src/services/signatureService')(bot);
 const cardGenerator = require('./src/services/cardGenerator')(bot);
