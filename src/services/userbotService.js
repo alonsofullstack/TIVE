@@ -53,8 +53,37 @@ async function iniciarUserbot() {
         const grupoIdRaw = process.env.GRUPO_CONSULTAS_ID;
         let grupoEntity;
         try {
-            grupoEntity = await client.getEntity(grupoIdRaw);
-            logInfo('USERBOT', '📌', `Grupo encontrado`, { titulo: grupoEntity.title, id: grupoEntity.id?.toString() });
+            // Intentar diferentes formatos del ID
+            const intentos = [
+                grupoIdRaw,                          // -3854880657
+                grupoIdRaw.replace('-', ''),          // 3854880657
+                `${grupoIdRaw}`.replace('-100', ''), // sin prefijo -100
+            ];
+
+            for (const intento of intentos) {
+                try {
+                    grupoEntity = await client.getEntity(intento);
+                    logInfo('USERBOT', '📌', `Grupo encontrado con ID: ${intento}`, { titulo: grupoEntity.title });
+                    break;
+                } catch (_) {}
+            }
+
+            // Si ninguno funcionó, buscar en los diálogos
+            if (!grupoEntity) {
+                logInfo('USERBOT', '🔍', 'Buscando grupo en diálogos...');
+                const dialogs = await client.getDialogs({ limit: 50 });
+                const grupoIdNum = Math.abs(parseInt(grupoIdRaw));
+                grupoEntity = dialogs.find(d =>
+                    Math.abs(parseInt(d.id?.toString())) === grupoIdNum
+                );
+                if (grupoEntity) {
+                    logInfo('USERBOT', '📌', `Grupo encontrado en diálogos`, { titulo: grupoEntity.title, id: grupoEntity.id?.toString() });
+                    grupoEntity = grupoEntity.entity || grupoEntity;
+                }
+            }
+
+            if (!grupoEntity) throw new Error(`No se encontró el grupo con ID ${grupoIdRaw}`);
+
         } catch (e) {
             logError('USERBOT', '❌', `No se pudo resolver el grupo ${grupoIdRaw}`, e);
             return;
