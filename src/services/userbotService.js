@@ -160,11 +160,11 @@ function limpiarTexto(texto) {
         .replace(/#SELENE_BOT/gi, '#ORION_BOT')
         .replace(/SELENE BOT/gi, 'ORION BOT')
         .replace(/SELENE/gi, 'ORION')
-        // Ocultar líneas de créditos y usuario
-        .replace(/CREDITOS\s*[=⇒➾►:→]+.*(\n|$)/gi, '')
-        .replace(/CRÉDITOS\s*[=⇒➾►:→]+.*(\n|$)/gi, '')
-        .replace(/USUARIO\s*[=⇒➾►:→]+.*(\n|$)/gi, '')
-        .replace(/\[\s*⚡\s*\]\s*ESTADO DE CUENTA.*?(\n\n|\n(?=[A-Z]))/gis, '')
+        // Ocultar líneas de créditos y usuario (cualquier símbolo separador)
+        .replace(/CREDITOS\s*.+(\n|$)/gi, '')
+        .replace(/CRÉDITOS\s*.+(\n|$)/gi, '')
+        .replace(/USUARIO\s*.+(\n|$)/gi, '')
+        .replace(/\[\s*⚡\s*\]\s*ESTADO DE CUENTA[\s\S]*?(\n\n|$)/gi, '')
         // Limpiar líneas vacías dobles al final
         .replace(/\n{3,}/g, '\n\n')
         .trim();
