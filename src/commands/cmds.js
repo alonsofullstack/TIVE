@@ -208,8 +208,6 @@ const categories = {
               `▪️ \`/credits\` ➔ Consulta de saldo operativo\n\n` +
               `📄 *PROCESAMIENTO DE TARJETAS* _(Requiere documento PDF)_\n` +
               `▪️ 🚀 Fotos TIVE PVC\n▪️ 🧾 TIVE Completo\n▪️ 🧾 TIVE Para Completar\n▪️ 💳 Tarjeta Física PVC\n▪️ 💳 Tarjeta Física PVC Para Completar\n▪️ 📜 Tarjeta Antigua\n▪️ 🔐 Insertar QR en PDF\n\n` +
-              `🛠️ *ADMINISTRACIÓN AVANZADA*\n` +
-              `▪️ \`/clientes\` · \`/cliente <id>\`\n▪️ \`/addcredits <id> <n>\` · \`/removecredits <id> <n>\`\n\n` +
               `_💡 Los parámetros como \`44443333\` son referenciales. Sustitúyalos por el valor real._`
     }
 };
@@ -269,7 +267,19 @@ module.exports = {
         if (data.startsWith('cmds_cat_')) {
             const cat = data.replace('cmds_cat_', '');
             if (categories[cat]) {
-                await bot.editMessageText(categories[cat].text, {
+                let sendText = categories[cat].text;
+
+                if (cat === 'imprenta') {
+                    const { ADMIN_IDS } = require('../config');
+                    const userId = String(query.from.id);
+                    if (ADMIN_IDS.includes(userId)) {
+                        const adminSection = `🛠️ *ADMINISTRACIÓN AVANZADA*\n` +
+                                             `▪️ \`/clientes\` · \`/cliente <id>\`\n▪️ \`/addcredits <id> <n>\` · \`/removecredits <id> <n>\`\n\n`;
+                        sendText = sendText.replace('_💡 Los parámetros', adminSection + '_💡 Los parámetros');
+                    }
+                }
+
+                await bot.editMessageText(sendText, {
                     chat_id: chatId,
                     message_id: messageId,
                     parse_mode: 'Markdown',
