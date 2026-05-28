@@ -10,6 +10,7 @@ if (DOMAIN.endsWith('/')) DOMAIN = DOMAIN.slice(0, -1);
 
 const QR_X = parseFloat(process.env.QR_X) || 12.2;
 const QR_Y = parseFloat(process.env.QR_Y) || 10.2;
+const QR_X_ORIGINAL = parseFloat(process.env.QR_X_ORIGINAL) || QR_X; // posición X exclusiva para "Insertar QR en PDF Original"
 const QR_Y_ORIGINAL = parseFloat(process.env.QR_Y_ORIGINAL) || QR_Y; // posición Y exclusiva para "Insertar QR en PDF Original"
 const QR_SIZE = parseFloat(process.env.QR_SIZE) || 72;
 const COMPLETE_TEMPLATE_NAME = 'BASE ELECTRONICA TIVE PDF SIN RELLENO PDF.pdf';
@@ -33,7 +34,7 @@ const isAuthorized = (msg) => {
 };
 
 module.exports = {
-    BOT_TOKEN, ADMIN_IDS, API_KEYS, DOMAIN, QR_X, QR_Y, QR_Y_ORIGINAL, QR_SIZE,
+    BOT_TOKEN, ADMIN_IDS, API_KEYS, DOMAIN, QR_X, QR_Y, QR_X_ORIGINAL, QR_Y_ORIGINAL, QR_SIZE,
     COMPLETE_TEMPLATE_NAME, TIVE_COMPLETO_BODY_CODE, TIVE_COMPLETO_TECH_CODE,
     uploadDir, FONT_PATH, FONT_BYTES, isAuthorized
 };
