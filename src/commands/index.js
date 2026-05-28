@@ -50,7 +50,7 @@ module.exports = function registerCommands(bot, state, deps) {
         }
 
         const buffer = userPdfs.get(chatId);
-        if (!buffer) {
+        if (!buffer && !data.startsWith('cmds_')) {
             return bot.sendMessage(chatId, "⚠️ El documento expiró. Por favor, envíalo de nuevo.");
         }
 
