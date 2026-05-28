@@ -571,7 +571,7 @@ module.exports = function (bot) {
             const imgA = await pdf2img.convert(bufA, { width: 1200 });
             const imgR = await pdf2img.convert(bufR, { width: 1200 });
 
-            const cropPx = 35;
+            const cropPx = options.cropPx !== undefined ? options.cropPx : 35;
             const recortarParaTelegram = async (bufferImg, extraRight = 0, extraLeft = 0) => {
                 const buffer = Buffer.from(bufferImg);
                 const metadata = await sharp(buffer).metadata();

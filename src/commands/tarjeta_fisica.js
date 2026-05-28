@@ -14,7 +14,7 @@ module.exports = {
             bot.editMessageText(`💳 *Procesando datos localmente...*`, { chat_id: chatId, message_id: messageId, parse_mode: 'Markdown' }).catch(handleEditError);
             try {
                 const datos = await extraerConIA(buffer, userPdfNames.get(chatId));
-                await generarTIVE(chatId, datos, null, buffer, { anv: 'TARJETA FISICA ADELANTE.pdf', rev: 'TARJETA FISICA ATRAS.pdf' }, { noQR: true });
+                await generarTIVE(chatId, datos, null, buffer, { anv: 'TARJETA FISICA ADELANTE.pdf', rev: 'TARJETA FISICA ATRAS.pdf' }, { noQR: true, cropPx: 20 });
             } catch (e) {
                 bot.sendMessage(chatId, `❌ Error: ${e.message}`);
             }
