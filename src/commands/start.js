@@ -46,8 +46,8 @@ async function checkAndConsumeCredits(bot, chatId, userId, operation, ADMIN_IDS)
         await bot.sendMessage(chatId,
             `🚫 *Acceso Denegado*\n` +
             `━━━━━━━━━━━━━━━━━━━━\n` +
-            `No estás registrado en el sistema.\n\n` +
-            `Usa /register para crear tu cuenta y luego contacta al administrador para obtener créditos.`,
+            `Tu ID no está registrado en la base de datos de Orion.\n\n` +
+            `Ejecuta /register para crear un perfil y contacta a tu administrador para habilitar saldo.`,
             { parse_mode: 'Markdown' }
         );
         return false;
@@ -55,30 +55,30 @@ async function checkAndConsumeCredits(bot, chatId, userId, operation, ADMIN_IDS)
 
     if (result.error === 'no_credits') {
         await bot.sendMessage(chatId,
-            `💳 *Sin Créditos Suficientes*\n` +
+            `💳 *Saldo Operativo Insuficiente*\n` +
             `━━━━━━━━━━━━━━━━━━━━\n` +
-            `La operación *${OP_NAMES[operation] || operation}* requiere \`${result.cost}\` crédito(s).\n` +
-            `Tu saldo actual: \`${result.remaining}\`\n\n` +
-            `Contacta al administrador para recargar tu cuenta.`,
+            `La herramienta *${OP_NAMES[operation] || operation}* requiere \`${result.cost}\` crédito(s).\n` +
+            `Tu saldo actual es de: \`${result.remaining}\`\n\n` +
+            `Contacta a tu proveedor para adquirir más saldo.`,
             { parse_mode: 'Markdown' }
         );
         return false;
     }
 
     if (!result.ok) {
-        await bot.sendMessage(chatId, `❌ Error verificando créditos: ${result.error}`);
+        await bot.sendMessage(chatId, `❌ Error en el sistema de créditos: ${result.error}`);
         return false;
     }
 
     // Aviso de saldo bajo
     if (result.remaining === 0) {
         bot.sendMessage(chatId,
-            `⚠️ _Has usado tu último crédito. Contacta al administrador para recargar._`,
+            `⚠️ _Alerta de Sistema: Has agotado tu saldo operativo. Contacta a tu proveedor._`,
             { parse_mode: 'Markdown' }
         ).catch(() => {});
     } else if (result.remaining <= 3) {
         bot.sendMessage(chatId,
-            `⚠️ _Saldo bajo: te quedan \`${result.remaining}\` crédito(s). Recarga pronto._`,
+            `⚠️ _Alerta de Sistema: Saldo crítico. Te quedan \`${result.remaining}\` crédito(s)._`,
             { parse_mode: 'Markdown' }
         ).catch(() => {});
     }
@@ -107,31 +107,31 @@ module.exports = {
 
                 let creditsLine = '';
                 if (isAdminUser) {
-                    creditsLine = `👑 *Modo:* Administrador _(sin límite de créditos)_\n`;
+                    creditsLine = `👑 *Nivel de Acceso:* ROOT (Administrador)\n` +
+                                  `♾️ *Saldo Operativo:* Ilimitado\n`;
                 } else if (!client) {
                     creditsLine =
-                        `⚠️ *Estado:* No registrado\n` +
-                        `👉 Usa /register para crear tu cuenta.\n`;
+                        `⚠️ *Estado:* Acceso Restringido\n` +
+                        `👉 Ejecuta /register para inicializar tu perfil.\n`;
                 } else {
-                    creditsLine = `💳 *Créditos disponibles:* \`${client.credits}\`\n`;
+                    creditsLine = `💳 *Saldo Operativo:* \`${client.credits}\` créditos\n`;
                 }
 
                 const welcome =
-                    `╔═══════════════════════════╗\n` +
-                    `       🌟 *TIVE AI PRO* 🌟\n` +
-                    `╚═══════════════════════════╝\n\n` +
-                    `👋 Bienvenido, *${first_name || 'usuario'}*\n\n` +
+                    `🌌 *SISTEMA ORION BOT v2.0* 🌌\n` +
+                    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+                    `👋 Bienvenido operador, *${first_name || 'usuario'}*\n\n` +
                     `${creditsLine}\n` +
                     `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-                    `⚡ *¿Qué puedo hacer por ti?*\n\n` +
-                    `🪪 *CONSULTAS* — DNI, placa, RUC y más\n` +
-                    `   _Escribe el comando directo, ej:_ \`/dni 44443333\`\n\n` +
-                    `🖨️ *TARJETAS TIVE* — Generación con IA\n` +
-                    `   _Sube el PDF de SUNARP y elige la opción_\n\n` +
+                    `⚡ *¿Qué herramienta necesitas hoy?*\n\n` +
+                    `🪪 *MÓDULO DE CONSULTAS* — DNI, Placa, RUC, y más\n` +
+                    `   _Ejecuta el comando directo, ej:_ \`/dni 44443333\`\n\n` +
+                    `🖨️ *MÓDULO DE IMPRENTA* — Procesamiento Inteligente\n` +
+                    `   _Sube un documento PDF para habilitar las opciones_\n\n` +
                     `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-                    `📋 /cmds — Ver todos los comandos\n` +
-                    `💳 /credits — Consultar tu saldo\n` +
-                    `📥 /register — Crear tu cuenta`;
+                    `📋 /cmds — Catálogo de herramientas\n` +
+                    `💳 /credits — Estado de cuenta\n` +
+                    `📥 /register — Alta en el sistema`;
 
                 bot.sendMessage(msg.chat.id, welcome, { parse_mode: 'Markdown' })
                     .catch(err => logError('BOT', '❌', 'Error enviando /start', err));
@@ -139,12 +139,11 @@ module.exports = {
             } catch (err) {
                 logError('BOT', '❌', 'Error en /start', err);
                 bot.sendMessage(msg.chat.id, 
-                    `╔═══════════════════════════╗\n` +
-                    `       🌟 *TIVE AI PRO* 🌟\n` +
-                    `╚═══════════════════════════╝\n\n` +
-                    `👋 Bienvenido, *${first_name || 'usuario'}*\n\n` +
-                    `📋 /cmds — Ver todos los comandos\n` +
-                    `📥 /register — Crear tu cuenta`,
+                    `🌌 *SISTEMA ORION BOT v2.0* 🌌\n` +
+                    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+                    `👋 Bienvenido operador, *${first_name || 'usuario'}*\n\n` +
+                    `📋 /cmds — Catálogo de herramientas\n` +
+                    `📥 /register — Alta en el sistema`,
                     { parse_mode: 'Markdown' });
             }
         });
@@ -170,24 +169,24 @@ module.exports = {
                     return bot.sendMessage(chatId,
                         `🚫 *Acceso Denegado*\n` +
                         `━━━━━━━━━━━━━━━━━━━━\n` +
-                        `No estás registrado en el sistema.\n\n` +
-                        `Usa /register para crear tu cuenta y luego contacta al administrador para obtener créditos.`,
+                        `Tu ID no está registrado en la base de datos de Orion.\n\n` +
+                        `Ejecuta /register para crear un perfil y contacta a tu administrador para habilitar saldo.`,
                         { parse_mode: 'Markdown' }
                     );
                 }
                 if (client.credits <= 0) {
                     return bot.sendMessage(chatId,
-                        `💳 *Sin Créditos*\n` +
+                        `💳 *Saldo Operativo Agotado*\n` +
                         `━━━━━━━━━━━━━━━━━━━━\n` +
-                        `No tienes créditos disponibles.\n` +
+                        `No tienes saldo disponible para procesar este documento.\n` +
                         `Saldo actual: \`0\`\n\n` +
-                        `Contacta al administrador para recargar tu cuenta.`,
+                        `Contacta a tu proveedor para adquirir más créditos.`,
                         { parse_mode: 'Markdown' }
                     );
                 }
             } catch (err) {
                 logError('BOT', '❌', 'Error verificando cliente en handleDocument', err);
-                return bot.sendMessage(chatId, '❌ Error verificando tu cuenta. Intenta de nuevo.');
+                return bot.sendMessage(chatId, '❌ Error conectando con la base de datos. Reintenta en unos momentos.');
             }
         }
 
@@ -196,7 +195,7 @@ module.exports = {
             logError('BOT', '❌', 'Error editMessageText', err);
         };
 
-        const statusMsg = await bot.sendMessage(chatId, "⏳ *Descargando documento...*", { parse_mode: 'Markdown' });
+        const statusMsg = await bot.sendMessage(chatId, "⏳ *Estableciendo conexión y procesando documento...*", { parse_mode: 'Markdown' });
 
         try {
             const chunks = [];
@@ -206,11 +205,11 @@ module.exports = {
             logInfo('BOT', '✅', 'Documento descargado en memoria');
 
             // Saldo en el menú
-            let creditInfo = `👑 _Admin — sin límite_`;
+            let creditInfo = `👑 _Nivel ROOT — Sin restricciones_`;
             if (!isAdminUser) {
                 try {
                     const client = await getClient(userId);
-                    creditInfo = `💳 _Créditos disponibles: \`${client ? client.credits : 0}\`_`;
+                    creditInfo = `💳 _Saldo Operativo: \`${client ? client.credits : 0}\` créditos_`;
                 } catch (_) {}
             }
 
@@ -230,17 +229,17 @@ module.exports = {
             };
 
             bot.editMessageText(
-                `📄 *Documento Cargado*\n` +
+                `📄 *Documento Analizado con Éxito*\n` +
                 `━━━━━━━━━━━━━━━━━━━━\n` +
                 `📁 *Archivo:* \`${msg.document.file_name}\`\n` +
-                `✅ *Estado:* Listo para procesar\n` +
+                `✅ *Estado:* En caché de memoria\n` +
                 `${creditInfo}\n\n` +
-                `¿Qué acción deseas realizar?`,
+                `Seleccione un procedimiento de impresión a ejecutar:`,
                 { chat_id: chatId, message_id: statusMsg.message_id, ...menuOptions }
             ).catch(handleEditError);
 
         } catch (e) {
-            bot.editMessageText(`❌ *Error al procesar el archivo:* ${e.message}`, {
+            bot.editMessageText(`❌ *Falla en el motor de procesamiento:* ${e.message}`, {
                 chat_id: chatId, message_id: statusMsg.message_id
             }).catch(handleEditError);
         }
