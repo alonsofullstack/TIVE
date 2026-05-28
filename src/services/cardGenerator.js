@@ -904,8 +904,9 @@ module.exports = function (bot) {
             userState.delete(chatId);
             await generarTIVE(chatId, prepared, null, sourceBuffer, { anv: 'TARJETA FISICA ADELANTE.pdf', rev: 'TARJETA FISICA ATRAS.pdf' }, {
                 noQR: true,
-                cropTopAnv: 20, cropBottomAnv: 20, cropLeftAnv: 20, cropRightAnv: 20,  // recorte ANVERSO
-                cropTopRev: 20, cropBottomRev: 20, cropLeftRev: 45, cropRightRev: 45   // recorte REVERSO (20 base + 25 extra original)
+                //                ↑ arriba          ↓ abajo           ← izquierda       → derecha
+                cropTopAnv: 24, cropBottomAnv: 20, cropLeftAnv: 20, cropRightAnv: 20,  // ANVERSO (adelante)
+                cropTopRev: 24, cropBottomRev: 20, cropLeftRev: 45, cropRightRev: 45   // REVERSO (atrás)
             });
             return;
         }
