@@ -2,7 +2,11 @@ const { logInfo } = require('../utils/logger');
 
 module.exports = {
     registerCommands(bot, state, deps) {
-        bot.onText(/\/cmds/, (msg) => {
+        bot.on('message', (msg) => {
+            if (!msg.text) return;
+            const texto = msg.text.trim().toLowerCase();
+            if (texto !== '/cmds' && texto !== '/menu' && !texto.startsWith('/cmds ') && !texto.startsWith('/menu ')) return;
+
             logInfo('BOT', '📋', 'Comando /cmds recibido', { id: msg.from.id });
 
             const menu =
