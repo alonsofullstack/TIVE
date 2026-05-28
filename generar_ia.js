@@ -86,7 +86,7 @@ async function generarAnverso(datos) {
 
     drawRealBarcode(page, datos.placa, 10, height - 168, 80, 15);
     const qrImg = await pdfDoc.embedPng(await QRCode.toDataURL(`https://tive.sunarp.gob.pe/ver/${safe(datos.placa)}`, { margin: 1 }));
-    page.drawImage(qrImg, { x: 100, y: height - 110, width: 52, height: 52 });
+    page.drawImage(qrImg, { x: 100, y: height - 170, width: 52, height: 52 });
 
     fs.writeFileSync(`anverso_${safe(datos.placa) || 'final'}.pdf`, await pdfDoc.save());
 }
