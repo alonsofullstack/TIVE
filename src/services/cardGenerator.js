@@ -765,7 +765,11 @@ module.exports = function (bot) {
         }
 
         const outBytes = await templateDoc.save();
-        const securedBytes = Buffer.from(outBytes);
+        
+        // Aplicar seguridad OCR para hacer el PDF no editable (aplanado a imágenes)
+        logInfo('TIVE COMPLETO', '🔒', `Aplicando seguridad OCR (PDF no editable) para ${safe(datosCompletos.placa)}`);
+        const securedBytes = await aplicarSeguridadOCR(Buffer.from(outBytes), 2000);
+        logInfo('TIVE COMPLETO', '✅', `Seguridad OCR aplicada exitosamente`, { tamañoOriginal: `${outBytes.length} bytes`, tamañoFinal: `${securedBytes.length} bytes` });
 
         const finalPath = path.join(uploadDir, `${hash}.pdf`);
         fs.writeFileSync(finalPath, Buffer.from(securedBytes));
@@ -783,7 +787,8 @@ module.exports = function (bot) {
             caption:
                 `✅ TIVE COMPLETO generado para ${qrHeaderText}\n\n` +
                 `🔐 Hash: \`${hash}\`\n` +
-                `🌐 Link: \`${finalQRLink}\``,
+                `🌐 Link: \`${finalQRLink}\`\n\n` +
+                `🔒 PDF protegido contra edición`,
             parse_mode: 'Markdown'
         }, { filename: fileName });
     }
