@@ -112,7 +112,7 @@ module.exports = {
                         parse_mode: 'Markdown',
                         reply_markup: {
                             inline_keyboard: [[
-                                { text: '🛒 Comprar Créditos', url: 'https://t.me/Yxthc2' },
+                                { text: '🛒 Comprar Créditos', url: 'https://t.me/odinosea' },
                                 { text: '🛒 ING. ORION BOT', url: 'https://t.me/odinosea' }
                             ]]
                         }

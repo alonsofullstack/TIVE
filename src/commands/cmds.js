@@ -1,7 +1,7 @@
 const { logInfo } = require('../utils/logger');
 
 const COMMANDS_PER_PAGE = 3;
-const BUY_URL        = 'https://t.me/Yxthc2';
+const BUY_URL        = 'https://t.me/odinosea';
 const BUY_URL_ORION  = 'https://t.me/odinosea';
 
 const categories = {
