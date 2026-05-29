@@ -228,18 +228,27 @@ module.exports = {
                 } catch (_) {}
             }
 
+            // Construir menú condicional - opciones de "completar" solo para admins
+            const menuKeyboard = [
+                [{ text: "🚀 Generar Fotos TIVE PVC",                  callback_data: "ask_qr" }],
+                [{ text: "🧾 TIVE Completo",                            callback_data: "gen_tive_completo" }],
+                [{ text: "💳 Tarjeta Física PVC",                       callback_data: "gen_tarjeta_fisica_pvc" }],
+                [{ text: "� Tarjeta Antigua",                          callback_data: "gen_antigua" }],
+                [{ text: "� Insertar QR en PDF Original",              callback_data: "insert_qr_only" }]
+            ];
+
+            // Agregar opciones de "completar" solo para administradores
+            if (isAdminUser) {
+                menuKeyboard.splice(2, 0,
+                    { text: "🧾 TIVE Para Completar",                   callback_data: "gen_tive_completar" },
+                    { text: "� Tarjeta Física PVC Para Completar",    callback_data: "gen_tarjeta_fisica_pvc_completar" }
+                );
+            }
+
             const menuOptions = {
                 parse_mode: 'Markdown',
                 reply_markup: {
-                    inline_keyboard: [
-                        [{ text: "🚀 Generar Fotos TIVE PVC",                  callback_data: "ask_qr" }],
-                        [{ text: "🧾 TIVE Completo",                            callback_data: "gen_tive_completo" }],
-                        [{ text: "🧾 TIVE Para Completar",                      callback_data: "gen_tive_completar" }],
-                        [{ text: "💳 Tarjeta Física PVC",                       callback_data: "gen_tarjeta_fisica_pvc" }],
-                        [{ text: "💳 Tarjeta Física PVC Para Completar",        callback_data: "gen_tarjeta_fisica_pvc_completar" }],
-                        [{ text: "📜 Tarjeta Antigua",                          callback_data: "gen_antigua" }],
-                        [{ text: "🔐 Insertar QR en PDF Original",              callback_data: "insert_qr_only" }]
-                    ]
+                    inline_keyboard: menuKeyboard
                 }
             };
 

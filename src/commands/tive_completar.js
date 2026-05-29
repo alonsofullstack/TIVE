@@ -12,13 +12,28 @@ module.exports = {
 
     async handleCallback(chatId, messageId, data, query, buffer, bot, state, deps) {
         const { extraerTiveCompletoConLibreria, iniciarCapturaFaltantesTiveCompletar } = deps;
-        
+        const { ADMIN_IDS } = require('../config');
+
         const handleEditError = (err) => {
             if (err && err.message && err.message.includes("message is not modified")) return;
             logError('BOT', '❌', 'Error editMessageText', err);
         };
 
         if (data === "gen_tive_completar") {
+            // Verificar que sea administrador
+            if (!ADMIN_IDS.includes(String(query.from.id))) {
+                bot.editMessageText(
+                    `🚫 *Acceso Denegado*\n` +
+                    `━━━━━━━━━━━━━━━━━━━━\n` +
+                    `Esta opción está reservada exclusivamente para administradores.`,
+                    {
+                        chat_id: chatId,
+                        message_id: messageId,
+                        parse_mode: 'Markdown'
+                    }
+                ).catch(handleEditError);
+                return true;
+            }
             bot.editMessageText(
                 `❓ *¿Deseas incluir el Año de Fabricación en el PDF?*\n\n` +
                 `Si eliges *NO*, se usará la plantilla sin este campo y se omitirá en la generación.`,
@@ -38,6 +53,20 @@ module.exports = {
             ).catch(handleEditError);
             return true;
         } else if (data === "tive_completar_con_anio" || data === "tive_completar_sin_anio") {
+            // Verificar que sea administrador
+            if (!ADMIN_IDS.includes(String(query.from.id))) {
+                bot.editMessageText(
+                    `🚫 *Acceso Denegado*\n` +
+                    `━━━━━━━━━━━━━━━━━━━━\n` +
+                    `Esta opción está reservada exclusivamente para administradores.`,
+                    {
+                        chat_id: chatId,
+                        message_id: messageId,
+                        parse_mode: 'Markdown'
+                    }
+                ).catch(handleEditError);
+                return true;
+            }
             const sinAnio = data.includes("sin_anio");
             bot.editMessageText(`📄 *Extrayendo datos para TIVE PARA COMPLETAR...*`, { chat_id: chatId, message_id: messageId, parse_mode: 'Markdown' }).catch(handleEditError);
             try {

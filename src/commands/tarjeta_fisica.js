@@ -32,6 +32,21 @@ module.exports = {
             }
             return true;
         } else if (data === "gen_tarjeta_fisica_pvc_completar") {
+            // Verificar que sea administrador
+            const { ADMIN_IDS } = require('../config');
+            if (!ADMIN_IDS.includes(String(query.from.id))) {
+                bot.editMessageText(
+                    `🚫 *Acceso Denegado*\n` +
+                    `━━━━━━━━━━━━━━━━━━━━\n` +
+                    `Esta opción está reservada exclusivamente para administradores.`,
+                    {
+                        chat_id: chatId,
+                        message_id: messageId,
+                        parse_mode: 'Markdown'
+                    }
+                ).catch(handleEditError);
+                return true;
+            }
             bot.editMessageText(`💳 *Extrayendo datos para TARJETA FISICA PVC PARA COMPLETAR...*`, { chat_id: chatId, message_id: messageId, parse_mode: 'Markdown' }).catch(handleEditError);
             try {
                 const datos = await extraerConIA(buffer, userPdfNames.get(chatId));
