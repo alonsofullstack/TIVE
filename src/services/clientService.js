@@ -20,7 +20,7 @@ const CREDIT_COSTS = {
     gen_tarjeta_fisica_pvc:           1,
     gen_tarjeta_fisica_pvc_completar: 1,
     gen_antigua:                      1,
-    insert_qr_only:                   1,
+    insert_qr_only:                  80,
     consulta_grupo:                   1,
 };
 

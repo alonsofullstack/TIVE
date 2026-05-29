@@ -13,7 +13,7 @@ const clientes      = require('./clientes');
 const explorar_cmds = require('./explorar_cmds');
 const buy           = require('./buy');
 
-const { checkAndConsumeCredits, PAID_OPERATIONS } = require('./start');
+const { checkAndConsumeCredits, PAID_OPERATIONS, ADMIN_ONLY_OPERATIONS } = require('./start');
 const { ADMIN_IDS } = require('../config');
 
 const modules = [
@@ -43,8 +43,18 @@ module.exports = function registerCommands(bot, state, deps) {
         logInfo('BOT', '🖱️', 'Botón presionado', { boton: data, chatId });
         bot.answerCallbackQuery(query.id).catch(() => {});
 
+        // ── Guard admin-only ─────────────────────────────────────────────
+        if (ADMIN_ONLY_OPERATIONS.has(data) && !ADMIN_IDS.includes(String(userId))) {
+            await bot.sendMessage(chatId,
+                `🚫 *Acceso Denegado*\n` +
+                `━━━━━━━━━━━━━━━━━━━━\n` +
+                `Esta herramienta está reservada para administradores.`,
+                { parse_mode: 'Markdown' }
+            );
+            return;
+        }
+
         // ── Guard de créditos ────────────────────────────────────────────
-        // Solo se cobra en la primera acción de cada flujo (las que están en PAID_OPERATIONS)
         if (PAID_OPERATIONS.has(data)) {
             const allowed = await checkAndConsumeCredits(bot, chatId, userId, data, ADMIN_IDS);
             if (!allowed) return;

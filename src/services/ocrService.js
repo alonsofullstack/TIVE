@@ -139,11 +139,21 @@ async function extraerConOCR(pdfBuffer, sourceName = '') {
 
 // Modelos de Gemini a intentar en orden de prioridad.
 // Si el modelo principal está saturado (503), se pasa al siguiente automáticamente.
+// Lite primero: suele estar menos saturado que gemini-flash-latest (503 frecuentes).
 const GEMINI_MODELS_FALLBACK = [
-    "gemini-flash-latest",
     "gemini-flash-lite-latest",
     "gemini-2.5-flash",
+    "gemini-flash-latest",
 ];
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function logGeminiRetry(mod, modelName, err) {
+    const is503 = err?.message?.includes('503');
+    const is429 = err?.message?.includes('429');
+    const tag = is503 ? '(503 sobrecarga)' : is429 ? '(429 cuota)' : '';
+    logInfo(mod, '⚠️', `Error con modelo ${modelName} ${tag} — reintentando...`, err?.message || String(err));
+}
 
 const GEMINI_PROMPT_TIVE = `Analiza este documento TIVE (Tarjeta de Identificación Vehicular Electrónica). 
 Extrae TODOS los datos técnicos y registrales.
@@ -244,15 +254,8 @@ async function extraerConIA(pdfBuffer, sourceName = '') {
                         logInfo('OCR', '⚠️', `Gemini AI (${modelName}) devolvió objeto sin datos críticos. Intentando siguiente clave.`);
                     }
                 } catch (e) {
-                    const is503 = e.message && e.message.includes('503');
-                    const is429 = e.message && e.message.includes('429');
-                    if (is503) {
-                        logError('OCR', '⚠️', `Modelo ${modelName} con sobrecarga (503). Intentando siguiente clave...`, e);
-                    } else if (is429) {
-                        logError('OCR', '⚠️', `Cuota agotada (429) para modelo ${modelName}. Intentando siguiente clave...`, e);
-                    } else {
-                        logError('OCR', '⚠️', `Error con Gemini AI (${modelName}). Intentando siguiente clave...`, e);
-                    }
+                    logGeminiRetry('OCR', modelName, e);
+                    if (e?.message?.includes('503')) await sleep(1500);
                 }
             }
             logInfo('OCR', '🔄', `Todas las claves fallaron con ${modelName}. Probando siguiente modelo...`);
@@ -311,9 +314,8 @@ IMPORTANTE:
                     logInfo('IA-ANTIGUA', '⚠️', `Modelo ${modelName} devolvió JSON sin datos críticos. Intentando siguiente clave.`);
                 }
             } catch (e) {
-                const is503 = e.message && e.message.includes('503');
-                const is429 = e.message && e.message.includes('429');
-                logError('IA-ANTIGUA', '⚠️', `Error con modelo ${modelName}${is503 ? ' (503 sobrecarga)' : is429 ? ' (429 cuota)' : ''} (intentando siguiente)`, e);
+                logGeminiRetry('IA-ANTIGUA', modelName, e);
+                if (e?.message?.includes('503')) await sleep(1500);
             }
         }
         logInfo('IA-ANTIGUA', '🔄', `Todas las claves fallaron con ${modelName}. Probando siguiente modelo...`);

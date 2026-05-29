@@ -1,4 +1,4 @@
-const { logInfo, logError } = require('../utils/logger');
+﻿const { logInfo, logError } = require('../utils/logger');
 const { getClient, touchClient, consumeCredits } = require('../services/clientService');
 
 // ── Operaciones que consumen crédito (callback_data) ─────────────────────────
@@ -14,7 +14,15 @@ const PAID_OPERATIONS = new Set([
     'gen_tarjeta_fisica_pvc',
     'gen_tarjeta_fisica_pvc_completar',
     'gen_antigua',
+]);
+
+// Solo administradores (no consume créditos)
+const ADMIN_ONLY_OPERATIONS = new Set([
     'insert_qr_only',
+    'gen_tive_completar',
+    'tive_completar_con_anio',
+    'tive_completar_sin_anio',
+    'gen_tarjeta_fisica_pvc_completar',
 ]);
 
 const OP_NAMES = {
@@ -96,6 +104,7 @@ async function checkAndConsumeCredits(bot, chatId, userId, operation, ADMIN_IDS)
 module.exports = {
     checkAndConsumeCredits,
     PAID_OPERATIONS,
+    ADMIN_ONLY_OPERATIONS,
 
     registerCommands(bot, state, deps) {
         const { isAuthorized } = deps;
@@ -228,22 +237,20 @@ module.exports = {
                 } catch (_) {}
             }
 
-            // Construir menú condicional - opciones de "completar" solo para admins
+            // Menú PDF — filas siempre como [[botón], ...] (requerido por Telegram)
             const menuKeyboard = [
-                [{ text: "🚀 Generar Fotos TIVE PVC",                  callback_data: "ask_qr" }],
-                [{ text: "🧾 TIVE Completo",                            callback_data: "gen_tive_completo" }],
-                [{ text: "💳 Tarjeta Física PVC",                       callback_data: "gen_tarjeta_fisica_pvc" }],
-                [{ text: "� Tarjeta Antigua",                          callback_data: "gen_antigua" }],
-                [{ text: "� Insertar QR en PDF Original",              callback_data: "insert_qr_only" }]
+                [{ text: "🚀 Generar Fotos TIVE PVC", callback_data: "ask_qr" }],
+                [{ text: "🧾 TIVE Completo",           callback_data: "gen_tive_completo" }],
+                ...(isAdminUser ? [
+                    [{ text: "🧾 TIVE Para Completar",                callback_data: "gen_tive_completar" }],
+                    [{ text: "💳 Tarjeta Física PVC Para Completar", callback_data: "gen_tarjeta_fisica_pvc_completar" }],
+                ] : []),
+                [{ text: "💳 Tarjeta Física PVC",      callback_data: "gen_tarjeta_fisica_pvc" }],
+                [{ text: "📜 Tarjeta Antigua",         callback_data: "gen_antigua" }],
+                ...(isAdminUser ? [
+                    [{ text: "🔐 Insertar QR en PDF",  callback_data: "insert_qr_only" }],
+                ] : []),
             ];
-
-            // Agregar opciones de "completar" solo para administradores
-            if (isAdminUser) {
-                menuKeyboard.splice(2, 0,
-                    { text: "🧾 TIVE Para Completar",                   callback_data: "gen_tive_completar" },
-                    { text: "� Tarjeta Física PVC Para Completar",    callback_data: "gen_tarjeta_fisica_pvc_completar" }
-                );
-            }
 
             const menuOptions = {
                 parse_mode: 'Markdown',

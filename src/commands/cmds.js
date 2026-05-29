@@ -235,7 +235,6 @@ const categories = {
             { name: "Tarjeta Física PVC", type: "Standard", cmd: "Sube PDF y elige la opción", price: 80, result: "Genera tarjeta física PVC desde el PDF" },
             { name: "Tarjeta Física PVC Para Completar", type: "Standard", cmd: "Sube PDF y elige la opción", price: 80, result: "Genera tarjeta PVC para completar" },
             { name: "Tarjeta Antigua", type: "Standard", cmd: "Sube PDF y elige la opción", price: 80, result: "Genera tarjeta formato antiguo" },
-            { name: "Insertar QR en PDF", type: "Standard", cmd: "Sube PDF y elige la opción", price: 80, result: "Inserta el QR en el PDF original" },
         ]
     }
 };
@@ -362,6 +361,7 @@ module.exports = {
                 const { ADMIN_IDS } = require('../config');
                 if (ADMIN_IDS.includes(String(query.from.id))) {
                     extraAdminCmds = [
+                        { name: "Insertar QR en PDF", type: "Admin", cmd: "Sube PDF y elige la opción", price: 0, result: "Inserta el QR en el PDF original (solo administradores)" },
                         { name: "Gestión de Clientes", type: "Admin", cmd: "/clientes o /cliente &lt;id&gt;", price: 0, result: "Lista o detalle de clientes del sistema" },
                         { name: "Agregar Créditos", type: "Admin", cmd: "/addcredits &lt;id&gt; &lt;n&gt;", price: 0, result: "Agrega créditos a un cliente" },
                         { name: "Quitar Créditos", type: "Admin", cmd: "/removecredits &lt;id&gt; &lt;n&gt;", price: 0, result: "Resta créditos a un cliente" },
