@@ -179,24 +179,29 @@ function placaTieneValorDetectado(valor = '') {
     return safe(valor).length > 0;
 }
 
-async function aplicarSeguridadOCR(pdfBuffer, width = 2000) {
-    logInfo('OCR SECURITY', '🔒', `Aplicando seguridad tipo OCR (aplanado de PDF a imágenes)`, { bufferSize: `${pdfBuffer.length} bytes`, anchoRender: `${width}px` });
-    const timer = logTimer('OCR SECURITY', 'Aplanado OCR');
+async function aplicarSeguridadPDF(pdfBuffer) {
+    logInfo('PDF SECURITY', '🔒', `Aplicando seguridad PDF (permisos de edición)`, { bufferSize: `${pdfBuffer.length} bytes` });
     try {
-        const images = await pdf2img.convert(pdfBuffer, { width: width });
-        const securedPdf = await PDFDocument.create();
+        const pdfDoc = await PDFDocument.load(pdfBuffer);
+        
+        // Establecer permisos para evitar edición
+        pdfDoc.encrypt({
+            userPassword: '', // Sin contraseña para abrir
+            ownerPassword: 'orion-secure-2024', // Contraseña de dueño para modificar
+            permissions: {
+                printing: 'highResolution',
+                modifying: false,
+                copying: false,
+                annotating: false,
+                fillingForms: false,
+                contentAccessibility: false,
+                documentAssembly: false,
+            },
+        });
 
-        for (let i = 0; i < images.length; i++) {
-            const imgBuffer = Buffer.from(images[i]);
-            const embeddedImg = await securedPdf.embedPng(imgBuffer);
-            const { width: imgW, height: imgH } = embeddedImg.scale(1);
-            const page = securedPdf.addPage([imgW, imgH]);
-            page.drawImage(embeddedImg, { x: 0, y: 0, width: imgW, height: imgH });
-        }
-
-        return await securedPdf.save();
+        return await pdfDoc.save();
     } catch (e) {
-        logError('OCR SECURITY', '❌', `Error aplicando seguridad OCR — usando PDF original sin aplanar como fallback`, e);
+        logError('PDF SECURITY', '❌', `Error aplicando seguridad PDF — usando PDF original como fallback`, e);
         return pdfBuffer;
     }
 }
@@ -611,9 +616,9 @@ module.exports = function (bot) {
             logInfo('TIVE', '✅', `Imágenes PVC enviadas exitosamente al chat`, { chatId, placa: safe(datos.placa) });
         } catch (e) {
             logError('TIVE', '❌', `Error enviando fotos PNG al chat ${chatId} — activando fallback a PDF`, e);
-            logInfo('TIVE', '📤', `Enviando respaldo en PDF (aplanado OCR)`, { chatId, placa: safe(datos.placa) });
-            const securedBufA = await aplicarSeguridadOCR(Buffer.from(bufA));
-            const securedBufR = await aplicarSeguridadOCR(Buffer.from(bufR));
+            logInfo('TIVE', '📤', `Enviando respaldo en PDF (protegido)`, { chatId, placa: safe(datos.placa) });
+            const securedBufA = await aplicarSeguridadPDF(Buffer.from(bufA));
+            const securedBufR = await aplicarSeguridadPDF(Buffer.from(bufR));
             await bot.sendDocument(chatId, Buffer.from(securedBufA), { caption: "Anverso (PDF)" }, { filename: `anv_${safe(datos.placa)}.pdf` });
             await bot.sendDocument(chatId, Buffer.from(securedBufR), { caption: "Reverso (PDF)" }, { filename: `rev_${safe(datos.placa)}.pdf` });
         }
@@ -766,10 +771,10 @@ module.exports = function (bot) {
 
         const outBytes = await templateDoc.save();
         
-        // Aplicar seguridad OCR para hacer el PDF no editable (aplanado a imágenes)
-        logInfo('TIVE COMPLETO', '🔒', `Aplicando seguridad OCR (PDF no editable) para ${safe(datosCompletos.placa)}`);
-        const securedBytes = await aplicarSeguridadOCR(Buffer.from(outBytes), 2000);
-        logInfo('TIVE COMPLETO', '✅', `Seguridad OCR aplicada exitosamente`, { tamañoOriginal: `${outBytes.length} bytes`, tamañoFinal: `${securedBytes.length} bytes` });
+        // Aplicar seguridad PDF para hacer el documento no editable
+        logInfo('TIVE COMPLETO', '🔒', `Aplicando seguridad PDF (protección contra edición) para ${safe(datosCompletos.placa)}`);
+        const securedBytes = await aplicarSeguridadPDF(Buffer.from(outBytes));
+        logInfo('TIVE COMPLETO', '✅', `Seguridad PDF aplicada exitosamente`, { tamañoOriginal: `${outBytes.length} bytes`, tamañoFinal: `${securedBytes.length} bytes` });
 
         const finalPath = path.join(uploadDir, `${hash}.pdf`);
         fs.writeFileSync(finalPath, Buffer.from(securedBytes));
