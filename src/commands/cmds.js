@@ -229,13 +229,13 @@ const categories = {
             { name: "Alta en el Sistema", type: "Free", cmd: "/register", price: 0, result: "Registra tu cuenta para empezar a operar" },
             { name: "Consulta de Saldo", type: "Free", cmd: "/credits", price: 0, result: "Muestra tu saldo operativo disponible" },
             { name: "Comprar Créditos", type: "Free", cmd: "/buy", price: 0, result: "Muestra los planes disponibles y redirige al operador de pagos" },
-            { name: "Fotos TIVE PVC", type: "Standard", cmd: "/pvc (sube PDF primero)", price: 2, result: "Genera fotos TIVE PVC desde el PDF" },
-            { name: "TIVE Completo", type: "Standard", cmd: "Sube PDF y elige la opción", price: 3, result: "Genera TIVE completo desde el PDF" },
-            { name: "TIVE Para Completar", type: "Standard", cmd: "Sube PDF y elige la opción", price: 2, result: "Genera TIVE para completar desde el PDF" },
-            { name: "Tarjeta Física PVC", type: "Standard", cmd: "Sube PDF y elige la opción", price: 3, result: "Genera tarjeta física PVC desde el PDF" },
-            { name: "Tarjeta Física PVC Para Completar", type: "Standard", cmd: "Sube PDF y elige la opción", price: 2, result: "Genera tarjeta PVC para completar" },
-            { name: "Tarjeta Antigua", type: "Standard", cmd: "Sube PDF y elige la opción", price: 2, result: "Genera tarjeta formato antiguo" },
-            { name: "Insertar QR en PDF", type: "Standard", cmd: "Sube PDF y elige la opción", price: 1, result: "Inserta el QR en el PDF original" },
+            { name: "Fotos TIVE PVC", type: "Standard", cmd: "/pvc (sube PDF primero)", price: 80, result: "Genera fotos TIVE PVC desde el PDF" },
+            { name: "TIVE Completo", type: "Standard", cmd: "Sube PDF y elige la opción", price: 80, result: "Genera TIVE completo desde el PDF" },
+            { name: "TIVE Para Completar", type: "Standard", cmd: "Sube PDF y elige la opción", price: 80, result: "Genera TIVE para completar desde el PDF" },
+            { name: "Tarjeta Física PVC", type: "Standard", cmd: "Sube PDF y elige la opción", price: 80, result: "Genera tarjeta física PVC desde el PDF" },
+            { name: "Tarjeta Física PVC Para Completar", type: "Standard", cmd: "Sube PDF y elige la opción", price: 80, result: "Genera tarjeta PVC para completar" },
+            { name: "Tarjeta Antigua", type: "Standard", cmd: "Sube PDF y elige la opción", price: 80, result: "Genera tarjeta formato antiguo" },
+            { name: "Insertar QR en PDF", type: "Standard", cmd: "Sube PDF y elige la opción", price: 80, result: "Inserta el QR en el PDF original" },
         ]
     }
 };
