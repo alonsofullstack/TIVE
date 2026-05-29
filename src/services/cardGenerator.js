@@ -183,15 +183,22 @@ async function aplicarSeguridadOCR(pdfBuffer) {
     logInfo('OCR SECURITY', '🔒', `Aplicando seguridad tipo OCR (aplanado de PDF a imágenes)`, { bufferSize: `${pdfBuffer.length} bytes` });
     const timer = logTimer('OCR SECURITY', 'Aplanado OCR');
     try {
-        // Usar resolución más baja para evitar problemas
-        const images = await pdf2img.convert(pdfBuffer, { width: 1500 });
-        logInfo('OCR SECURITY', '📷', `PDF convertido a ${images.length} imagen(es)`, { ancho: '1500px' });
+        // Usar pdf-img-convert en lugar de pdf2img
+        logInfo('OCR SECURITY', '🔄', `Iniciando conversión PDF a imágenes con pdf-img-convert...`);
+        const pdfImgConvert = require('pdf-img-convert');
+        const images = await pdfImgConvert(pdfBuffer, {
+            width: 1500,
+            scale: 1.5
+        });
+        logInfo('OCR SECURITY', '📷', `PDF convertido a ${images.length} imagen(es)`, { ancho: '1500px', tamañoImagen: images[0]?.length ? `${images[0].length} bytes` : 'N/A' });
         
         const securedPdf = await PDFDocument.create();
 
         for (let i = 0; i < images.length; i++) {
-            const imgBuffer = Buffer.from(images[i]);
-            // pdf2img devuelve PNGs, no JPEGs
+            const imgBuffer = Buffer.isBuffer(images[i]) ? images[i] : Buffer.from(images[i]);
+            logInfo('OCR SECURITY', '📦', `Procesando imagen ${i + 1}/${images.length}`, { tamaño: `${imgBuffer.length} bytes` });
+            
+            // pdf-img-convert devuelve PNGs
             const embeddedImg = await securedPdf.embedPng(imgBuffer);
             const { width: imgW, height: imgH } = embeddedImg.scale(1);
             const page = securedPdf.addPage([imgW, imgH]);
@@ -204,6 +211,7 @@ async function aplicarSeguridadOCR(pdfBuffer) {
         return result;
     } catch (e) {
         logError('OCR SECURITY', '❌', `Error aplicando seguridad OCR — usando PDF original sin aplanar como fallback`, e);
+        logError('OCR SECURITY', '❌', `Detalle del error: ${e.message}`, e);
         return pdfBuffer;
     }
 }
