@@ -67,9 +67,9 @@ module.exports = {
                     `✅ *¡Registro Exitoso!*\n` +
                     `━━━━━━━━━━━━━━━━━━━━\n` +
                     `👤 *Nombre:* ${result.client.firstName}\n` +
-                    `🆔 *Tu ID:* \`${id}\`\n` +
+                    `🆔 *Tu ID de Usuario:* \`${id}\`\n\n` +
                     `💳 *Créditos iniciales:* \`0\`\n\n` +
-                    `⚠️ _Aún no tienes créditos. Contacta al administrador para que te asigne._\n\n` +
+                    `⚠️ _IMPORTANTE: Envía este ID (\`${id}\`) al administrador para que te asigne créditos._\n\n` +
                     `Usa /credits para consultar tu saldo.`,
                     { parse_mode: 'Markdown' }
                 );
