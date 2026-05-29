@@ -185,7 +185,7 @@ async function aplicarSeguridadOCR(pdfBuffer) {
     try {
         // Usar pdf-img-convert en lugar de pdf2img
         logInfo('OCR SECURITY', '🔄', `Iniciando conversión PDF a imágenes con pdf-img-convert...`);
-        const pdfImgConvert = require('pdf-img-convert');
+        const pdfImgConvert = require('pdf-img-convert').default || require('pdf-img-convert');
         const images = await pdfImgConvert(pdfBuffer, {
             width: 1500,
             scale: 1.5
