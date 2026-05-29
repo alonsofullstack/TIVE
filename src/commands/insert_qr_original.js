@@ -3,8 +3,23 @@ const crypto = require('crypto');
 module.exports = {
     async handleCallback(chatId, messageId, data, query, buffer, bot, state, deps) {
         const { finalizarInsercionQR } = deps;
+        const { ADMIN_IDS } = require('../config');
 
         if (data === "insert_qr_only") {
+            // Verificar que sea administrador
+            if (!ADMIN_IDS.includes(String(query.from.id))) {
+                bot.editMessageText(
+                    `🚫 *Acceso Denegado*\n` +
+                    `━━━━━━━━━━━━━━━━━━━━\n` +
+                    `Esta opción está reservada exclusivamente para administradores.`,
+                    {
+                        chat_id: chatId,
+                        message_id: messageId,
+                        parse_mode: 'Markdown'
+                    }
+                ).catch(() => {});
+                return true;
+            }
             const hash = crypto.createHash('sha256').update(buffer).digest('hex').toUpperCase();
             await finalizarInsercionQR(chatId, buffer, "CERTIFICADO", hash, messageId);
             return true;
