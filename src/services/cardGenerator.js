@@ -801,8 +801,7 @@ module.exports = function (bot) {
             caption:
                 `✅ TIVE COMPLETO generado para ${qrHeaderText}\n\n` +
                 `🔐 Hash: \`${hash}\`\n` +
-                `🌐 Link: \`${finalQRLink}\`\n\n` +
-                `🔒 PDF protegido contra edición`,
+                `🌐 Link: \`${finalQRLink}\``,
             parse_mode: 'Markdown'
         }, { filename: fileName });
     }
