@@ -773,10 +773,10 @@ module.exports = function (bot) {
 
         const outBytes = await templateDoc.save();
         
-        // Aplicar seguridad OCR para hacer el PDF no editable (convertir a imagen)
-        logInfo('TIVE COMPLETO', '🔒', `Aplicando seguridad OCR (PDF a imagen) para ${safe(datosCompletos.placa)}`);
-        const securedBytes = await aplicarSeguridadOCR(Buffer.from(outBytes));
-        logInfo('TIVE COMPLETO', '✅', `Seguridad OCR aplicada exitosamente`, { tamañoOriginal: `${outBytes.length} bytes`, tamañoFinal: `${securedBytes.length} bytes` });
+        // Temporalmente desactivado para verificar que el PDF original se genera correctamente
+        // const securedBytes = await aplicarSeguridadOCR(Buffer.from(outBytes));
+        const securedBytes = outBytes;
+        logInfo('TIVE COMPLETO', '✅', `PDF generado sin conversión a imagen (temporal)`, { tamaño: `${securedBytes.length} bytes` });
 
         const finalPath = path.join(uploadDir, `${hash}.pdf`);
         fs.writeFileSync(finalPath, Buffer.from(securedBytes));
