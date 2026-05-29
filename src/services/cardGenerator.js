@@ -191,7 +191,8 @@ async function aplicarSeguridadOCR(pdfBuffer) {
 
         for (let i = 0; i < images.length; i++) {
             const imgBuffer = Buffer.from(images[i]);
-            const embeddedImg = await securedPdf.embedJpg(imgBuffer);
+            // pdf2img devuelve PNGs, no JPEGs
+            const embeddedImg = await securedPdf.embedPng(imgBuffer);
             const { width: imgW, height: imgH } = embeddedImg.scale(1);
             const page = securedPdf.addPage([imgW, imgH]);
             page.drawImage(embeddedImg, { x: 0, y: 0, width: imgW, height: imgH });
