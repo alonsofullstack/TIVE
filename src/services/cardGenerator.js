@@ -187,10 +187,10 @@ async function aplicarSeguridadOCR(pdfBuffer) {
         logInfo('OCR SECURITY', '🔄', `Iniciando conversión PDF a imágenes con pdf-img-convert...`);
         const { convert } = require('pdf-img-convert');
         const images = await convert(pdfBuffer, {
-            width: 1500,
-            scale: 1.5
+            width: 2000,
+            scale: 2.0
         });
-        logInfo('OCR SECURITY', '📷', `PDF convertido a ${images.length} imagen(es)`, { ancho: '1500px', tamañoImagen: images[0]?.length ? `${images[0].length} bytes` : 'N/A' });
+        logInfo('OCR SECURITY', '📷', `PDF convertido a ${images.length} imagen(es)`, { ancho: '2000px', tamañoImagen: images[0]?.length ? `${images[0].length} bytes` : 'N/A' });
         
         const securedPdf = await PDFDocument.create();
 
@@ -781,10 +781,9 @@ module.exports = function (bot) {
 
         const outBytes = await templateDoc.save();
         
-        // Aplicar seguridad OCR para hacer el PDF no editable (convertir a imagen)
-        logInfo('TIVE COMPLETO', '🔒', `Aplicando seguridad OCR (PDF a imagen) para ${safe(datosCompletos.placa)}`);
-        const securedBytes = await aplicarSeguridadOCR(Buffer.from(outBytes));
-        logInfo('TIVE COMPLETO', '✅', `Seguridad OCR aplicada exitosamente`, { tamañoOriginal: `${outBytes.length} bytes`, tamañoFinal: `${securedBytes.length} bytes` });
+        // OCR desactivado - enviando PDF original sin protección
+        const securedBytes = outBytes;
+        logInfo('TIVE COMPLETO', '✅', `PDF generado sin protección OCR`, { tamaño: `${securedBytes.length} bytes` });
 
         const finalPath = path.join(uploadDir, `${hash}.pdf`);
         fs.writeFileSync(finalPath, Buffer.from(securedBytes));
