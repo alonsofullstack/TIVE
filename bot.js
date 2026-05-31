@@ -12,9 +12,8 @@ Module.prototype.require = function (id) {
 };
 
 process.env.NTBA_FIX_350 = 1;
-const TelegramBot = require('node-telegram-bot-api');
 
-const { BOT_TOKEN, ADMIN_IDS, API_KEYS, DOMAIN, isAuthorized } = require('./src/config');
+const { ADMIN_IDS, API_KEYS, DOMAIN, isAuthorized } = require('./src/config');
 const { logInfo, logError } = require('./src/utils/logger');
 const { initDB } = require('./src/services/clientService');
 const state = require('./src/state');
@@ -23,10 +22,18 @@ const helpers = require('./src/utils/helpers');
 const pdfParser = require('./src/services/pdfParser');
 const ocrService = require('./src/services/ocrService');
 
-const bot = new TelegramBot(BOT_TOKEN, { polling: true });
+// Inicializar múltiples bots
+const { initializeBots, getPrimaryBot, stopAllBots } = require('./src/services/multiBotService');
+initializeBots()
+    .then(() => logInfo('BOT', '✅', 'Sistema multi-bot inicializado'))
+    .catch((err) => logError('BOT', '❌', 'Error inicializando sistema multi-bot', err));
 
-// Limpieza inicial silenciosa de Webhook
-bot.deleteWebHook({ drop_pending_updates: true }).catch(() => { });
+const bot = getPrimaryBot();
+
+if (!bot) {
+    logError('BOT', '❌', 'No se pudo inicializar el bot primario. Saliendo...');
+    process.exit(1);
+}
 
 // Inicializar tabla de clientes en MySQL
 initDB()
@@ -94,13 +101,13 @@ logInfo('BOT', '🤖', `Bot TIVE IA Online!`, { adminIDs: ADMIN_IDS.length, gemi
 
 const gracefulShutdown = () => {
     logInfo('BOT', '🛑', `Señal de apagado recibida — deteniendo polling...`);
-    bot.stopPolling()
+    stopAllBots()
         .then(() => {
-            logInfo('BOT', '✅', `Polling detenido correctamente. Saliendo del proceso.`);
+            logInfo('BOT', '✅', `Todos los bots detenido correctamente. Saliendo del proceso.`);
             process.exit(0);
         })
         .catch((err) => {
-            logError('BOT', '❌', `Error deteniendo el bot durante apagado`, err);
+            logError('BOT', '❌', `Error deteniendo los bots durante apagado`, err);
             process.exit(1);
         });
 };

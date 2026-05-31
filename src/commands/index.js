@@ -13,6 +13,7 @@ const clientes      = require('./clientes');
 const explorar_cmds = require('./explorar_cmds');
 const buy           = require('./buy');
 const { addToQueue } = require('../services/queueSystem');
+const { getBotForCommand } = require('../services/multiBotService');
 
 const { checkAndConsumeCredits, PAID_OPERATIONS, ADMIN_ONLY_OPERATIONS } = require('./start');
 const { ADMIN_IDS } = require('../config');
@@ -68,10 +69,13 @@ module.exports = function registerCommands(bot, state, deps) {
 
         // Procesar en cola global para evitar saturación del puente Telegram
         await addToQueue(async () => {
+            // Obtener el bot apropiado para este comando
+            const targetBot = getBotForCommand(data);
+            
             // Delegar a los módulos de funcionalidades
             for (const mod of modules) {
                 if (mod.handleCallback) {
-                    const handled = await mod.handleCallback(chatId, messageId, data, query, buffer, bot, state, deps);
+                    const handled = await mod.handleCallback(chatId, messageId, data, query, buffer, targetBot, state, deps);
                     if (handled) return;
                 }
             }

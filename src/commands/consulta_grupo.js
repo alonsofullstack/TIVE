@@ -16,24 +16,36 @@ const CARGA_IMG = path.join(__dirname, '..', '..', 'tarjeta', 'carga.jpg');
 // Lista de comandos que se redirigen al grupo
 // Agrega o quita según los que tenga el grupo
 const COMANDOS_GRUPO = [
-    // RENIEC
-    '/dnim', '/dni', '/dnif', '/dnit', '/nm', '/dir', '/dnidb', '/dnifdb', '/dnitdb', '/nmdb',
-    // TELEFONÍA
+    // RENIEC (activos que usarán sesión secundaria)
+    '/dnis', '/dnib', '/nm', '/fab',
+    // RENIEC (otros comandos)
+    '/dnim', '/dni', '/dnif', '/dnit', '/dir', '/dnidb', '/dnifdb', '/dnitdb', '/nmdb',
+    // TELEFONÍA (activos que usarán sesión secundaria)
+    '/movn', '/movd', '/bitx',
+    // TELEFONÍA (otros comandos)
     '/telp', '/tel', '/stel', '/cel', '/telpdb', '/claro', '/bitel', '/movistar', '/entel', '/lineas', '/operador',
     // DELITOS
     '/fiscapdf', '/fiscacs', '/fiscanm', '/den', '/denuncias', '/denpla',
     '/rqh', '/rq', '/rqv', '/rqant', '/antpenv', '/antpolv', '/antjudv', '/jne',
     // POLICÍA
     '/pnp',
-    // SUNAT
-    '/ruc', '/sunat', '/consu', '/consumos', '/reptrib', '/tra', '/suel', '/sueld',
+    // SUNAT (activos que usarán sesión secundaria)
+    '/ruc', '/rucn', '/rucd',
+    // SUNAT (otros comandos)
+    '/sunat', '/consu', '/consumos', '/reptrib', '/tra', '/suel', '/sueld',
     // SUNARP
     '/pro', '/propdf', '/partida',
-    // VEHÍCULOS
+    // SAT (activos que usarán sesión secundaria)
+    '/sat', '/csat',
+    // VEHÍCULOS (activos que usarán sesión secundaria)
+    '/citv', '/soat', '/hsoat',
+    // VEHÍCULOS (otros comandos)
     '/vec', '/pla', '/plat', '/revtec', '/revtecpdf', '/boi',
-    '/hsoat', '/soat', '/tive', '/tivep', '/tivev', '/tivevpdf', '/paptrud', '/brevete',
-    // GENERADORES
-    '/c4a', '/c4b', '/c4i', '/dniv', '/dnivel',
+    '/tive', '/tivep', '/tivev', '/tivevpdf', '/paptrud', '/brevete',
+    // GENERADORES (activos que usarán sesión secundaria)
+    '/c4', '/dniv',
+    // GENERADORES (otros comandos)
+    '/c4a', '/c4b', '/c4i', '/dnivel',
     // CERTIFICADOS
     '/antpen', '/antpol', '/antjud',
     // FAMILIARES
@@ -54,7 +66,9 @@ const COMANDOS_GRUPO = [
     '/cedula', '/nmv', '/mtel', '/ssn',
     // TEMPORAL
     '/utp', '/dpm',
-    // MÉDICO
+    // MÉDICO (activos que usarán sesión secundaria)
+    '/seg',
+    // MÉDICO (otros comandos)
     '/minsa', '/const', '/reminsa', '/cliluz', '/essalud', '/certmed', '/reessalud',
     // ACTAS
     '/actnac', '/actmat', '/actdef',

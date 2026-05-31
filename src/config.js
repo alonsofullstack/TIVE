@@ -21,10 +21,93 @@ const TIVE_COMPLETO_TECH_CODE = { x: 60, y: 17, width: 260, height: 40 };
 // Por defecto 16000ms (16 segundos) para evitar límite de 15 segundos
 const QUERY_DELAY = parseInt(process.env.QUERY_DELAY) || 16000;
 
+// Configuración de múltiples bots de Telegram
+const BOT_TOKENS = {
+    primary: process.env.TELEGRAM_BOT_TOKEN,
+    secondary: process.env.TELEGRAM_BOT_TOKEN_2 || null
+};
+
+// Mapeo de comandos a bots específicos
+// null = usa bot primario, 'secondary' = usa bot secundario
+const COMMAND_BOT_MAPPING = {
+    // Comandos que usarán el bot secundario
+    'gen_tive_completo': 'secondary',
+    'gen_tarjeta_fisica_pvc': 'secondary',
+    'gen_antigua': 'secondary',
+    'insert_qr_only': 'secondary',
+    // Comandos que deben usar el bot primario
+    'gen_tive_completar': null,
+    'gen_tarjeta_fisica_pvc_completar': null,
+    'ask_qr': null
+};
+
 // Configuración de múltiples sesiones de userbot para distribuir consultas al grupo
 const USERBOT_SESSIONS = {
     primary: process.env.TELEGRAM_SESSION || '',
     secondary: process.env.TELEGRAM_SESSION_2 || ''
+};
+
+// Configuración de destinos para cada sesión de userbot
+// primary: grupo, secondary: bot directo
+const USERBOT_DESTINATIONS = {
+    primary: {
+        type: 'group',
+        id: process.env.GRUPO_CONSULTAS_ID || ''
+    },
+    secondary: {
+        type: 'bot',
+        username: process.env.TELEGRAM_BOT_USERNAME_2 || '' // Username del bot para sesión secundario (ej: @MiBot)
+    }
+};
+
+// Mapeo de comandos de consulta a sesiones de userbot específicas
+// null = usa sesión primaria (round-robin), 'secondary' = usa sesión secundaria
+const COMMAND_USERBOT_MAPPING = {
+    // Comandos RENIEC que usarán la sesión secundario (solo los activos)
+    '/dnis': 'secondary',  // DNI V2 - ON
+    '/dnib': 'secondary',  // DNI V3 - ON
+    '/nm': 'secondary',    // NOMBRES V1 - ON
+    '/fab': 'secondary',   // FACIAL - ON
+    // Comandos TELEFONÍA que usarán la sesión secundario (solo los activos)
+    '/movn': 'secondary',  // MOVISTAR - ON
+    '/movd': 'secondary',  // DATA MOVISTAR - ON
+    '/bitx': 'secondary',  // BITEL V3 - ON
+    // Comandos GENERADORES que usarán la sesión secundario (solo los activos)
+    '/c4': 'secondary',    // C4 AZUL V1 - ON
+    '/dniv': 'secondary',  // DNI VIRTUAL AZUL - ON
+    // Comandos SALUD que usarán la sesión secundario (solo los activos)
+    '/seg': 'secondary',   // SALUD SEGUROS - ON
+    // Comandos VEHÍCULOS que usarán la sesión secundario (solo los activos)
+    '/citv': 'secondary',  // REVISION TECNICA - ON
+    '/soat': 'secondary',  // SOAT - ON
+    '/hsoat': 'secondary', // HISTORIAL SOAT - ON
+    // Comandos SUNAT que usarán la sesión secundario (solo los activos)
+    '/ruc': 'secondary',   // SUNAT RUC V1 - ON
+    '/rucn': 'secondary',  // RUC X RAZON - ON
+    '/rucd': 'secondary',  // RUC X DN - ON
+    // Comandos SAT que usarán la sesión secundario (solo los activos)
+    '/sat': 'secondary',   // SAT PAPELETAS - ON
+    '/csat': 'secondary',  // SAT CAPTURAS - ON
+    // Comandos que usarán la sesión primaria (round-robin por defecto)
+    '/dni': null,          // DNI V1 - OFF
+    '/dnim': null,
+    '/dnif': null,
+    '/dnit': null,
+    '/sunat': null,
+    '/vec': null,
+    '/pla': null,
+    '/tive': null,
+    '/telp': null,
+    '/tel': null,
+    '/cel': null,
+    '/pnp': null,
+    '/den': null,
+    '/rq': null,
+    '/bit': null,          // BITEL V1 - OFF
+    '/bitel': null,        // BITEL V2 - OFF
+    '/c4a': null,          // C4 otros - OFF
+    '/c4b': null,          // C4 otros - OFF
+    '/c4i': null           // C4 otros - OFF
 };
 
 const uploadDir = path.join(__dirname, '..', 'servicio', 'verCertificado', 'Tive');
@@ -41,5 +124,5 @@ module.exports = {
     BOT_TOKEN, ADMIN_IDS, API_KEYS, DOMAIN, QR_X, QR_Y, QR_X_ORIGINAL, QR_Y_ORIGINAL, QR_SIZE,
     COMPLETE_TEMPLATE_NAME, TIVE_COMPLETO_BODY_CODE, TIVE_COMPLETO_TECH_CODE,
     uploadDir, FONT_PATH, FONT_BYTES, isAuthorized, QUERY_DELAY,
-    USERBOT_SESSIONS
+    BOT_TOKENS, COMMAND_BOT_MAPPING, USERBOT_SESSIONS, USERBOT_DESTINATIONS, COMMAND_USERBOT_MAPPING
 };

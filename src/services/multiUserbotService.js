@@ -2,7 +2,7 @@ const { TelegramClient } = require('telegram');
 const { StringSession } = require('telegram/sessions');
 const { NewMessage } = require('telegram/events');
 const { logInfo, logError } = require('../utils/logger');
-const { USERBOT_SESSIONS, QUERY_DELAY } = require('../config');
+const { USERBOT_SESSIONS, QUERY_DELAY, COMMAND_USERBOT_MAPPING, USERBOT_DESTINATIONS } = require('../config');
 
 const API_ID   = 33222502;
 const API_HASH = 'b2f2a2532045bb4b928082ab7243d8a6';
@@ -12,7 +12,8 @@ const WAIT_MORE_MS = 4000;
 
 const clients = new Map();
 const isReady = new Map();
-const grupoEntityIds = new Map();
+const destinationEntities = new Map(); // Puede ser grupo o bot
+const destinationTypes = new Map(); // 'group' o 'bot'
 const pendingQueries = new Map();
 
 let currentSessionIndex = 0;
@@ -24,13 +25,18 @@ async function initializeMultiUserbot() {
     logInfo('MULTI-USERBOT', '🚀', 'Inicializando múltiples sesiones de userbot...');
 
     const sessions = [
-        { key: 'primary', session: USERBOT_SESSIONS.primary },
-        { key: 'secondary', session: USERBOT_SESSIONS.secondary }
+        { key: 'primary', session: USERBOT_SESSIONS.primary, destination: USERBOT_DESTINATIONS.primary },
+        { key: 'secondary', session: USERBOT_SESSIONS.secondary, destination: USERBOT_DESTINATIONS.secondary }
     ];
 
-    for (const { key, session } of sessions) {
+    for (const { key, session, destination } of sessions) {
         if (!session) {
             logInfo('MULTI-USERBOT', '⚠️', `Sesión ${key} no configurada, omitiendo`);
+            continue;
+        }
+
+        if (!destination || !destination.type) {
+            logInfo('MULTI-USERBOT', '⚠️', `Destino para sesión ${key} no configurado, omitiendo`);
             continue;
         }
 
@@ -53,43 +59,84 @@ async function initializeMultiUserbot() {
 
             clients.set(key, client);
             isReady.set(key, true);
+            destinationTypes.set(key, destination.type);
 
-            // Resolver grupo
-            const grupoIdRaw = process.env.GRUPO_CONSULTAS_ID;
-            const grupoIdNum = Math.abs(parseInt(grupoIdRaw));
+            if (destination.type === 'group') {
+                // Resolver grupo
+                const grupoIdRaw = destination.id;
+                const grupoIdNum = Math.abs(parseInt(grupoIdRaw));
 
-            logInfo('MULTI-USERBOT', '🔍', `Sesión ${key} buscando grupo ID: ${grupoIdRaw}`);
-            const dialogs = await client.getDialogs({ limit: 200 });
-            const dialog = dialogs.find(d => Math.abs(parseInt(d.id?.toString() || '0')) === grupoIdNum);
+                logInfo('MULTI-USERBOT', '🔍', `Sesión ${key} buscando grupo ID: ${grupoIdRaw}`);
+                const dialogs = await client.getDialogs({ limit: 200 });
+                const dialog = dialogs.find(d => Math.abs(parseInt(d.id?.toString() || '0')) === grupoIdNum);
 
-            if (dialog) {
-                grupoEntityIds.set(key, dialog.inputEntity || dialog.entity || dialog.id);
-                logInfo('MULTI-USERBOT', '📌', `Sesión ${key} grupo listo`, { titulo: dialog.title });
+                if (dialog) {
+                    destinationEntities.set(key, dialog.inputEntity || dialog.entity || dialog.id);
+                    logInfo('MULTI-USERBOT', '📌', `Sesión ${key} grupo listo`, { titulo: dialog.title, grupoId: grupoIdRaw });
 
-                // Agregar event handler para esta sesión
-                client.addEventHandler(async (event) => {
-                    try {
-                        const msg = event.message;
-                        if (!msg) return;
-                        const msgChatId = Math.abs(parseInt(msg.chatId?.toString() || msg.peerId?.channelId?.toString() || '0'));
-                        if (msgChatId !== grupoIdNum) return;
+                    // Agregar event handler para esta sesión
+                    client.addEventHandler(async (event) => {
+                        try {
+                            const msg = event.message;
+                            if (!msg) return;
+                            const msgChatId = Math.abs(parseInt(msg.chatId?.toString() || msg.peerId?.channelId?.toString() || '0'));
+                            if (msgChatId !== grupoIdNum) return;
 
-                        for (const [, pending] of pendingQueries.entries()) {
-                            if (pending.resolved) continue;
-                            pending.messages.push(msg);
-                            if (pending.waitTimer) clearTimeout(pending.waitTimer);
-                            pending.waitTimer = setTimeout(() => {
-                                if (!pending.resolved) {
-                                    pending.resolved = true;
-                                    pending.resolve(pending.messages);
-                                }
-                            }, WAIT_MORE_MS);
-                        }
-                    } catch (_) {}
-                }, new NewMessage({}));
-            } else {
-                logError('MULTI-USERBOT', '❌', `Sesión ${key} grupo no encontrado`);
-                isReady.set(key, false);
+                            for (const [, pending] of pendingQueries.entries()) {
+                                if (pending.resolved) continue;
+                                pending.messages.push(msg);
+                                if (pending.waitTimer) clearTimeout(pending.waitTimer);
+                                pending.waitTimer = setTimeout(() => {
+                                    if (!pending.resolved) {
+                                        pending.resolved = true;
+                                        pending.resolve(pending.messages);
+                                    }
+                                }, WAIT_MORE_MS);
+                            }
+                        } catch (_) {}
+                    }, new NewMessage({}));
+                } else {
+                    logError('MULTI-USERBOT', '❌', `Sesión ${key} grupo no encontrado (ID: ${grupoIdRaw})`);
+                    isReady.set(key, false);
+                }
+            } else if (destination.type === 'bot') {
+                // Resolver bot por username
+                const botUsername = destination.username.replace('@', '');
+                logInfo('MULTI-USERBOT', '🔍', `Sesión ${key} buscando bot: @${botUsername}`);
+                
+                try {
+                    const botEntity = await client.getEntity(botUsername);
+                    destinationEntities.set(key, botEntity);
+                    logInfo('MULTI-USERBOT', '📌', `Sesión ${key} bot listo`, { username: botUsername });
+
+                    // Agregar event handler para esta sesión (respuestas del bot)
+                    client.addEventHandler(async (event) => {
+                        try {
+                            const msg = event.message;
+                            if (!msg) return;
+                            const senderId = msg.senderId?.userId?.toString() || msg.senderId?.userId?.toString();
+                            const botId = botEntity.id?.toString();
+                            
+                            // Verificar que el mensaje sea del bot
+                            if (senderId !== botId) return;
+
+                            for (const [, pending] of pendingQueries.entries()) {
+                                if (pending.resolved) continue;
+                                pending.messages.push(msg);
+                                if (pending.waitTimer) clearTimeout(pending.waitTimer);
+                                pending.waitTimer = setTimeout(() => {
+                                    if (!pending.resolved) {
+                                        pending.resolved = true;
+                                        pending.resolve(pending.messages);
+                                    }
+                                }, WAIT_MORE_MS);
+                            }
+                        } catch (_) {}
+                    }, new NewMessage({}));
+                } catch (err) {
+                    logError('MULTI-USERBOT', '❌', `Sesión ${key} bot no encontrado (@${botUsername})`, err);
+                    isReady.set(key, false);
+                }
             }
 
         } catch (err) {
@@ -100,6 +147,31 @@ async function initializeMultiUserbot() {
 
     const activeSessions = Array.from(isReady.entries()).filter(([_, ready]) => ready).length;
     logInfo('MULTI-USERBOT', '📊', `Sesiones activas: ${activeSessions}/${sessions.length}`);
+}
+
+/**
+ * Obtiene la sesión apropiada para un comando específico
+ * @param {string} comando - Comando para determinar la sesión
+ */
+function getSessionForCommand(comando) {
+    // Extraer el comando base (ej: "/dni 12345678" -> "/dni")
+    const comandoBase = comando.split(' ')[0].toLowerCase();
+    
+    // Verificar si hay un mapeo específico para este comando
+    const mappedSession = COMMAND_USERBOT_MAPPING[comandoBase];
+    
+    if (mappedSession === 'secondary') {
+        const sessionKey = 'secondary';
+        if (isReady.get(sessionKey)) {
+            logInfo('MULTI-USERBOT', '🎯', `Comando "${comandoBase}" enrutado a sesión secundaria`);
+            return sessionKey;
+        } else {
+            logInfo('MULTI-USERBOT', '⚠️', `Sesión secundaria no disponible, usando round-robin`);
+        }
+    }
+    
+    // Usar round-robin por defecto
+    return getNextSession();
 }
 
 /**
@@ -126,20 +198,22 @@ function getNextSession() {
 }
 
 /**
- * Consulta en el grupo usando la siguiente sesión disponible
+ * Consulta en el destino (grupo o bot) usando la sesión apropiada para el comando
+ * @param {string} comando - Comando a enviar
  */
 async function consultarEnGrupo(comando) {
-    const sessionKey = getNextSession();
+    const sessionKey = getSessionForCommand(comando);
     
     if (!sessionKey) {
         throw new Error('No hay sesiones de userbot disponibles');
     }
 
     const client = clients.get(sessionKey);
-    const grupoEntityId = grupoEntityIds.get(sessionKey);
+    const destinationEntity = destinationEntities.get(sessionKey);
+    const destinationType = destinationTypes.get(sessionKey);
 
-    if (!client || !grupoEntityId) {
-        throw new Error(`Sesión ${sessionKey} no está conectada o grupo no resuelto`);
+    if (!client || !destinationEntity) {
+        throw new Error(`Sesión ${sessionKey} no está conectada o destino no resuelto`);
     }
 
     const queryKey = `${sessionKey}_${Date.now()}_${Math.random()}`;
@@ -162,7 +236,8 @@ async function consultarEnGrupo(comando) {
                 if (pending.messages.length > 0) {
                     resolve(pending.messages);
                 } else {
-                    reject(new Error('Timeout: el bot del grupo no respondió'));
+                    const destName = destinationType === 'bot' ? 'bot' : 'grupo';
+                    reject(new Error(`Timeout: el ${destName} no respondió`));
                 }
             }
         }, TIMEOUT_MS);
@@ -170,8 +245,9 @@ async function consultarEnGrupo(comando) {
         pendingQueries.set(queryKey, pending);
 
         try {
-            await client.sendMessage(grupoEntityId, { message: comando });
-            logInfo('MULTI-USERBOT', '📤', `Comando enviado al grupo vía sesión ${sessionKey}`, { comando });
+            await client.sendMessage(destinationEntity, { message: comando });
+            const destName = destinationType === 'bot' ? 'bot' : 'grupo';
+            logInfo('MULTI-USERBOT', '📤', `Comando enviado al ${destName} vía sesión ${sessionKey}`, { comando });
         } catch (err) {
             clearTimeout(timeoutTimer);
             pendingQueries.delete(queryKey);
@@ -227,7 +303,8 @@ function getSessionStats() {
         sessions: Array.from(clients.keys()).map(key => ({
             key,
             ready: isReady.get(key),
-            hasGroup: !!grupoEntityIds.get(key)
+            destinationType: destinationTypes.get(key),
+            hasDestination: !!destinationEntities.get(key)
         }))
     };
 }
