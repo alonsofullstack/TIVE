@@ -105,6 +105,7 @@ const COMMAND_USERBOT_MAPPING = {
     '/vec': null,
     '/pla': null,
     '/tive': null,
+    '/tiv': 'secondary',
     '/telp': null,
     '/tel': null,
     '/cel': null,

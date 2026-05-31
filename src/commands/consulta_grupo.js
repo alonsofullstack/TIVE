@@ -41,7 +41,7 @@ const COMANDOS_GRUPO = [
     '/citv', '/soat', '/hsoat',
     // VEHÍCULOS (otros comandos)
     '/vec', '/pla', '/plat', '/revtec', '/revtecpdf', '/boi',
-    '/tive', '/tivep', '/tivev', '/tivevpdf', '/paptrud', '/brevete',
+    '/tive', '/tivep', '/tivev', '/tivevpdf', '/paptrud', '/brevete', '/tiv',
     // GENERADORES (activos que usarán sesión secundaria)
     '/c4', '/dniv',
     // GENERADORES (otros comandos)
