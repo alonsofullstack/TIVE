@@ -107,18 +107,24 @@ async function initializeMultiUserbot() {
                 try {
                     const botEntity = await client.getEntity(botUsername);
                     destinationEntities.set(key, botEntity);
-                    logInfo('MULTI-USERBOT', '📌', `Sesión ${key} bot listo`, { username: botUsername });
+                    logInfo('MULTI-USERBOT', '📌', `Sesión ${key} bot listo`, { username: botUsername, botId: botEntity.id });
 
                     // Agregar event handler para esta sesión (respuestas del bot)
                     client.addEventHandler(async (event) => {
                         try {
                             const msg = event.message;
                             if (!msg) return;
-                            const senderId = msg.senderId?.userId?.toString() || msg.senderId?.userId?.toString();
-                            const botId = botEntity.id?.toString();
                             
-                            // Verificar que el mensaje sea del bot
-                            if (senderId !== botId) return;
+                            // Verificar que el mensaje sea del bot (método más robusto)
+                            const sender = msg.sender;
+                            const isBot = sender && (sender.bot || sender.className === 'User' && sender.bot);
+                            
+                            if (!isBot) return;
+
+                            logInfo('MULTI-USERBOT', '📥', `Mensaje recibido del bot`, { 
+                                sessionId: key, 
+                                message: msg.message?.substring(0, 50) 
+                            });
 
                             for (const [, pending] of pendingQueries.entries()) {
                                 if (pending.resolved) continue;
@@ -131,7 +137,9 @@ async function initializeMultiUserbot() {
                                     }
                                 }, WAIT_MORE_MS);
                             }
-                        } catch (_) {}
+                        } catch (err) {
+                            logError('MULTI-USERBOT', '❌', 'Error en event handler', err);
+                        }
                     }, new NewMessage({}));
                 } catch (err) {
                     logError('MULTI-USERBOT', '❌', `Sesión ${key} bot no encontrado (@${botUsername})`, err);

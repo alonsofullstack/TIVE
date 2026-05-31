@@ -205,6 +205,7 @@ const categories = {
     medico: {
         title: "💊 MÉDICO",
         cmds: [
+            { name: "Salud Seguros - PDF", type: "Standard", cmd: "/seg 44443333", price: 3, result: "Listado de seguros por DNI en PDF" },
             { name: "Descanso Médico MINSA - PDF", type: "Premium", cmd: "/minsa 44443333", price: 30, result: "Descanso médico MINSA en PDF" },
             { name: "Constancia MINSA - PDF", type: "Premium", cmd: "/const 44443333", price: 30, result: "Constancia médica MINSA en PDF" },
             { name: "Receta Médica MINSA - PDF", type: "Premium", cmd: "/reminsa 44443333", price: 30, result: "Receta médica MINSA en PDF" },
@@ -212,6 +213,13 @@ const categories = {
             { name: "Descanso ESSALUD - PDF", type: "Premium", cmd: "/essalud 44443333", price: 30, result: "Descanso médico ESSALUD en PDF" },
             { name: "Certificado Médico ESSALUD - PDF", type: "Premium", cmd: "/certmed 44443333", price: 30, result: "Certificado médico ESSALUD en PDF" },
             { name: "Receta Médica ESSALUD - PDF", type: "Premium", cmd: "/reessalud 44443333", price: 30, result: "Receta médica ESSALUD en PDF" },
+        ]
+    },
+    sat: {
+        title: "🚔 SAT",
+        cmds: [
+            { name: "SAT Papeletas - Texto", type: "Standard", cmd: "/sat SOS666", price: 4, result: "Consulta SAT papeletas en texto" },
+            { name: "SAT Capturas - Texto", type: "Standard", cmd: "/csat SOS666", price: 4, result: "Consulta captura vehicular en texto" },
         ]
     },
     actas: {
