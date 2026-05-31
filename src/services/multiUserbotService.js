@@ -208,6 +208,7 @@ function getNextSession() {
 /**
  * Consulta en el destino (grupo o bot) usando la sesión apropiada para el comando
  * @param {string} comando - Comando a enviar
+ * @returns {Promise<{messages: Array, sessionKey: string}>}
  */
 async function consultarEnGrupo(comando) {
     const sessionKey = getSessionForCommand(comando);
@@ -231,9 +232,11 @@ async function consultarEnGrupo(comando) {
             messages: [],
             resolved: false,
             waitTimer: null,
+            sessionKey: sessionKey, // Guardar la sesión usada para la consulta
             resolve: (msgs) => {
                 pendingQueries.delete(queryKey);
-                resolve(msgs);
+                // Devolver mensajes y la sesión usada
+                resolve({ messages: msgs, sessionKey: sessionKey });
             }
         };
 
@@ -242,7 +245,7 @@ async function consultarEnGrupo(comando) {
                 pending.resolved = true;
                 pendingQueries.delete(queryKey);
                 if (pending.messages.length > 0) {
-                    resolve(pending.messages);
+                    resolve({ messages: pending.messages, sessionKey: sessionKey });
                 } else {
                     const destName = destinationType === 'bot' ? 'bot' : 'grupo';
                     reject(new Error(`Timeout: el ${destName} no respondió`));
@@ -297,30 +300,51 @@ function esMensajeUtil(msg) {
 
 /**
  * Reenvía respuestas usando el bot principal
+ * @param {object} bot - Bot principal de Telegram
+ * @param {number} chatId - ID del chat donde reenviar
+ * @param {Array} mensajes - Mensajes a reenviar
+ * @param {string} sessionKey - Sesion que se usó para la consulta (opcional)
  */
-async function reenviarRespuestas(bot, chatId, mensajes) {
-    const sessionKey = getNextSession();
-    const client = clients.get(sessionKey);
+async function reenviarRespuestas(bot, chatId, mensajes, sessionKey = null) {
+    // Usar la sesión proporcionada o la siguiente disponible
+    const targetSessionKey = sessionKey || getNextSession();
+    const client = clients.get(targetSessionKey);
 
     if (!client) {
         throw new Error('No hay sesión de userbot disponible para descargar medios');
     }
 
     const utiles = mensajes.filter(esMensajeUtil);
-    logInfo('MULTI-USERBOT', '📨', `Mensajes a reenviar`, { total: mensajes.length, utiles: utiles.length });
+    logInfo('MULTI-USERBOT', '📨', `Mensajes a reenviar`, { 
+        total: mensajes.length, 
+        utiles: utiles.length,
+        session: targetSessionKey
+    });
 
     for (const msg of utiles) {
         try {
             const caption = limpiarTexto(msg.message || '');
             if (msg.photo) {
-                const photoBuffer = await client.downloadMedia(msg);
-                if (photoBuffer) await bot.sendPhoto(chatId, Buffer.from(photoBuffer), { caption });
+                try {
+                    const photoBuffer = await client.downloadMedia(msg);
+                    if (photoBuffer) await bot.sendPhoto(chatId, Buffer.from(photoBuffer), { caption });
+                } catch (downloadErr) {
+                    // Si falla la descarga, enviar solo el texto
+                    logError('MULTI-USERBOT', '⚠️', 'Error descargando foto, enviando solo texto', downloadErr);
+                    if (caption) await bot.sendMessage(chatId, caption);
+                }
             } else if (msg.document) {
-                const docBuffer = await client.downloadMedia(msg);
-                if (docBuffer) {
-                    const fileName = msg.document.attributes?.find(a => a.fileName)?.fileName || 'archivo';
-                    const cleanFileName = fileName.replace(/selene/gi, 'ORION');
-                    await bot.sendDocument(chatId, Buffer.from(docBuffer), { caption }, { filename: cleanFileName });
+                try {
+                    const docBuffer = await client.downloadMedia(msg);
+                    if (docBuffer) {
+                        const fileName = msg.document.attributes?.find(a => a.fileName)?.fileName || 'archivo';
+                        const cleanFileName = fileName.replace(/selene/gi, 'ORION');
+                        await bot.sendDocument(chatId, Buffer.from(docBuffer), { caption }, { filename: cleanFileName });
+                    }
+                } catch (downloadErr) {
+                    // Si falla la descarga, enviar solo el texto
+                    logError('MULTI-USERBOT', '⚠️', 'Error descargando documento, enviando solo texto', downloadErr);
+                    if (caption) await bot.sendMessage(chatId, caption);
                 }
             } else if (msg.message) {
                 await bot.sendMessage(chatId, limpiarTexto(msg.message));

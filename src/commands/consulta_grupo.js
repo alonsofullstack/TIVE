@@ -124,15 +124,17 @@ module.exports = {
             });
 
             try {
-                const respuestas = await consultarEnGrupo(texto);
+                const resultado = await consultarEnGrupo(texto);
+                const respuestas = resultado.messages;
+                const sessionKey = resultado.sessionKey;
 
                 if (respuestas.length === 0) {
                     await bot.sendMessage(chatId, '⚠️ No se recibió respuesta del grupo.');
                     return;
                 }
 
-                logInfo('CONSULTA', '✅', `Respuestas recibidas`, { cantidad: respuestas.length });
-                await reenviarRespuestas(bot, chatId, respuestas);
+                logInfo('CONSULTA', '✅', `Respuestas recibidas`, { cantidad: respuestas.length, sessionKey });
+                await reenviarRespuestas(bot, chatId, respuestas, sessionKey);
 
             } catch (err) {
                 logError('CONSULTA', '❌', 'Error en consulta al grupo', err);
