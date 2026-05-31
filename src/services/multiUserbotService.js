@@ -309,21 +309,27 @@ async function reenviarRespuestas(bot, chatId, mensajes, sessionKey = null) {
     // Usar la sesión proporcionada o la siguiente disponible
     const targetSessionKey = sessionKey || getNextSession();
     const client = clients.get(targetSessionKey);
+    const destType = destinationTypes.get(targetSessionKey);
 
     if (!client) {
         throw new Error('No hay sesión de userbot disponible para descargar medios');
     }
 
-    const utiles = mensajes.filter(esMensajeUtil);
+    const esGrupo = destType === 'group';
+
+    const utiles = esGrupo ? mensajes.filter(esMensajeUtil) : mensajes;
     logInfo('MULTI-USERBOT', '📨', `Mensajes a reenviar`, { 
         total: mensajes.length, 
         utiles: utiles.length,
-        session: targetSessionKey
+        session: targetSessionKey,
+        destType: destType
     });
 
     for (const msg of utiles) {
         try {
-            const caption = limpiarTexto(msg.message || '');
+            const rawText = msg.message || '';
+            const caption = esGrupo ? limpiarTexto(rawText) : rawText;
+            
             if (msg.photo) {
                 try {
                     const photoBuffer = await client.downloadMedia(msg);
@@ -338,7 +344,7 @@ async function reenviarRespuestas(bot, chatId, mensajes, sessionKey = null) {
                     const docBuffer = await client.downloadMedia(msg);
                     if (docBuffer) {
                         const fileName = msg.document.attributes?.find(a => a.fileName)?.fileName || 'archivo';
-                        const cleanFileName = fileName.replace(/selene/gi, 'ORION');
+                        const cleanFileName = esGrupo ? fileName.replace(/selene/gi, 'ORION') : fileName;
                         await bot.sendDocument(chatId, Buffer.from(docBuffer), { caption }, { filename: cleanFileName });
                     }
                 } catch (downloadErr) {
@@ -346,8 +352,8 @@ async function reenviarRespuestas(bot, chatId, mensajes, sessionKey = null) {
                     logError('MULTI-USERBOT', '⚠️', 'Error descargando documento, enviando solo texto', downloadErr);
                     if (caption) await bot.sendMessage(chatId, caption);
                 }
-            } else if (msg.message) {
-                await bot.sendMessage(chatId, limpiarTexto(msg.message));
+            } else if (rawText) {
+                await bot.sendMessage(chatId, caption);
             }
         } catch (err) {
             logError('MULTI-USERBOT', '❌', 'Error reenviando mensaje', err);
