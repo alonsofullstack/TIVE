@@ -265,10 +265,40 @@ async function consultarEnGrupo(comando) {
 }
 
 /**
+ * Limpia el texto de un mensaje
+ */
+function limpiarTexto(texto) {
+    if (!texto) return '';
+    return texto
+        .replace(/selene/gi, 'ORION')
+        .replace(/🕵️‍♂️/g, '')
+        .replace(/⚡/g, '')
+        .replace(/━━━━━━━━━━━━━━━━━━━━/g, '')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+}
+
+/**
+ * Determina si un mensaje es útil para reenviar
+ */
+function esMensajeUtil(msg) {
+    const texto = (msg.message || '').toLowerCase();
+    const ignorar = [
+        'estamos procesando', 'un momento por favor', 'bienvenido',
+        'procesando tu solicitud', '[ ⏳ ]', '[ 🔄 ]',
+    ];
+    for (const frase of ignorar) {
+        if (texto.includes(frase.toLowerCase())) return false;
+    }
+    if (msg.photo && !texto) return false;
+    if (msg.photo && ignorar.some(f => texto.includes(f.toLowerCase()))) return false;
+    return true;
+}
+
+/**
  * Reenvía respuestas usando el bot principal
  */
 async function reenviarRespuestas(bot, chatId, mensajes) {
-    const { limpiarTexto, esMensajeUtil } = require('./userbotService');
     const sessionKey = getNextSession();
     const client = clients.get(sessionKey);
 
