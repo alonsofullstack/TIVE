@@ -8,7 +8,7 @@
  */
 
 const { logInfo, logError } = require('../utils/logger');
-const { explorarCmdsGrupo } = require('../services/userbotService');
+const { explorarCmdsGrupo } = require('../services/multiUserbotService');
 
 module.exports = {
     registerCommands(bot, state, deps) {

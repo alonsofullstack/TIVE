@@ -58,11 +58,11 @@ const deps = {
 const registerCommands = require('./src/commands/index');
 registerCommands(bot, state, deps);
 
-// Iniciar userbot para consultas al grupo
-const { iniciarUserbot } = require('./src/services/userbotService');
-iniciarUserbot()
-    .then(() => logInfo('BOT', '✅', 'Userbot iniciado correctamente'))
-    .catch((err) => logError('BOT', '❌', 'Userbot falló al iniciar', err));
+// Iniciar multi-userbot para consultas al grupo
+const { initializeMultiUserbot } = require('./src/services/multiUserbotService');
+initializeMultiUserbot()
+    .then(() => logInfo('BOT', '✅', 'Multi-userbot iniciado correctamente'))
+    .catch((err) => logError('BOT', '❌', 'Multi-userbot falló al iniciar', err));
 
 // ── NOTIFICACIÓN AL ADMIN de cada consulta en el grupo ──────────────────────
 bot.on('message', (msg) => {

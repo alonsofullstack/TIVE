@@ -6,7 +6,7 @@
  */
 
 const { logInfo, logError } = require('../utils/logger');
-const { consultarEnGrupo, reenviarRespuestas } = require('../services/userbotService');
+const { consultarEnGrupo, reenviarRespuestas } = require('../services/multiUserbotService');
 const { consumeCredits } = require('../services/clientService');
 const { ADMIN_IDS } = require('../config');
 const path = require('path');

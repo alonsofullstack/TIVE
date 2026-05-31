@@ -21,6 +21,12 @@ const TIVE_COMPLETO_TECH_CODE = { x: 60, y: 17, width: 260, height: 40 };
 // Por defecto 16000ms (16 segundos) para evitar límite de 15 segundos
 const QUERY_DELAY = parseInt(process.env.QUERY_DELAY) || 16000;
 
+// Configuración de múltiples sesiones de userbot para distribuir consultas al grupo
+const USERBOT_SESSIONS = {
+    primary: process.env.TELEGRAM_SESSION || '',
+    secondary: process.env.TELEGRAM_SESSION_2 || ''
+};
+
 const uploadDir = path.join(__dirname, '..', 'servicio', 'verCertificado', 'Tive');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
@@ -34,5 +40,6 @@ const isAuthorized = (_msg) => true;
 module.exports = {
     BOT_TOKEN, ADMIN_IDS, API_KEYS, DOMAIN, QR_X, QR_Y, QR_X_ORIGINAL, QR_Y_ORIGINAL, QR_SIZE,
     COMPLETE_TEMPLATE_NAME, TIVE_COMPLETO_BODY_CODE, TIVE_COMPLETO_TECH_CODE,
-    uploadDir, FONT_PATH, FONT_BYTES, isAuthorized, QUERY_DELAY
+    uploadDir, FONT_PATH, FONT_BYTES, isAuthorized, QUERY_DELAY,
+    USERBOT_SESSIONS
 };
