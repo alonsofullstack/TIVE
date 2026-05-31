@@ -88,6 +88,14 @@ const COMMAND_USERBOT_MAPPING = {
     // Comandos SAT que usarán la sesión secundario (solo los activos)
     '/sat': 'secondary',   // SAT PAPELETAS - ON
     '/csat': 'secondary',  // SAT CAPTURAS - ON
+    // Comandos ESTUDIOS que usarán la sesión secundario
+    '/notas': 'secondary',
+    '/const': 'secondary',
+    '/cadult': 'secondary',
+    // Comandos MTC que usarán la sesión secundario
+    '/mtcb': 'secondary',
+    '/record': 'secondary',
+    '/citv': 'secondary',  // REVISION TECNICA - ON
     // Comandos que usarán la sesión primaria (round-robin por defecto)
     '/dni': null,          // DNI V1 - OFF
     '/dnim': null,

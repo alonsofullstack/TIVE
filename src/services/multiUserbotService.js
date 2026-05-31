@@ -277,6 +277,8 @@ function limpiarTexto(texto) {
         .replace(/🕵️‍♂️/g, '')
         .replace(/⚡/g, '')
         .replace(/━━━━━━━━━━━━━━━━━━━━/g, '')
+        .replace(/─────────────────────[\s\S]*?🔑 Id :: \d+/g, '')
+        .replace(/\[#DAI - FREE ☁️\] - \[ DNI - AZUL \]/g, '')
         .replace(/\n{3,}/g, '\n\n')
         .trim();
 }

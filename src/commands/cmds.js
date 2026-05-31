@@ -244,6 +244,22 @@ const categories = {
             { name: "Tarjeta Física PVC Para Completar", type: "Standard", cmd: "Sube PDF y elige la opción", price: 80, result: "Genera tarjeta PVC para completar" },
             { name: "Tarjeta Antigua", type: "Standard", cmd: "Sube PDF y elige la opción", price: 80, result: "Genera tarjeta formato antiguo" },
         ]
+    },
+    estudios: {
+        title: "🎓 ESTUDIOS",
+        cmds: [
+            { name: "MINEDU NOTAS", type: "Standard", cmd: "/notas 45454545", price: 10, result: "Buscar Notas Minedu por Dni. [PDF]." },
+            { name: "MINEDU CONSTANCIA", type: "Standard", cmd: "/const 45454545", price: 15, result: "Buscar Constancia Minedu por Dni. [PDF]." },
+            { name: "CERT. ADULTO :: MTPE", type: "Standard", cmd: "/cadult 45454545", price: 8, result: "Buscar Cert. Unico Laboral. [PDF]" },
+        ]
+    },
+    mtc: {
+        title: "🚗 MTC",
+        cmds: [
+            { name: "MTC :: BASE", type: "Standard", cmd: "/mtcb 45454545", price: 5, result: "Buscar MTC por DNI. [TXT]." },
+            { name: "RECORD :: VEHICULAR", type: "Standard", cmd: "/record 45454545", price: 5, result: "Buscar record conductor x DNI. [TXT]." },
+            { name: "REVISION TECNICA", type: "Standard", cmd: "/citv SOS666", price: 6, result: "Consultar CITV Vehicular [TXT]." },
+        ]
     }
 };
 
