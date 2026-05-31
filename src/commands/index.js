@@ -12,6 +12,7 @@ const cmds          = require('./cmds');
 const clientes      = require('./clientes');
 const explorar_cmds = require('./explorar_cmds');
 const buy           = require('./buy');
+const { addToQueue } = require('../services/queueSystem');
 
 const { checkAndConsumeCredits, PAID_OPERATIONS, ADMIN_ONLY_OPERATIONS } = require('./start');
 const { ADMIN_IDS } = require('../config');
@@ -32,7 +33,7 @@ module.exports = function registerCommands(bot, state, deps) {
         }
     }
 
-    // 2. Gestionar callback queries (botones inline)
+    // 2. Gestionar callback queries (botones inline) con sistema de colas global
     bot.on('callback_query', async (query) => {
         const chatId    = query.message.chat.id;
         const messageId = query.message.message_id;
@@ -65,38 +66,49 @@ module.exports = function registerCommands(bot, state, deps) {
             return bot.sendMessage(chatId, "⚠️ El documento expiró. Por favor, envíalo de nuevo.");
         }
 
-        // Delegar a los módulos de funcionalidades
-        for (const mod of modules) {
-            if (mod.handleCallback) {
-                const handled = await mod.handleCallback(chatId, messageId, data, query, buffer, bot, state, deps);
-                if (handled) return;
+        // Procesar en cola global para evitar saturación del puente Telegram
+        await addToQueue(async () => {
+            // Delegar a los módulos de funcionalidades
+            for (const mod of modules) {
+                if (mod.handleCallback) {
+                    const handled = await mod.handleCallback(chatId, messageId, data, query, buffer, bot, state, deps);
+                    if (handled) return;
+                }
             }
-        }
+        }, { type: 'callback', data, chatId, userId });
     });
 
-    // 3. Gestionar subida de documentos (PDF original / imagen de firma)
+    // 3. Gestionar subida de documentos (PDF original / imagen de firma) con sistema de colas global
     bot.on('document', async (msg) => {
-        const currentUstate = userState.get(msg.chat.id);
-        if (currentUstate === 'awaiting_tive_firma_image') {
-            await firma.handleDocument(msg, bot, state, deps);
-        } else {
-            await start.handleDocument(msg, bot, state, deps);
-        }
+        const userId = msg.from.id;
+        const chatId = msg.chat.id;
+
+        await addToQueue(async () => {
+            const currentUstate = userState.get(chatId);
+            if (currentUstate === 'awaiting_tive_firma_image') {
+                await firma.handleDocument(msg, bot, state, deps);
+            } else {
+                await start.handleDocument(msg, bot, state, deps);
+            }
+        }, { type: 'document', chatId, userId });
     });
 
-    // 4. Gestionar transiciones de estados conversacionales
+    // 4. Gestionar transiciones de estados conversacionales con sistema de colas global
     bot.on('message', async (msg) => {
         const chatId = msg.chat.id;
+        const userId = msg.from.id;
         const currentUstate = userState.get(chatId);
         if (!currentUstate) return;
 
-        const buffer = userPdfs.get(chatId);
+        await addToQueue(async () => {
+            const buffer = userPdfs.get(chatId);
 
-        for (const mod of modules) {
-            if (mod.handleMessage) {
-                const handled = await mod.handleMessage(chatId, currentUstate, msg, buffer, bot, state, deps);
-                if (handled) return;
+            for (const mod of modules) {
+                if (mod.handleMessage) {
+                    const handled = await mod.handleMessage(chatId, currentUstate, msg, buffer, bot, state, deps);
+                    if (handled) return;
+                }
             }
-        }
+        }, { type: 'message', chatId, userId, state: currentUstate });
     });
 };
