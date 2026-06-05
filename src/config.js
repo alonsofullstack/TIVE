@@ -95,7 +95,7 @@ const COMMAND_USERBOT_MAPPING = {
     // Comandos MTC que usarán la sesión secundario
     '/mtcb': 'secondary',
     '/record': 'secondary',
-    '/citv': 'secondary',  // REVISION TECNICA - ON
+    // Nota: /citv ya está mapeado a 'secondary' en la sección de Vehículos
     // Comandos que usarán la sesión primaria (round-robin por defecto)
     '/dni': null,          // DNI V1 - OFF
     '/dnim': null,

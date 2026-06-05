@@ -16,6 +16,20 @@ const destinationEntities = new Map(); // Puede ser grupo o bot
 const destinationTypes = new Map(); // 'group' o 'bot'
 const pendingQueries = new Map();
 
+// Cola por sesión — garantiza que solo haya UNA consulta activa por sesión a la vez
+// Esto evita que las respuestas se crucen entre usuarios simultáneos
+const sessionQueues = new Map(); // key -> Promise (última operación en cola)
+
+/**
+ * Encola una función async para ejecutarse secuencialmente por sesión
+ */
+function enqueueForSession(sessionKey, fn) {
+    const prev = sessionQueues.get(sessionKey) || Promise.resolve();
+    const next = prev.then(() => fn()).catch(() => {}); // errores no rompen la cola
+    sessionQueues.set(sessionKey, next);
+    return prev.then(() => fn()); // retorna el resultado real con el error si aplica
+}
+
 let currentSessionIndex = 0;
 
 /**
@@ -82,8 +96,10 @@ async function initializeMultiUserbot() {
                             const msgChatId = Math.abs(parseInt(msg.chatId?.toString() || msg.peerId?.channelId?.toString() || '0'));
                             if (msgChatId !== grupoIdNum) return;
 
+                            // Solo entregamos a queries de ESTA sesión (evita cruce de datos)
                             for (const [, pending] of pendingQueries.entries()) {
                                 if (pending.resolved) continue;
+                                if (pending.sessionKey !== key) continue; // ← filtro de sesión
                                 pending.messages.push(msg);
                                 if (pending.waitTimer) clearTimeout(pending.waitTimer);
                                 pending.waitTimer = setTimeout(() => {
@@ -126,8 +142,10 @@ async function initializeMultiUserbot() {
                                 message: msg.message?.substring(0, 50) 
                             });
 
+                            // Solo entregamos a queries de ESTA sesión (evita cruce de datos)
                             for (const [, pending] of pendingQueries.entries()) {
                                 if (pending.resolved) continue;
+                                if (pending.sessionKey !== key) continue; // ← filtro de sesión
                                 pending.messages.push(msg);
                                 if (pending.waitTimer) clearTimeout(pending.waitTimer);
                                 pending.waitTimer = setTimeout(() => {
@@ -206,7 +224,8 @@ function getNextSession() {
 }
 
 /**
- * Consulta en el destino (grupo o bot) usando la sesión apropiada para el comando
+ * Consulta en el destino (grupo o bot) usando la sesión apropiada para el comando.
+ * Las consultas se serializan por sesión para evitar cruce de respuestas entre usuarios.
  * @param {string} comando - Comando a enviar
  * @returns {Promise<{messages: Array, sessionKey: string}>}
  */
@@ -225,6 +244,15 @@ async function consultarEnGrupo(comando) {
         throw new Error(`Sesión ${sessionKey} no está conectada o destino no resuelto`);
     }
 
+    // Encolamos la ejecución para que sea secuencial por sesión
+    // Esto garantiza que dos usuarios simultáneos no mezclen sus respuestas
+    return enqueueForSession(sessionKey, () => _ejecutarConsulta(sessionKey, client, destinationEntity, destinationType, comando));
+}
+
+/**
+ * Ejecuta una consulta individual (ya encolada, sin concurrencia en la misma sesión)
+ */
+async function _ejecutarConsulta(sessionKey, client, destinationEntity, destinationType, comando) {
     const queryKey = `${sessionKey}_${Date.now()}_${Math.random()}`;
 
     return new Promise(async (resolve, reject) => {
@@ -232,10 +260,9 @@ async function consultarEnGrupo(comando) {
             messages: [],
             resolved: false,
             waitTimer: null,
-            sessionKey: sessionKey, // Guardar la sesión usada para la consulta
+            sessionKey: sessionKey, // Permite al event handler filtrar solo sus mensajes
             resolve: (msgs) => {
                 pendingQueries.delete(queryKey);
-                // Devolver mensajes y la sesión usada
                 resolve({ messages: msgs, sessionKey: sessionKey });
             }
         };
