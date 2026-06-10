@@ -2,7 +2,7 @@ const { TelegramClient } = require('telegram');
 const { StringSession } = require('telegram/sessions');
 const { NewMessage } = require('telegram/events');
 const { logInfo, logError } = require('../utils/logger');
-const { USERBOT_SESSIONS, QUERY_DELAY, COMMAND_USERBOT_MAPPING, USERBOT_DESTINATIONS } = require('../config');
+const { USERBOT_SESSIONS, QUERY_DELAY, COMMAND_USERBOT_MAPPING, USERBOT_DESTINATIONS, USERBOT_COOLDOWNS } = require('../config');
 
 const API_ID   = 33222502;
 const API_HASH = 'b2f2a2532045bb4b928082ab7243d8a6';
@@ -15,6 +15,7 @@ const isReady = new Map();
 const destinationEntities = new Map(); // Puede ser grupo o bot
 const destinationTypes = new Map(); // 'group' o 'bot'
 const pendingQueries = new Map();
+const lastSentTime = new Map(); // Para rastrear el antispam por sesión
 
 // Cola por sesión — garantiza que solo haya UNA consulta activa por sesión a la vez
 // Esto evita que las respuestas se crucen entre usuarios simultáneos
@@ -25,9 +26,11 @@ const sessionQueues = new Map(); // key -> Promise (última operación en cola)
  */
 function enqueueForSession(sessionKey, fn) {
     const prev = sessionQueues.get(sessionKey) || Promise.resolve();
-    const next = prev.then(() => fn()).catch(() => {}); // errores no rompen la cola
-    sessionQueues.set(sessionKey, next);
-    return prev.then(() => fn()); // retorna el resultado real con el error si aplica
+    const next = prev.then(() => fn());
+    // Guardar en la cola capturando el error para no romper la cadena de ejecuciones siguientes
+    sessionQueues.set(sessionKey, next.catch(() => {}));
+    // Retornar la promesa original para que el llamador reciba el resultado o error real
+    return next;
 }
 
 let currentSessionIndex = 0;
@@ -245,8 +248,21 @@ async function consultarEnGrupo(comando) {
     }
 
     // Encolamos la ejecución para que sea secuencial por sesión
-    // Esto garantiza que dos usuarios simultáneos no mezclen sus respuestas
-    return enqueueForSession(sessionKey, () => _ejecutarConsulta(sessionKey, client, destinationEntity, destinationType, comando));
+    // Esto garantiza que dos usuarios simultáneos no mezclen sus respuestas y se respete el antispam
+    return enqueueForSession(sessionKey, async () => {
+        const now = Date.now();
+        const lastSent = lastSentTime.get(sessionKey) || 0;
+        const cooldown = USERBOT_COOLDOWNS[sessionKey] || 16000;
+        const elapsed = now - lastSent;
+
+        if (elapsed < cooldown) {
+            const waitMs = cooldown - elapsed;
+            logInfo('MULTI-USERBOT', '⏱️', `Antispam activo para sesión ${sessionKey}. Esperando ${waitMs / 1000}s antes de enviar comando al grupo/bot...`);
+            await new Promise(r => setTimeout(r, waitMs));
+        }
+
+        return _ejecutarConsulta(sessionKey, client, destinationEntity, destinationType, comando);
+    });
 }
 
 /**
@@ -284,6 +300,7 @@ async function _ejecutarConsulta(sessionKey, client, destinationEntity, destinat
 
         try {
             await client.sendMessage(destinationEntity, { message: comando });
+            lastSentTime.set(sessionKey, Date.now()); // Registrar el momento exacto del envío exitoso para el antispam
             const destName = destinationType === 'bot' ? 'bot' : 'grupo';
             logInfo('MULTI-USERBOT', '📤', `Comando enviado al ${destName} vía sesión ${sessionKey}`, { comando });
         } catch (err) {

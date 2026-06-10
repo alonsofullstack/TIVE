@@ -91,7 +91,7 @@ module.exports = {
 
             // ── Guard de créditos ────────────────────────────────────────
             if (!ADMIN_IDS.includes(String(msg.from.id))) {
-                const credit = consumeCredits(msg.from.id, 'consulta_grupo');
+                const credit = await consumeCredits(msg.from.id, 'consulta_grupo');
                 if (credit.error === 'no_registered') {
                     return bot.sendMessage(chatId,
                         `🚫 *Acceso Denegado*\n` +

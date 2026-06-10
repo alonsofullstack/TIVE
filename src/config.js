@@ -21,6 +21,12 @@ const TIVE_COMPLETO_TECH_CODE = { x: 60, y: 17, width: 260, height: 40 };
 // Por defecto 16000ms (16 segundos) para evitar límite de 15 segundos
 const QUERY_DELAY = parseInt(process.env.QUERY_DELAY) || 16000;
 
+// Cooldown de antispam por sesión de userbot (en milisegundos)
+const USERBOT_COOLDOWNS = {
+    primary: parseInt(process.env.USERBOT_COOLDOWN_PRIMARY) || 40000,    // 40s para el grupo
+    secondary: parseInt(process.env.USERBOT_COOLDOWN_SECONDARY) || 20000  // 20s para el bot directo
+};
+
 // Configuración de múltiples bots de Telegram
 const BOT_TOKENS = {
     primary: process.env.TELEGRAM_BOT_TOKEN,
@@ -132,6 +138,6 @@ const isAuthorized = (_msg) => true;
 module.exports = {
     BOT_TOKEN, ADMIN_IDS, API_KEYS, DOMAIN, QR_X, QR_Y, QR_X_ORIGINAL, QR_Y_ORIGINAL, QR_SIZE,
     COMPLETE_TEMPLATE_NAME, TIVE_COMPLETO_BODY_CODE, TIVE_COMPLETO_TECH_CODE,
-    uploadDir, FONT_PATH, FONT_BYTES, isAuthorized, QUERY_DELAY,
+    uploadDir, FONT_PATH, FONT_BYTES, isAuthorized, QUERY_DELAY, USERBOT_COOLDOWNS,
     BOT_TOKENS, COMMAND_BOT_MAPPING, USERBOT_SESSIONS, USERBOT_DESTINATIONS, COMMAND_USERBOT_MAPPING
 };
