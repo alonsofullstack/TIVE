@@ -118,6 +118,24 @@ module.exports = {
                 }
             }
 
+            // Notificar a administradores de la consulta
+            if (!ADMIN_IDS.includes(String(msg.from.id))) {
+                try {
+                    const isGroupChat = msg.chat.type === 'group' || msg.chat.type === 'supergroup';
+                    const chatName = isGroupChat ? msg.chat.title : 'Chat Privado';
+                    const notifText =
+                        `🔍 *NUEVA CONSULTA DE USUARIO*\n` +
+                        `━━━━━━━━━━━━━━━━━━━━\n` +
+                        `👤 *Usuario:* ${msg.from.first_name || 'Sin nombre'} (@${msg.from.username || 'sin_username'}) (\`${msg.from.id}\`)\n` +
+                        `💬 *Origen:* ${chatName}\n` +
+                        `📝 *Comando:* \`${texto}\``;
+
+                    for (const adminId of ADMIN_IDS) {
+                        bot.sendMessage(adminId, notifText, { parse_mode: 'Markdown' }).catch(() => {});
+                    }
+                } catch (_) {}
+            }
+
             const procesando = await bot.sendPhoto(chatId, CARGA_IMG, {
                 caption: `⏳ *Procesando tu solicitud...*`,
                 parse_mode: 'Markdown'

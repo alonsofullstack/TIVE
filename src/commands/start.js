@@ -1,4 +1,4 @@
-﻿const { logInfo, logError } = require('../utils/logger');
+const { logInfo, logError } = require('../utils/logger');
 const { getClient, touchClient, consumeCredits } = require('../services/clientService');
 
 // ── Operaciones que consumen crédito (callback_data) ─────────────────────────
@@ -84,6 +84,25 @@ async function checkAndConsumeCredits(bot, chatId, userId, operation, ADMIN_IDS)
         await bot.sendMessage(chatId, `❌ Error en el sistema de créditos: ${result.error}`);
         return false;
     }
+
+    // Notificar al admin de la operación de imprenta pagada
+    try {
+        getClient(userId).then(client => {
+            const clientName = client ? client.firstName : 'Usuario';
+            const clientUname = client && client.username ? `@${client.username}` : 'sin_username';
+            const opName = OP_NAMES[operation] || operation;
+            const notifText =
+                `🖨️ *NUEVA OPERACIÓN DE IMPRENTA*\n` +
+                `━━━━━━━━━━━━━━━━━━━━\n` +
+                `👤 *Usuario:* ${clientName} (${clientUname}) (\`${userId}\`)\n` +
+                `⚙️ *Herramienta:* \`${opName}\`\n` +
+                `💳 *Costo:* \`${result.cost}\` crédito(s) | *Saldo restante:* \`${result.remaining}\``;
+
+            for (const adminId of ADMIN_IDS) {
+                bot.sendMessage(adminId, notifText, { parse_mode: 'Markdown' }).catch(() => {});
+            }
+        }).catch(() => {});
+    } catch (_) {}
 
     // Aviso de saldo bajo
     if (result.remaining === 0) {

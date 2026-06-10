@@ -260,7 +260,7 @@ module.exports = {
                 const clientLines = all.map(c => {
                     const uname  = c.username ? `@${c.username}` : '—';
                     const status = c.credits > 0 ? '🟢' : '🔴';
-                    return `${status} *${c.firstName}* (${uname})\n   🆔 \`${c.userId}\` · 💳 \`${c.credits}\` créditos`;
+                    return `${status} *${c.firstName}* (${uname})\n   🆔 \`${c.userId}\` · 💳 \`${c.credits}\` créd. · 📊 \`${c.totalUsed}\` consultas`;
                 });
 
                 const header =
