@@ -371,38 +371,57 @@ async function reenviarRespuestas(bot, chatId, mensajes, sessionKey = null) {
         destType: destType
     });
 
-    for (const msg of utiles) {
+    // 1. Descargar todos los medios en paralelo (operación de red lenta)
+    const promesasDescarga = utiles.map(async (msg) => {
+        const rawText = msg.message || '';
+        const caption = esGrupo ? limpiarTexto(rawText) : rawText;
+        let mediaBuffer = null;
+        let mediaType = null;
+        let fileName = null;
+
+        if (msg.photo) {
+            mediaType = 'photo';
+            try {
+                mediaBuffer = await client.downloadMedia(msg);
+            } catch (err) {
+                logError('MULTI-USERBOT', '⚠️', 'Error descargando foto', err);
+            }
+        } else if (msg.document) {
+            mediaType = 'document';
+            try {
+                mediaBuffer = await client.downloadMedia(msg);
+                fileName = msg.document.attributes?.find(a => a.fileName)?.fileName || 'archivo';
+            } catch (err) {
+                logError('MULTI-USERBOT', '⚠️', 'Error descargando documento', err);
+            }
+        }
+
+        return { msg, caption, mediaType, mediaBuffer, fileName };
+    });
+
+    const resultados = await Promise.all(promesasDescarga);
+
+    // 2. Enviar secuencialmente al chat de destino para preservar el orden original
+    for (const res of resultados) {
         try {
-            const rawText = msg.message || '';
-            const caption = esGrupo ? limpiarTexto(rawText) : rawText;
-            
-            if (msg.photo) {
-                try {
-                    const photoBuffer = await client.downloadMedia(msg);
-                    if (photoBuffer) await bot.sendPhoto(chatId, Buffer.from(photoBuffer), { caption });
-                } catch (downloadErr) {
-                    // Si falla la descarga, enviar solo el texto
-                    logError('MULTI-USERBOT', '⚠️', 'Error descargando foto, enviando solo texto', downloadErr);
-                    if (caption) await bot.sendMessage(chatId, caption);
+            if (res.mediaType === 'photo') {
+                if (res.mediaBuffer) {
+                    await bot.sendPhoto(chatId, Buffer.from(res.mediaBuffer), { caption: res.caption });
+                } else if (res.caption) {
+                    await bot.sendMessage(chatId, res.caption);
                 }
-            } else if (msg.document) {
-                try {
-                    const docBuffer = await client.downloadMedia(msg);
-                    if (docBuffer) {
-                        const fileName = msg.document.attributes?.find(a => a.fileName)?.fileName || 'archivo';
-                        const cleanFileName = esGrupo ? fileName.replace(/selene/gi, 'ORION') : fileName;
-                        await bot.sendDocument(chatId, Buffer.from(docBuffer), { caption }, { filename: cleanFileName });
-                    }
-                } catch (downloadErr) {
-                    // Si falla la descarga, enviar solo el texto
-                    logError('MULTI-USERBOT', '⚠️', 'Error descargando documento, enviando solo texto', downloadErr);
-                    if (caption) await bot.sendMessage(chatId, caption);
+            } else if (res.mediaType === 'document') {
+                if (res.mediaBuffer) {
+                    const cleanFileName = esGrupo ? res.fileName.replace(/selene/gi, 'ORION') : res.fileName;
+                    await bot.sendDocument(chatId, Buffer.from(res.mediaBuffer), { caption: res.caption }, { filename: cleanFileName });
+                } else if (res.caption) {
+                    await bot.sendMessage(chatId, res.caption);
                 }
-            } else if (rawText) {
-                await bot.sendMessage(chatId, caption);
+            } else if (res.caption) {
+                await bot.sendMessage(chatId, res.caption);
             }
         } catch (err) {
-            logError('MULTI-USERBOT', '❌', 'Error reenviando mensaje', err);
+            logError('MULTI-USERBOT', '❌', 'Error reenviando mensaje procesado', err);
         }
     }
 }

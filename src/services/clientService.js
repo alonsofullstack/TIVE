@@ -58,6 +58,20 @@ async function initDB() {
             last_activity DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
+    
+    // Crear índice idx_username si no existe para búsquedas eficientes
+    try {
+        await db.execute('ALTER TABLE clients ADD INDEX idx_username (username)');
+        logInfo('DB', '✅', 'Índice idx_username creado/verificado en tabla clients');
+    } catch (err) {
+        // Código de error 1061 indica que el índice ya existe
+        if (err.errno === 1061 || err.code === 'ER_DUP_KEYNAME') {
+            logInfo('DB', '✅', 'Índice idx_username ya existente');
+        } else {
+            logError('DB', '⚠️', 'No se pudo crear el índice idx_username', err);
+        }
+    }
+    
     logInfo('DB', '✅', 'Tabla clients lista');
 }
 
@@ -70,19 +84,34 @@ async function registerClient(userId, username, firstName) {
     const db = getPool();
     const id = BigInt(userId);
 
-    const [rows] = await db.execute(
-        'SELECT * FROM clients WHERE user_id = ?', [id]
-    );
-    if (rows.length > 0) {
-        return { ok: false, alreadyExists: true, client: _row(rows[0]) };
+    try {
+        // Enfoque optimista: intentar INSERT directamente
+        await db.execute(
+            'INSERT INTO clients (user_id, username, first_name, credits, total_used) VALUES (?, ?, ?, 0, 0)',
+            [id, username || null, firstName || 'Sin nombre']
+        );
+        return {
+            ok: true,
+            client: {
+                userId: String(id),
+                username: username || null,
+                firstName: firstName || 'Sin nombre',
+                credits: 0,
+                totalUsed: 0,
+                registeredAt: new Date().toISOString(),
+                lastActivity: new Date().toISOString()
+            }
+        };
+    } catch (err) {
+        // Código de error 1062 indica entrada duplicada (ya registrado)
+        if (err.errno === 1062 || err.code === 'ER_DUP_ENTRY') {
+            const [rows] = await db.execute(
+                'SELECT * FROM clients WHERE user_id = ?', [id]
+            );
+            return { ok: false, alreadyExists: true, client: _row(rows[0]) };
+        }
+        throw err;
     }
-
-    await db.execute(
-        'INSERT INTO clients (user_id, username, first_name, credits, total_used) VALUES (?, ?, ?, 0, 0)',
-        [id, username || null, firstName || 'Sin nombre']
-    );
-    const [newRows] = await db.execute('SELECT * FROM clients WHERE user_id = ?', [id]);
-    return { ok: true, client: _row(newRows[0]) };
 }
 
 /**
@@ -122,9 +151,9 @@ async function findClientByRef(ref) {
         if (rows.length > 0) return _row(rows[0]);
     }
 
-    // Por username (case-insensitive)
+    // Por username (aprovecha la colación case-insensitive de MySQL y el nuevo índice)
     const [rows] = await db.execute(
-        'SELECT * FROM clients WHERE LOWER(username) = LOWER(?)', [clean]
+        'SELECT * FROM clients WHERE username = ?', [clean]
     );
     return rows.length > 0 ? _row(rows[0]) : null;
 }
@@ -137,12 +166,14 @@ async function addCredits(userId, amount) {
     const id = BigInt(userId);
     if (amount <= 0) return { ok: false, error: 'La cantidad debe ser mayor a 0.' };
 
-    const [rows] = await db.execute('SELECT credits FROM clients WHERE user_id = ?', [id]);
-    if (rows.length === 0) return { ok: false, error: 'Cliente no registrado.' };
-
-    await db.execute(
+    // Enfoque optimista: intentar UPDATE primero
+    const [result] = await db.execute(
         'UPDATE clients SET credits = credits + ? WHERE user_id = ?', [amount, id]
     );
+    if (result.affectedRows === 0) {
+        return { ok: false, error: 'Cliente no registrado.' };
+    }
+
     const [updated] = await db.execute('SELECT credits FROM clients WHERE user_id = ?', [id]);
     return { ok: true, credits: updated[0].credits };
 }
@@ -155,12 +186,14 @@ async function removeCredits(userId, amount) {
     const id = BigInt(userId);
     if (amount <= 0) return { ok: false, error: 'La cantidad debe ser mayor a 0.' };
 
-    const [rows] = await db.execute('SELECT credits FROM clients WHERE user_id = ?', [id]);
-    if (rows.length === 0) return { ok: false, error: 'Cliente no registrado.' };
-
-    await db.execute(
+    // Enfoque optimista: intentar UPDATE primero
+    const [result] = await db.execute(
         'UPDATE clients SET credits = GREATEST(0, credits - ?) WHERE user_id = ?', [amount, id]
     );
+    if (result.affectedRows === 0) {
+        return { ok: false, error: 'Cliente no registrado.' };
+    }
+
     const [updated] = await db.execute('SELECT credits FROM clients WHERE user_id = ?', [id]);
     return { ok: true, credits: updated[0].credits };
 }
@@ -198,8 +231,9 @@ async function consumeCredits(userId, operation) {
         );
         await conn.commit();
 
-        const [updated] = await db.execute('SELECT credits FROM clients WHERE user_id = ?', [id]);
-        return { ok: true, remaining: updated[0].credits, cost };
+        // Evitar el SELECT final redundante calculando el saldo restante en memoria
+        const remaining = current - cost;
+        return { ok: true, remaining, cost };
 
     } catch (err) {
         await conn.rollback();
