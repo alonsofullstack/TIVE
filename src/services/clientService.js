@@ -71,6 +71,19 @@ async function initDB() {
             logError('DB', '⚠️', 'No se pudo crear el índice idx_username', err);
         }
     }
+
+    // Agregar columna banned si no existe
+    try {
+        await db.execute('ALTER TABLE clients ADD COLUMN banned TINYINT NOT NULL DEFAULT 0');
+        logInfo('DB', '✅', 'Columna banned creada/verificada en tabla clients');
+    } catch (err) {
+        // Código de error 1060 indica columna duplicada (ya existe)
+        if (err.errno === 1060 || err.code === 'ER_DUP_COLUMNNAME') {
+            logInfo('DB', '✅', 'Columna banned ya existente');
+        } else {
+            logError('DB', '⚠️', 'No se pudo verificar/crear la columna banned', err);
+        }
+    }
     
     logInfo('DB', '✅', 'Tabla clients lista');
 }
@@ -261,15 +274,56 @@ async function touchClient(userId, username, firstName) {
 
 // ── Helper interno ──────────────────────────────────────────────────────────
 function _row(r) {
+    if (!r) return null;
     return {
         userId:       String(r.user_id),
         username:     r.username     || null,
         firstName:    r.first_name   || 'Sin nombre',
         credits:      r.credits,
         totalUsed:    r.total_used,
+        banned:       r.banned === 1,
         registeredAt: r.registered_at instanceof Date ? r.registered_at.toISOString() : r.registered_at,
         lastActivity: r.last_activity instanceof Date ? r.last_activity.toISOString() : r.last_activity,
     };
+}
+
+/**
+ * Banea a un cliente.
+ */
+async function banClient(userId) {
+    const db = getPool();
+    const id = BigInt(userId);
+    const [result] = await db.execute(
+        'UPDATE clients SET banned = 1 WHERE user_id = ?', [id]
+    );
+    return { ok: result.affectedRows > 0 };
+}
+
+/**
+ * Desbanea a un cliente.
+ */
+async function unbanClient(userId) {
+    const db = getPool();
+    const id = BigInt(userId);
+    const [result] = await db.execute(
+        'UPDATE clients SET banned = 0 WHERE user_id = ?', [id]
+    );
+    return { ok: result.affectedRows > 0 };
+}
+
+/**
+ * Verifica si un cliente está baneado.
+ */
+async function isClientBanned(userId) {
+    const db = getPool();
+    try {
+        const [rows] = await db.execute(
+            'SELECT banned FROM clients WHERE user_id = ?', [BigInt(userId)]
+        );
+        return rows.length > 0 ? (rows[0].banned === 1) : false;
+    } catch (err) {
+        return false;
+    }
 }
 
 module.exports = {
@@ -282,5 +336,8 @@ module.exports = {
     removeCredits,
     consumeCredits,
     touchClient,
+    banClient,
+    unbanClient,
+    isClientBanned,
     CREDIT_COSTS,
 };

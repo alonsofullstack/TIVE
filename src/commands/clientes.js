@@ -16,7 +16,7 @@
 const { logInfo, logError } = require('../utils/logger');
 const {
     registerClient, getClient, getAllClients, findClientByRef,
-    addCredits, removeCredits, touchClient,
+    addCredits, removeCredits, touchClient, banClient, unbanClient,
 } = require('../services/clientService');
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -259,7 +259,7 @@ module.exports = {
                 // Construir líneas por cliente
                 const clientLines = all.map(c => {
                     const uname  = c.username ? `@${c.username}` : '—';
-                    const status = c.credits > 0 ? '🟢' : '🔴';
+                    const status = c.banned ? '🚫' : (c.credits > 0 ? '🟢' : '🔴');
                     return `${status} *${c.firstName}* (${uname})\n   🆔 \`${c.userId}\` · 💳 \`${c.credits}\` créd. · 📊 \`${c.totalUsed}\` consultas`;
                 });
 
@@ -326,6 +326,7 @@ module.exports = {
                     `📛 *Nombre:* ${c.firstName}\n` +
                     `🔖 *Username:* ${uname}\n` +
                     `🆔 *ID:* \`${c.userId}\`\n` +
+                    `⚡ *Estado:* ${c.banned ? '🚫 Baneado' : '🟢 Activo'}\n` +
                     `💳 *Créditos:* \`${c.credits}\`\n` +
                     `📊 \`${bar}\`\n` +
                     `📈 *Total usado:* \`${c.totalUsed}\`\n` +
@@ -339,6 +340,94 @@ module.exports = {
             } catch (err) {
                 logError('ADMIN', '❌', 'Error en /cliente', err);
                 bot.sendMessage(msg.chat.id, '❌ Error consultando cliente. Intenta de nuevo.');
+            }
+        });
+
+        // ─────────────────────────────────────────────────────────────────────
+        // /ban <ref>   [solo admin]
+        // ─────────────────────────────────────────────────────────────────────
+        bot.onText(/\/ban(?:\s+(.+))?/, async (msg, match) => {
+            if (!isAdmin(msg.from.id, ADMIN_IDS)) {
+                return bot.sendMessage(msg.chat.id, '🚫 Solo el administrador puede usar este comando.');
+            }
+
+            const ref = (match[1] || '').trim();
+            if (!ref) {
+                return bot.sendMessage(msg.chat.id,
+                    `⚠️ *Uso correcto:*\n\`/ban <userId o @username>\`\n\n` +
+                    `_Ejemplo: \`/ban 123456789\` o \`/ban @usuario\`_`,
+                    { parse_mode: 'Markdown' }
+                );
+            }
+
+            try {
+                const target = await findClientByRef(ref);
+                if (!target) {
+                    return bot.sendMessage(msg.chat.id,
+                        `❌ Cliente \`${ref}\` no encontrado.`,
+                        { parse_mode: 'Markdown' }
+                    );
+                }
+
+                const result = await banClient(target.userId);
+                if (!result.ok) return bot.sendMessage(msg.chat.id, '❌ No se pudo banear al usuario.');
+
+                logInfo('ADMIN', '🚫', 'Usuario baneado', { target: target.userId, name: target.firstName });
+
+                bot.sendMessage(msg.chat.id,
+                    `🚫 *Usuario Baneado*\n` +
+                    `━━━━━━━━━━━━━━━━━━━━\n` +
+                    `👤 *Cliente:* ${target.firstName} (\`${target.userId}\`)\n` +
+                    `✅ *Estado:* Suspendido del sistema.`,
+                    { parse_mode: 'Markdown' }
+                );
+            } catch (err) {
+                logError('ADMIN', '❌', 'Error en /ban', err);
+                bot.sendMessage(msg.chat.id, '❌ Error al banear al usuario. Intenta de nuevo.');
+            }
+        });
+
+        // ─────────────────────────────────────────────────────────────────────
+        // /desban <ref>   [solo admin]
+        // ─────────────────────────────────────────────────────────────────────
+        bot.onText(/\/desban(?:\s+(.+))?/, async (msg, match) => {
+            if (!isAdmin(msg.from.id, ADMIN_IDS)) {
+                return bot.sendMessage(msg.chat.id, '🚫 Solo el administrador puede usar este comando.');
+            }
+
+            const ref = (match[1] || '').trim();
+            if (!ref) {
+                return bot.sendMessage(msg.chat.id,
+                    `⚠️ *Uso correcto:*\n\`/desban <userId o @username>\`\n\n` +
+                    `_Ejemplo: \`/desban 123456789\` o \`/desban @usuario\`_`,
+                    { parse_mode: 'Markdown' }
+                );
+            }
+
+            try {
+                const target = await findClientByRef(ref);
+                if (!target) {
+                    return bot.sendMessage(msg.chat.id,
+                        `❌ Cliente \`${ref}\` no encontrado.`,
+                        { parse_mode: 'Markdown' }
+                    );
+                }
+
+                const result = await unbanClient(target.userId);
+                if (!result.ok) return bot.sendMessage(msg.chat.id, '❌ No se pudo desbanear al usuario.');
+
+                logInfo('ADMIN', '🟢', 'Usuario desbaneado', { target: target.userId, name: target.firstName });
+
+                bot.sendMessage(msg.chat.id,
+                    `🟢 *Usuario Desbaneado*\n` +
+                    `━━━━━━━━━━━━━━━━━━━━\n` +
+                    `👤 *Cliente:* ${target.firstName} (\`${target.userId}\`)\n` +
+                    `✅ *Estado:* Acceso restablecido.`,
+                    { parse_mode: 'Markdown' }
+                );
+            } catch (err) {
+                logError('ADMIN', '❌', 'Error en /desban', err);
+                bot.sendMessage(msg.chat.id, '❌ Error al desbanear al usuario. Intenta de nuevo.');
             }
         });
     }

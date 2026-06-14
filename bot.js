@@ -25,6 +25,53 @@ const ocrService = require('./src/services/ocrService');
 
 const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 
+// ── Interceptor Global de Baneos ─────────────────────────────────────────────
+const { isClientBanned } = require('./src/services/clientService');
+
+const originalOn = bot.on.bind(bot);
+bot.on = function(event, listener) {
+    if (['message', 'callback_query', 'document'].includes(event)) {
+        const wrappedListener = async function(...args) {
+            const eventData = args[0];
+            const fromUser = event === 'callback_query' ? eventData?.from : eventData?.from;
+            const chatId = event === 'callback_query' ? eventData?.message?.chat?.id : eventData?.chat?.id;
+
+            if (fromUser && fromUser.id) {
+                const isBanned = await isClientBanned(fromUser.id);
+                if (isBanned) {
+                    const isPrivate = event === 'callback_query'
+                        ? (eventData?.message?.chat?.type === 'private')
+                        : (eventData?.chat?.type === 'private');
+                    if (isPrivate) {
+                        bot.sendMessage(chatId, "🚫 *Acceso Denegado*\nTu usuario ha sido suspendido del sistema.", { parse_mode: 'Markdown' }).catch(() => {});
+                    }
+                    return; // Detener ejecución
+                }
+            }
+            return listener.apply(this, args);
+        };
+        return originalOn(event, wrappedListener);
+    }
+    return originalOn(event, listener);
+};
+
+const originalOnText = bot.onText.bind(bot);
+bot.onText = function(regexp, listener) {
+    const wrappedListener = async function(msg, match) {
+        if (msg && msg.from && msg.from.id) {
+            const isBanned = await isClientBanned(msg.from.id);
+            if (isBanned) {
+                if (msg.chat && msg.chat.type === 'private') {
+                    bot.sendMessage(msg.chat.id, "🚫 *Acceso Denegado*\nTu usuario ha sido suspendido del sistema.", { parse_mode: 'Markdown' }).catch(() => {});
+                }
+                return; // Detener ejecución
+            }
+        }
+        return listener.apply(this, arguments);
+    };
+    return originalOnText(regexp, wrappedListener);
+};
+
 // Limpieza inicial silenciosa de Webhook
 bot.deleteWebHook({ drop_pending_updates: true }).catch(() => { });
 
