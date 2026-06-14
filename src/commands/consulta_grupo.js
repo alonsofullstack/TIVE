@@ -9,9 +9,43 @@ const { logInfo, logError } = require('../utils/logger');
 const { consultarEnGrupo, reenviarRespuestas } = require('../services/multiUserbotService');
 const { consumeCredits } = require('../services/clientService');
 const { ADMIN_IDS } = require('../config');
+const { categories } = require('./cmds');
 const path = require('path');
 
 const CARGA_IMG = path.join(__dirname, '..', '..', 'tarjeta', 'carga.jpg');
+
+// Mapeo dinámico de comandos a precios
+const COMMAND_PRICES = {};
+for (const catKey in categories) {
+    const cat = categories[catKey];
+    if (cat && Array.isArray(cat.cmds)) {
+        for (const item of cat.cmds) {
+            if (item.cmd && typeof item.price === 'number') {
+                const matches = item.cmd.match(/\/([a-zA-Z0-9_]+)/g);
+                if (matches) {
+                    for (const match of matches) {
+                        COMMAND_PRICES[match.toLowerCase()] = item.price;
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Precios adicionales para comandos de consulta en grupo que no están explícitos en el catálogo
+const EXTRA_PRICES = {
+    '/dnis':      1,  // DNI V2 (DNI Online Nv2 equivalente)
+    '/dnib':      2,  // DNI V3 (DNI Online Nv3 equivalente)
+    '/fab':       30, // Facial (Facial VIP equivalente)
+    '/movn':      5,  // Movistar (Titular Claro/Movistar/Bitel/Entel equivalente)
+    '/movd':      5,  // Datos Movistar (Titular Claro/Movistar/Bitel/Entel equivalente)
+    '/bitx':      5,  // Bitel V3 (Titular Claro/Movistar/Bitel/Entel equivalente)
+    '/rucn':      3,  // RUC por Razón (RUC Datos Personal equivalente)
+    '/rucd':      3,  // RUC por DNI (RUC Datos Personal equivalente)
+    '/revtecpdf': 5,  // Revisión Técnica PDF (Revisión Técnica equivalente)
+    '/tiv':       20, // TIVE (TIVE Original equivalente)
+    '/c4':        5,  // Ficha C4 (C4 Azul equivalente)
+};
 
 // Lista de comandos que se redirigen al grupo
 // Agrega o quita según los que tenga el grupo
@@ -89,9 +123,30 @@ module.exports = {
 
             logInfo('CONSULTA', '🔍', `Consulta al grupo`, { chatId, comando: texto });
 
+            // Identificar el comando que coincide (el más largo para evitar colisiones como /dni vs /dnim)
+            let matchedCmd = '';
+            for (const cmd of COMANDOS_GRUPO) {
+                if (texto.toLowerCase().startsWith(cmd.toLowerCase())) {
+                    if (cmd.length > matchedCmd.length) {
+                        matchedCmd = cmd.toLowerCase();
+                    }
+                }
+            }
+
+            // Determinar el costo específico de la consulta
+            let price = 1; // costo por defecto si no se encuentra
+            if (matchedCmd) {
+                if (COMMAND_PRICES[matchedCmd] !== undefined) {
+                    price = COMMAND_PRICES[matchedCmd];
+                } else if (EXTRA_PRICES[matchedCmd] !== undefined) {
+                    price = EXTRA_PRICES[matchedCmd];
+                }
+            }
+
             // ── Guard de créditos ────────────────────────────────────────
+            let credit = { cost: price, remaining: 0 };
             if (!ADMIN_IDS.includes(String(msg.from.id))) {
-                const credit = await consumeCredits(msg.from.id, 'consulta_grupo');
+                credit = await consumeCredits(msg.from.id, price);
                 if (credit.error === 'no_registered') {
                     return bot.sendMessage(chatId,
                         `🚫 *Acceso Denegado*\n` +
@@ -102,11 +157,11 @@ module.exports = {
                 }
                 if (credit.error === 'no_credits') {
                     return bot.sendMessage(chatId,
-                        `💳 *Sin Créditos*\n` +
+                        `💳 *Saldo Operativo Insuficiente*\n` +
                         `━━━━━━━━━━━━━━━━━━━━\n` +
-                        `No tienes créditos para realizar consultas.\n` +
-                        `Saldo actual: \`0\`\n\n` +
-                        `Contacta al administrador para recargar.`,
+                        `La consulta *${matchedCmd}* requiere \`${credit.cost}\` crédito(s).\n` +
+                        `Tu saldo actual es de: \`${credit.remaining}\`\n\n` +
+                        `Recarga créditos con el comando /buy o contacta a tu proveedor.`,
                         { parse_mode: 'Markdown' }
                     );
                 }
@@ -128,7 +183,8 @@ module.exports = {
                         `━━━━━━━━━━━━━━━━━━━━\n` +
                         `👤 *Usuario:* ${msg.from.first_name || 'Sin nombre'} (@${msg.from.username || 'sin_username'}) (\`${msg.from.id}\`)\n` +
                         `💬 *Origen:* ${chatName}\n` +
-                        `📝 *Comando:* \`${texto}\``;
+                        `📝 *Comando:* \`${texto}\`\n` +
+                        `💳 *Costo:* \`${credit.cost}\` crédito(s) | *Saldo restante:* \`${credit.remaining}\``;
 
                     for (const adminId of ADMIN_IDS) {
                         bot.sendMessage(adminId, notifText, { parse_mode: 'Markdown' }).catch(() => {});

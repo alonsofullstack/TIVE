@@ -205,7 +205,7 @@ async function removeCredits(userId, amount) {
 async function consumeCredits(userId, operation) {
     const db = getPool();
     const id = BigInt(userId);
-    const cost = CREDIT_COSTS[operation] ?? 1;
+    const cost = typeof operation === 'number' ? operation : (CREDIT_COSTS[operation] ?? 1);
 
     const conn = await db.getConnection();
     try {

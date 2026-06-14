@@ -345,6 +345,7 @@ function getMainMenuKeyboard() {
 }
 
 module.exports = {
+    categories,
     registerCommands(bot, state, deps) {
         bot.on('message', (msg) => {
             if (!msg.text) return;
