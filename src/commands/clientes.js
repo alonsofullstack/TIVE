@@ -16,7 +16,7 @@
 const { logInfo, logError } = require('../utils/logger');
 const {
     registerClient, getClient, getAllClients, findClientByRef,
-    addCredits, removeCredits, touchClient, banClient, unbanClient,
+    addCredits, removeCredits, touchClient, banClient, unbanClient, getLatestQueries
 } = require('../services/clientService');
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -317,6 +317,16 @@ module.exports = {
                     );
                 }
 
+                const queries = await getLatestQueries(c.userId, 10);
+                let queriesText = '_Sin consultas registradas aún._';
+                if (queries.length > 0) {
+                    queriesText = queries.map(q => {
+                        const date = fmtDate(q.created_at);
+                        const detail = q.query_text ? ` (\`${q.query_text}\`)` : '';
+                        return `• *${q.command}*${detail} · 💳 \`${q.cost}\` · _${date}_`;
+                    }).join('\n');
+                }
+
                 const uname = c.username ? `@${c.username}` : '—';
                 const bar   = creditBar(c.credits);
 
@@ -332,6 +342,8 @@ module.exports = {
                     `📈 *Total usado:* \`${c.totalUsed}\`\n` +
                     `📅 *Registrado:* ${fmtDate(c.registeredAt)}\n` +
                     `🕐 *Última actividad:* ${fmtDate(c.lastActivity)}\n\n` +
+                    `📋 *Últimas Consultas:* (Máx. 10)\n` +
+                    `${queriesText}\n\n` +
                     `_Comandos rápidos:_\n` +
                     `\`/addcredits ${c.userId} 10\`\n` +
                     `\`/removecredits ${c.userId} 5\``,

@@ -111,31 +111,6 @@ initializeMultiUserbot()
     .then(() => logInfo('BOT', '✅', 'Multi-userbot iniciado correctamente'))
     .catch((err) => logError('BOT', '❌', 'Multi-userbot falló al iniciar', err));
 
-// ── NOTIFICACIÓN AL ADMIN de cada consulta en el grupo ──────────────────────
-bot.on('message', (msg) => {
-    try {
-        const chatId = msg.chat.id;
-        const userId = msg.from?.id;
-        const username = msg.from?.username ? `@${msg.from.username}` : msg.from?.first_name || 'Sin nombre';
-        const text = msg.text || msg.caption || '[archivo/documento]';
-        const chatTitle = msg.chat.title || 'Chat privado';
-        const chatType = msg.chat.type; // group, supergroup, private
-
-        // Solo notificar si viene de un grupo (no del propio admin)
-        if ((chatType === 'group' || chatType === 'supergroup') && !ADMIN_IDS.includes(String(userId))) {
-            const notif =
-                `👁️ *CONSULTA EN GRUPO*\n` +
-                `━━━━━━━━━━━━━━━━━━━━\n` +
-                `👤 *Usuario:* ${username} (\`${userId}\`)\n` +
-                `💬 *Grupo:* ${chatTitle}\n` +
-                `📝 *Mensaje:* \`${text}\``;
-
-            for (const adminId of ADMIN_IDS) {
-                bot.sendMessage(adminId, notif, { parse_mode: 'Markdown' }).catch(() => {});
-            }
-        }
-    } catch (_) {}
-});
 
 logInfo('BOT', '🤖', `Bot TIVE IA Online!`, { adminIDs: ADMIN_IDS.length, geminiKeys: API_KEYS.length, domain: DOMAIN });
 

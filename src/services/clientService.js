@@ -84,6 +84,25 @@ async function initDB() {
             logError('DB', '⚠️', 'No se pudo verificar/crear la columna banned', err);
         }
     }
+
+    // Crear tabla query_logs si no existe
+    try {
+        await db.execute(`
+            CREATE TABLE IF NOT EXISTS query_logs (
+                id         INT          AUTO_INCREMENT PRIMARY KEY,
+                user_id    BIGINT       NOT NULL,
+                command    VARCHAR(128) NOT NULL,
+                query_text VARCHAR(255) DEFAULT NULL,
+                cost       INT          NOT NULL DEFAULT 0,
+                created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_user_id (user_id),
+                INDEX idx_created_at (created_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        `);
+        logInfo('DB', '✅', 'Tabla query_logs lista/verificada');
+    } catch (err) {
+        logError('DB', '⚠️', 'No se pudo crear/verificar la tabla query_logs', err);
+    }
     
     logInfo('DB', '✅', 'Tabla clients lista');
 }
@@ -326,6 +345,38 @@ async function isClientBanned(userId) {
     }
 }
 
+/**
+ * Registra una consulta en el historial.
+ */
+async function logQuery(userId, command, queryText, cost) {
+    const db = getPool();
+    try {
+        await db.execute(
+            'INSERT INTO query_logs (user_id, command, query_text, cost) VALUES (?, ?, ?, ?)',
+            [BigInt(userId), command, queryText ? queryText.substring(0, 255) : null, cost]
+        );
+    } catch (err) {
+        logError('DB', '⚠️', 'Error al registrar query_log', err);
+    }
+}
+
+/**
+ * Obtiene las últimas N consultas de un usuario.
+ */
+async function getLatestQueries(userId, limit = 5) {
+    const db = getPool();
+    try {
+        const [rows] = await db.execute(
+            'SELECT command, query_text, cost, created_at FROM query_logs WHERE user_id = ? ORDER BY created_at DESC LIMIT ?',
+            [BigInt(userId), limit]
+        );
+        return rows;
+    } catch (err) {
+        logError('DB', '⚠️', 'Error al obtener query_logs', err);
+        return [];
+    }
+}
+
 module.exports = {
     initDB,
     registerClient,
@@ -339,5 +390,7 @@ module.exports = {
     banClient,
     unbanClient,
     isClientBanned,
+    logQuery,
+    getLatestQueries,
     CREDIT_COSTS,
 };

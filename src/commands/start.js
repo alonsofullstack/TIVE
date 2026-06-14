@@ -1,5 +1,5 @@
 const { logInfo, logError } = require('../utils/logger');
-const { getClient, touchClient, consumeCredits } = require('../services/clientService');
+const { getClient, touchClient, consumeCredits, logQuery } = require('../services/clientService');
 
 // ── Operaciones que consumen crédito (callback_data) ─────────────────────────
 const PAID_OPERATIONS = new Set([
@@ -45,7 +45,10 @@ const OP_NAMES = {
  * Admins siempre pasan. Devuelve true si puede continuar.
  */
 async function checkAndConsumeCredits(bot, chatId, userId, operation, ADMIN_IDS) {
-    if (ADMIN_IDS.includes(String(userId))) return true;
+    if (ADMIN_IDS.includes(String(userId))) {
+        logQuery(userId, OP_NAMES[operation] || operation, null, 0).catch(() => {});
+        return true;
+    }
     if (!PAID_OPERATIONS.has(operation)) return true;
 
     const result = await consumeCredits(userId, operation);
@@ -85,24 +88,8 @@ async function checkAndConsumeCredits(bot, chatId, userId, operation, ADMIN_IDS)
         return false;
     }
 
-    // Notificar al admin de la operación de imprenta pagada
-    try {
-        getClient(userId).then(client => {
-            const clientName = client ? client.firstName : 'Usuario';
-            const clientUname = client && client.username ? `@${client.username}` : 'sin_username';
-            const opName = OP_NAMES[operation] || operation;
-            const notifText =
-                `🖨️ *NUEVA OPERACIÓN DE IMPRENTA*\n` +
-                `━━━━━━━━━━━━━━━━━━━━\n` +
-                `👤 *Usuario:* ${clientName} (${clientUname}) (\`${userId}\`)\n` +
-                `⚙️ *Herramienta:* \`${opName}\`\n` +
-                `💳 *Costo:* \`${result.cost}\` crédito(s) | *Saldo restante:* \`${result.remaining}\``;
-
-            for (const adminId of ADMIN_IDS) {
-                bot.sendMessage(adminId, notifText, { parse_mode: 'Markdown' }).catch(() => {});
-            }
-        }).catch(() => {});
-    } catch (_) {}
+    // Registrar la operación en el historial
+    logQuery(userId, OP_NAMES[operation] || operation, null, result.cost || 1).catch(() => {});
 
     // Aviso de saldo bajo
     if (result.remaining === 0) {
