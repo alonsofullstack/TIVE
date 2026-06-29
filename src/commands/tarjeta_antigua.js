@@ -1,4 +1,5 @@
 const { logError } = require('../utils/logger');
+const { clearPendingCharge } = require('../services/creditGuard');
 
 module.exports = {
     async handleCallback(chatId, messageId, data, query, buffer, bot, state, deps) {
@@ -126,8 +127,9 @@ module.exports = {
                 await generarTarjetaAntigua(chatId, datos, buffer);
                 userAntiguaData.delete(chatId);
             } catch (e) {
+                clearPendingCharge(state, chatId);
                 logError('BOT', '❌', 'Error final en tarjeta antigua', e);
-                bot.sendMessage(chatId, "❌ Error: " + e.message);
+                bot.sendMessage(chatId, `❌ Error: ${e.message}\n_No se descontaron créditos._`, { parse_mode: 'Markdown' });
             }
             return true;
         }

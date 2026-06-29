@@ -123,7 +123,7 @@ function getQueueStats() {
  * @param {number} ms - Milisegundos de delay
  */
 function setQueryDelay(ms) {
-    global.QUERY_DELAY = ms;
+    QUERY_DELAY = ms;
     logInfo('QUEUE', '⚙️', `Delay actualizado a ${ms}ms (${ms / 1000}s)`);
 }
 

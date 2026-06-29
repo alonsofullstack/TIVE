@@ -1,4 +1,5 @@
 const { logError } = require('../utils/logger');
+const { clearPendingCharge } = require('../services/creditGuard');
 
 module.exports = {
     registerCommands(bot, state, deps) {
@@ -45,7 +46,8 @@ module.exports = {
                 datos.sinAnioFabricacion = sinAnio;
                 await iniciarCapturaFaltantesTiveCompleto(chatId, datos, buffer);
             } catch (e) {
-                bot.sendMessage(chatId, `❌ Error: ${e.message}`);
+                clearPendingCharge(state, chatId);
+                bot.sendMessage(chatId, `❌ Error: ${e.message}\n_No se descontaron créditos._`, { parse_mode: 'Markdown' });
             }
             return true;
         }
@@ -90,8 +92,9 @@ module.exports = {
                 try {
                     await generarTiveCompleto(chatId, pending.datos, null, pending.sourceHash);
                 } catch (e) {
+                    clearPendingCharge(state, chatId);
                     logError('BOT', '❌', 'Error generando TIVE COMPLETO', e);
-                    bot.sendMessage(chatId, "❌ Error: " + e.message);
+                    bot.sendMessage(chatId, `❌ Error: ${e.message}\n_No se descontaron créditos._`, { parse_mode: 'Markdown' });
                 }
             } else {
                 userTiveCompletoData.set(chatId, pending);

@@ -1,4 +1,5 @@
 const { logError } = require('../utils/logger');
+const { clearPendingCharge } = require('../services/creditGuard');
 
 module.exports = {
     async handleCallback(chatId, messageId, data, query, buffer, bot, state, deps) {
@@ -16,19 +17,18 @@ module.exports = {
                 const datos = await extraerConIA(buffer, userPdfNames.get(chatId));
                 await generarTIVE(chatId, datos, null, buffer, { anv: 'TARJETA FISICA ADELANTE.pdf', rev: 'TARJETA FISICA ATRAS.pdf' }, {
                     noQR: true,
-                    // ── ANVERSO (cara de adelante) ──────────────────
-                    cropTopAnv:     35,  // ↑ arriba
-                    cropBottomAnv:  0,  // ↓ abajo
-                    cropLeftAnv:    0.5,  // ← izquierda
-                    cropRightAnv:   0.5,  // → derecha
-                    // ── REVERSO (cara de atrás) ─────────────────────
-                    cropTopRev:    20,  // ↑ arriba
-                    cropBottomRev: 20,  // ↓ abajo
-                    cropLeftRev:   45,  // ← izquierda
-                    cropRightRev:  45,  // → derecha
+                    cropTopAnv:     35,
+                    cropBottomAnv:  0,
+                    cropLeftAnv:    0.5,
+                    cropRightAnv:   0.5,
+                    cropTopRev:    20,
+                    cropBottomRev: 20,
+                    cropLeftRev:   45,
+                    cropRightRev:  45,
                 });
             } catch (e) {
-                bot.sendMessage(chatId, `❌ Error: ${e.message}`);
+                clearPendingCharge(state, chatId);
+                bot.sendMessage(chatId, `❌ Error: ${e.message}\n_No se descontaron créditos._`, { parse_mode: 'Markdown' });
             }
             return true;
         } else if (data === "gen_tarjeta_fisica_pvc_completar") {

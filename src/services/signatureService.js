@@ -3,6 +3,7 @@ const fs = require('fs');
 const { logInfo, logError } = require('../utils/logger');
 const { safe, nombreArchivoFirma } = require('../utils/helpers');
 const state = require('../state');
+const { clearPendingCharge } = require('./creditGuard');
 
 const { userState, userFirmaPendienteData } = state;
 
@@ -118,9 +119,14 @@ module.exports = function(bot) {
         userState.delete(chatId);
         await bot.sendMessage(chatId, `✅ Firma guardada como \`${firmaFileName}\`.\nGenerando TIVE...`, { parse_mode: 'Markdown' });
         
-        // Import dynamically to avoid circular references
-        const cardGenerator = require('./cardGenerator')(bot);
-        await cardGenerator.generarTiveCompleto(chatId, pending.datos, pending.qrCustomLink, pending.verificationHash, firmaPath);
+        try {
+            const cardGenerator = require('./cardGenerator')(bot);
+            await cardGenerator.generarTiveCompleto(chatId, pending.datos, pending.qrCustomLink, pending.verificationHash, firmaPath);
+        } catch (err) {
+            clearPendingCharge(state, chatId);
+            logError('FIRMA', '❌', 'Error generando TIVE tras guardar firma', err);
+            await bot.sendMessage(chatId, `❌ Error: ${err.message}\n_No se descontaron créditos._`, { parse_mode: 'Markdown' });
+        }
     }
 
     return {

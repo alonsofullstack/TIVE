@@ -30,6 +30,7 @@ const {
 } = require('../utils/helpers');
 
 const state = require('../state');
+const { chargeOnSuccess } = require('./creditGuard');
 const {
     userState, userTiveCompletoData, userTiveCompletarData, userFisicaPvcCompletarData
 } = state;
@@ -401,6 +402,7 @@ module.exports = function (bot) {
         const pdfBytes = await pdfDoc.save();
         const fileName = `Tarjeta_Antigua_${(datos.placa || 'DOC').toUpperCase()}.pdf`;
         await bot.sendDocument(chatId, Buffer.from(pdfBytes), { caption: "✅ Tarjeta Antigua Generada con Éxito" }, { filename: fileName });
+        await chargeOnSuccess(bot, chatId, state);
     }
 
     async function generarTIVE(chatId, datos, qrCustomLink = null, originalBuffer = null, templates = { anv: 'adelantexd.pdf', rev: 'atrasxd.pdf' }, options = {}) {
@@ -632,6 +634,7 @@ module.exports = function (bot) {
             await bot.sendDocument(chatId, Buffer.from(securedBufA), { caption: "Anverso (PDF)" }, { filename: `anv_${safe(datos.placa)}.pdf` });
             await bot.sendDocument(chatId, Buffer.from(securedBufR), { caption: "Reverso (PDF)" }, { filename: `rev_${safe(datos.placa)}.pdf` });
         }
+        await chargeOnSuccess(bot, chatId, state);
     }
 
     async function generarTiveCompleto(chatId, datos, qrCustomLink = null, verificationHash = null, firmaPathOverride = null) {
@@ -804,6 +807,7 @@ module.exports = function (bot) {
                 `🌐 Link: \`${finalQRLink}\``,
             parse_mode: 'Markdown'
         }, { filename: fileName });
+        await chargeOnSuccess(bot, chatId, state);
     }
 
     async function finalizarInsercionQR(chatId, buffer, placa, hash, messageId = null) {

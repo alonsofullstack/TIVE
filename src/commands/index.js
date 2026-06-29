@@ -12,7 +12,8 @@ const cmds          = require('./cmds');
 const clientes      = require('./clientes');
 const explorar_cmds = require('./explorar_cmds');
 const buy           = require('./buy');
-const { checkAndConsumeCredits, PAID_OPERATIONS, ADMIN_ONLY_OPERATIONS } = require('./start');
+const { VERIFY_OPERATIONS, ADMIN_ONLY_OPERATIONS } = require('./start');
+const { verifyOperationCredits } = require('../services/creditGuard');
 const { ADMIN_IDS } = require('../config');
 
 const modules = [
@@ -22,7 +23,7 @@ const modules = [
 ];
 
 module.exports = function registerCommands(bot, state, deps) {
-    const { userPdfs, userState } = state;
+    const { userPdfs, userState, userPendingCharge } = state;
 
     // 1. Registrar escuchadores de comandos
     for (const mod of modules) {
@@ -53,10 +54,11 @@ module.exports = function registerCommands(bot, state, deps) {
             return;
         }
 
-        // ── Guard de créditos ────────────────────────────────────────────
-        if (PAID_OPERATIONS.has(data)) {
-            const allowed = await checkAndConsumeCredits(bot, chatId, userId, data, ADMIN_IDS);
+        // ── Verificar saldo (sin cobrar; el cobro es tras generación exitosa) ──
+        if (VERIFY_OPERATIONS.has(data)) {
+            const allowed = await verifyOperationCredits(bot, chatId, userId, data);
             if (!allowed) return;
+            userPendingCharge.set(chatId, { userId, operation: data });
         }
 
         const buffer = userPdfs.get(chatId);

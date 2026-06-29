@@ -1,20 +1,23 @@
 /**
  * CONSULTA AL GRUPO — reenvía comandos al grupo y devuelve la respuesta
- * 
- * Uso: cualquier comando que empiece con / y tenga parámetros
- * Ejemplo: /tive ABC123 → se manda al grupo → respuesta se reenvía al usuario
+ *
+ * Flujo de créditos:
+ *   1. Identificar comando y resolver precio
+ *   2. Verificar registro + saldo (sin cobrar)
+ *   3. Consultar al grupo
+ *   4. Cobrar y registrar solo si hay respuesta exitosa
  */
 
 const { logInfo, logError } = require('../utils/logger');
 const { consultarEnGrupo, reenviarRespuestas } = require('../services/multiUserbotService');
-const { consumeCredits, logQuery } = require('../services/clientService');
+const { checkCredits, consumeCredits, logQuery } = require('../services/clientService');
 const { ADMIN_IDS } = require('../config');
 const { categories } = require('./cmds');
 const path = require('path');
 
 const CARGA_IMG = path.join(__dirname, '..', '..', 'tarjeta', 'carga.jpg');
 
-// Mapeo dinámico de comandos a precios
+// Mapeo dinámico de comandos a precios (desde catálogo /cmds)
 const COMMAND_PRICES = {};
 for (const catKey in categories) {
     const cat = categories[catKey];
@@ -32,23 +35,35 @@ for (const catKey in categories) {
     }
 }
 
-// Precios adicionales para comandos de consulta en grupo que no están explícitos en el catálogo
+// Precios adicionales para alias del grupo que no están en el catálogo
 const EXTRA_PRICES = {
-    '/dnis':      1,  // DNI V2 (DNI Online Nv2 equivalente)
-    '/dnib':      2,  // DNI V3 (DNI Online Nv3 equivalente)
-    '/fab':       30, // Facial (Facial VIP equivalente)
-    '/movn':      5,  // Movistar (Titular Claro/Movistar/Bitel/Entel equivalente)
-    '/movd':      5,  // Datos Movistar (Titular Claro/Movistar/Bitel/Entel equivalente)
-    '/bitx':      5,  // Bitel V3 (Titular Claro/Movistar/Bitel/Entel equivalente)
-    '/rucn':      3,  // RUC por Razón (RUC Datos Personal equivalente)
-    '/rucd':      3,  // RUC por DNI (RUC Datos Personal equivalente)
-    '/revtecpdf': 5,  // Revisión Técnica PDF (Revisión Técnica equivalente)
-    '/tiv':       20, // TIVE (TIVE Original equivalente)
-    '/c4':        5,  // Ficha C4 (C4 Azul equivalente)
+    '/dnis':      1,
+    '/dnib':      2,
+    '/fab':       30,
+    '/movn':      5,
+    '/movd':      5,
+    '/bitx':      5,
+    '/rucn':      3,
+    '/rucd':      3,
+    '/revtecpdf': 5,
+    '/tiv':       20,
+    '/c4':        5,
 };
 
+// Prioridad máxima — resuelve ambigüedades del catálogo
+const PRICE_OVERRIDES = {
+    '/const': 30, // Constancia MINSA (médico); estudios también define /const a 15
+};
+
+function resolvePrice(matchedCmd) {
+    const cmd = matchedCmd.toLowerCase();
+    if (PRICE_OVERRIDES[cmd] !== undefined) return PRICE_OVERRIDES[cmd];
+    if (COMMAND_PRICES[cmd] !== undefined) return COMMAND_PRICES[cmd];
+    if (EXTRA_PRICES[cmd] !== undefined) return EXTRA_PRICES[cmd];
+    return 1;
+}
+
 // Lista de comandos que se redirigen al grupo
-// Agrega o quita según los que tenga el grupo
 const COMANDOS_GRUPO = [
     // RENIEC (activos que usarán sesión secundaria)
     '/dnis', '/dnib', '/nm', '/fab',
@@ -104,78 +119,123 @@ const COMANDOS_GRUPO = [
     '/seg',
     // MÉDICO (otros comandos)
     '/minsa', '/const', '/reminsa', '/cliluz', '/essalud', '/certmed', '/reessalud',
+    // ESTUDIOS
+    '/notas', '/cadult',
+    // MTC
+    '/mtcb', '/record',
     // ACTAS
     '/actnac', '/actmat', '/actdef',
 ];
+
+function matchComando(texto) {
+    let matchedCmd = '';
+    for (const cmd of COMANDOS_GRUPO) {
+        if (texto.toLowerCase().startsWith(cmd.toLowerCase())) {
+            if (cmd.length > matchedCmd.length) {
+                matchedCmd = cmd.toLowerCase();
+            }
+        }
+    }
+    return matchedCmd;
+}
+
+async function verificarAcceso(bot, chatId, userId, matchedCmd, price) {
+    if (ADMIN_IDS.includes(String(userId))) {
+        return { ok: true, isAdmin: true };
+    }
+
+    const amountRequired = price > 0 ? price : 1;
+    const check = await checkCredits(userId, amountRequired);
+
+    if (check.error === 'no_registered') {
+        await bot.sendMessage(chatId,
+            `🚫 *Acceso Denegado*\n` +
+            `━━━━━━━━━━━━━━━━━━━━\n` +
+            `No estás registrado. Usa /register para crear tu cuenta.`,
+            { parse_mode: 'Markdown' }
+        );
+        return { ok: false };
+    }
+
+    if (check.error === 'no_credits') {
+        await bot.sendMessage(chatId,
+            `💳 *Saldo Operativo Insuficiente*\n` +
+            `━━━━━━━━━━━━━━━━━━━━\n` +
+            `La consulta *${matchedCmd}* requiere \`${check.cost}\` crédito(s).\n` +
+            `Tu saldo actual es de: \`${check.remaining}\`\n\n` +
+            `Recarga créditos con el comando /buy o contacta a tu proveedor.`,
+            { parse_mode: 'Markdown' }
+        );
+        return { ok: false };
+    }
+
+    if (!check.ok) {
+        await bot.sendMessage(chatId, `❌ Error verificando créditos: ${check.error}`);
+        return { ok: false };
+    }
+
+    return { ok: true, isAdmin: false, remaining: check.remaining };
+}
+
+async function cobrarConsultaExitosa(bot, chatId, userId, matchedCmd, texto, price) {
+    if (ADMIN_IDS.includes(String(userId))) {
+        logQuery(userId, matchedCmd || 'consulta', texto, 0).catch(() => {});
+        return;
+    }
+
+    if (price <= 0) {
+        logQuery(userId, matchedCmd || 'consulta', texto, 0).catch(() => {});
+        return;
+    }
+
+    const credit = await consumeCredits(userId, price);
+
+    if (!credit.ok) {
+        logError('CONSULTA', '⚠️', 'Respuesta entregada pero falló el cobro de créditos', {
+            userId, comando: matchedCmd, error: credit.error
+        });
+        await bot.sendMessage(chatId,
+            `⚠️ _La consulta se completó pero hubo un error al descontar créditos. Contacta al administrador._`,
+            { parse_mode: 'Markdown' }
+        ).catch(() => {});
+        return;
+    }
+
+    logQuery(userId, matchedCmd || 'consulta', texto, credit.cost).catch(() => {});
+
+    if (credit.remaining === 0) {
+        bot.sendMessage(chatId,
+            `⚠️ _Alerta de Sistema: Has agotado tu saldo operativo. Contacta a tu proveedor._`,
+            { parse_mode: 'Markdown' }
+        ).catch(() => {});
+    } else if (credit.remaining <= 3) {
+        bot.sendMessage(chatId,
+            `⚠️ _Saldo bajo: te quedan \`${credit.remaining}\` crédito(s)._`,
+            { parse_mode: 'Markdown' }
+        ).catch(() => {});
+    }
+}
 
 module.exports = {
     registerCommands(bot, state, deps) {
         bot.on('message', async (msg) => {
             if (!msg.text) return;
             const chatId = msg.chat.id;
+            const userId = msg.from.id;
             const texto = msg.text.trim();
 
-            // Verificar si el mensaje empieza con algún comando del grupo
             const esComandoGrupo = COMANDOS_GRUPO.some(cmd =>
                 texto.toLowerCase().startsWith(cmd.toLowerCase())
             );
             if (!esComandoGrupo) return;
 
-            logInfo('CONSULTA', '🔍', `Consulta al grupo`, { chatId, comando: texto });
+            const matchedCmd = matchComando(texto);
+            const price = resolvePrice(matchedCmd);
 
-            // Identificar el comando que coincide (el más largo para evitar colisiones como /dni vs /dnim)
-            let matchedCmd = '';
-            for (const cmd of COMANDOS_GRUPO) {
-                if (texto.toLowerCase().startsWith(cmd.toLowerCase())) {
-                    if (cmd.length > matchedCmd.length) {
-                        matchedCmd = cmd.toLowerCase();
-                    }
-                }
-            }
+            logInfo('CONSULTA', '🔍', `Consulta al grupo`, { chatId, comando: texto, precio: price });
 
-            // Determinar el costo específico de la consulta
-            let price = 1; // costo por defecto si no se encuentra
-            if (matchedCmd) {
-                if (COMMAND_PRICES[matchedCmd] !== undefined) {
-                    price = COMMAND_PRICES[matchedCmd];
-                } else if (EXTRA_PRICES[matchedCmd] !== undefined) {
-                    price = EXTRA_PRICES[matchedCmd];
-                }
-            }
-
-            // ── Guard de créditos ────────────────────────────────────────
-            let credit = { cost: price, remaining: 0 };
-            if (!ADMIN_IDS.includes(String(msg.from.id))) {
-                credit = await consumeCredits(msg.from.id, price);
-                if (credit.error === 'no_registered') {
-                    return bot.sendMessage(chatId,
-                        `🚫 *Acceso Denegado*\n` +
-                        `━━━━━━━━━━━━━━━━━━━━\n` +
-                        `No estás registrado. Usa /register para crear tu cuenta.`,
-                        { parse_mode: 'Markdown' }
-                    );
-                }
-                if (credit.error === 'no_credits') {
-                    return bot.sendMessage(chatId,
-                        `💳 *Saldo Operativo Insuficiente*\n` +
-                        `━━━━━━━━━━━━━━━━━━━━\n` +
-                        `La consulta *${matchedCmd}* requiere \`${credit.cost}\` crédito(s).\n` +
-                        `Tu saldo actual es de: \`${credit.remaining}\`\n\n` +
-                        `Recarga créditos con el comando /buy o contacta a tu proveedor.`,
-                        { parse_mode: 'Markdown' }
-                    );
-                }
-                if (credit.ok && credit.remaining <= 3 && credit.remaining > 0) {
-                    bot.sendMessage(chatId,
-                        `⚠️ _Saldo bajo: te quedan \`${credit.remaining}\` crédito(s)._`,
-                        { parse_mode: 'Markdown' }
-                    ).catch(() => {});
-                }
-            }
-
-            // Registrar la consulta en el historial
-            const loggedCost = ADMIN_IDS.includes(String(msg.from.id)) ? 0 : credit.cost;
-            logQuery(msg.from.id, matchedCmd || 'consulta', texto, loggedCost).catch(() => {});
+            const acceso = await verificarAcceso(bot, chatId, userId, matchedCmd, price);
+            if (!acceso.ok) return;
 
             const procesando = await bot.sendPhoto(chatId, CARGA_IMG, {
                 caption: `⏳ *Procesando tu solicitud...*`,
@@ -188,20 +248,26 @@ module.exports = {
                 const sessionKey = resultado.sessionKey;
 
                 if (respuestas.length === 0) {
-                    await bot.sendMessage(chatId, '⚠️ No se recibió respuesta del grupo.');
+                    await bot.sendMessage(chatId,
+                        `⚠️ No se recibió respuesta del grupo.\n` +
+                        `_No se descontaron créditos._`,
+                        { parse_mode: 'Markdown' }
+                    );
                     return;
                 }
 
                 logInfo('CONSULTA', '✅', `Respuestas recibidas`, { cantidad: respuestas.length, sessionKey });
                 await reenviarRespuestas(bot, chatId, respuestas, sessionKey);
+                await cobrarConsultaExitosa(bot, chatId, userId, matchedCmd, texto, price);
 
             } catch (err) {
                 logError('CONSULTA', '❌', 'Error en consulta al grupo', err);
                 await bot.sendMessage(chatId,
-                    `❌ Error al consultar: ${err.message}`
+                    `❌ Error al consultar: ${err.message}\n` +
+                    `_No se descontaron créditos._`,
+                    { parse_mode: 'Markdown' }
                 );
             } finally {
-                // Borrar el mensaje "Consultando..."
                 bot.deleteMessage(chatId, procesando.message_id).catch(() => {});
             }
         });
