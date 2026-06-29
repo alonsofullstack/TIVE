@@ -12,9 +12,16 @@ const cmds          = require('./cmds');
 const clientes      = require('./clientes');
 const explorar_cmds = require('./explorar_cmds');
 const buy           = require('./buy');
-const { VERIFY_OPERATIONS, ADMIN_ONLY_OPERATIONS } = require('./start');
-const { verifyOperationCredits } = require('../services/creditGuard');
+const { ADMIN_ONLY_OPERATIONS } = require('./start');
+const {
+    CHECK_ONLY_OPERATIONS,
+    RESERVE_OPERATIONS,
+    verifyOperationCredits,
+    reserveOperationCredits,
+    refundPendingCharge,
+} = require('../services/creditGuard');
 const { ADMIN_IDS } = require('../config');
+const { touchChatState } = require('../state');
 
 const modules = [
     ping, start, tive_completo, tive_completar, tarjeta_fisica,
@@ -22,17 +29,24 @@ const modules = [
     consulta_grupo, cmds, clientes, explorar_cmds, buy
 ];
 
-module.exports = function registerCommands(bot, state, deps) {
-    const { userPdfs, userState, userPendingCharge } = state;
+function isConversationalMessage(msg, userState, chatId) {
+    const ustate = userState.get(chatId);
+    if (!ustate) return false;
+    const text = (msg.text || '').trim();
+    if (!text.startsWith('/')) return true;
+    const lower = text.toLowerCase();
+    return lower === '/ok' || lower === '/skip' || lower.startsWith('/skip ');
+}
 
-    // 1. Registrar escuchadores de comandos
+module.exports = function registerCommands(bot, state, deps) {
+    const { userPdfs, userState } = state;
+
     for (const mod of modules) {
         if (mod.registerCommands) {
             mod.registerCommands(bot, state, deps);
         }
     }
 
-    // 2. Gestionar callback queries (botones inline)
     bot.on('callback_query', async (query) => {
         const chatId    = query.message.chat.id;
         const messageId = query.message.message_id;
@@ -43,22 +57,23 @@ module.exports = function registerCommands(bot, state, deps) {
         logInfo('BOT', '🖱️', 'Botón presionado', { boton: data, chatId });
         bot.answerCallbackQuery(query.id).catch(() => {});
 
-        // ── Guard admin-only ─────────────────────────────────────────────
         if (ADMIN_ONLY_OPERATIONS.has(data) && !ADMIN_IDS.includes(String(userId))) {
             await bot.sendMessage(chatId,
-                `🚫 *Acceso Denegado*\n` +
-                `━━━━━━━━━━━━━━━━━━━━\n` +
+                `🚫 *Acceso Denegado*\n━━━━━━━━━━━━━━━━━━━━\n` +
                 `Esta herramienta está reservada para administradores.`,
                 { parse_mode: 'Markdown' }
             );
             return;
         }
 
-        // ── Verificar saldo (sin cobrar; el cobro es tras generación exitosa) ──
-        if (VERIFY_OPERATIONS.has(data)) {
+        if (CHECK_ONLY_OPERATIONS.has(data)) {
             const allowed = await verifyOperationCredits(bot, chatId, userId, data);
             if (!allowed) return;
-            userPendingCharge.set(chatId, { userId, operation: data });
+        }
+
+        if (RESERVE_OPERATIONS.has(data)) {
+            const allowed = await reserveOperationCredits(bot, chatId, userId, data, state);
+            if (!allowed) return;
         }
 
         const buffer = userPdfs.get(chatId);
@@ -66,7 +81,6 @@ module.exports = function registerCommands(bot, state, deps) {
             return bot.sendMessage(chatId, "⚠️ El documento expiró. Por favor, envíalo de nuevo.");
         }
 
-        // Procesar directamente de manera asíncrona y concurrente
         for (const mod of modules) {
             if (mod.handleCallback) {
                 const handled = await mod.handleCallback(chatId, messageId, data, query, buffer, bot, state, deps);
@@ -75,11 +89,10 @@ module.exports = function registerCommands(bot, state, deps) {
         }
     });
 
-    // 3. Gestionar subida de documentos (PDF original / imagen de firma)
     bot.on('document', async (msg) => {
         const chatId = msg.chat.id;
         const currentUstate = userState.get(chatId);
-        
+
         if (currentUstate === 'awaiting_tive_firma_image') {
             await firma.handleDocument(msg, bot, state, deps);
         } else {
@@ -87,19 +100,29 @@ module.exports = function registerCommands(bot, state, deps) {
         }
     });
 
-    // 4. Gestionar transiciones de estados conversacionales
     bot.on('message', async (msg) => {
         const chatId = msg.chat.id;
-        const currentUstate = userState.get(chatId);
-        if (!currentUstate) return;
 
-        const buffer = userPdfs.get(chatId);
-
-        for (const mod of modules) {
-            if (mod.handleMessage) {
-                const handled = await mod.handleMessage(chatId, currentUstate, msg, buffer, bot, state, deps);
-                if (handled) return;
+        if (isConversationalMessage(msg, userState, chatId)) {
+            touchChatState(chatId);
+            const buffer = userPdfs.get(chatId);
+            for (const mod of modules) {
+                if (mod.handleMessage) {
+                    const handled = await mod.handleMessage(chatId, userState.get(chatId), msg, buffer, bot, state, deps);
+                    if (handled) return;
+                }
             }
+            return;
+        }
+
+        if (msg.text && cmds.handleCmdsMessage) {
+            const handled = await cmds.handleCmdsMessage(msg, bot);
+            if (handled) return;
+        }
+
+        if (msg.text) {
+            const handled = await consulta_grupo.handleConsultaMessage(msg, bot, state);
+            if (handled) return;
         }
     });
 };

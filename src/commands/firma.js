@@ -2,12 +2,11 @@ const { logInfo, logError } = require('../utils/logger');
 
 module.exports = {
     async handleDocument(msg, bot, state, deps) {
-        const { isAuthorized, guardarFirmaPendienteDesdeMensaje } = deps;
+        const { guardarFirmaPendienteDesdeMensaje } = deps;
         const { userState } = state;
         const chatId = msg.chat.id;
 
         logInfo('FIRMA', '📄', 'Documento de firma recibido', { name: msg.document.file_name, size: msg.document.file_size });
-        if (!isAuthorized(msg)) return;
 
         const currentUstate = userState.get(chatId);
         if (currentUstate === 'awaiting_tive_firma_image') {

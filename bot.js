@@ -14,10 +14,14 @@ Module.prototype.require = function (id) {
 process.env.NTBA_FIX_350 = 1;
 const TelegramBot = require('node-telegram-bot-api');
 
-const { BOT_TOKEN, ADMIN_IDS, API_KEYS, DOMAIN, isAuthorized } = require('./src/config');
+const { BOT_TOKEN, ADMIN_IDS, API_KEYS, DOMAIN, FONT_PATH } = require('./src/config');
+const { validateStartup } = require('./src/startup');
 const { logInfo, logError } = require('./src/utils/logger');
 const { initDB } = require('./src/services/clientService');
 const state = require('./src/state');
+const { refundPendingCharge } = require('./src/services/creditGuard');
+
+validateStartup({ BOT_TOKEN, FONT_PATH, API_KEYS });
 
 const helpers = require('./src/utils/helpers');
 const pdfParser = require('./src/services/pdfParser');
@@ -25,7 +29,10 @@ const ocrService = require('./src/services/ocrService');
 
 const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 
-// ── Interceptor Global de Baneos ─────────────────────────────────────────────
+state.setOnChatExpire(async (chatId) => {
+    await refundPendingCharge(state, chatId);
+});
+
 const { isClientBanned } = require('./src/services/clientService');
 
 const originalOn = bot.on.bind(bot);
@@ -45,7 +52,7 @@ bot.on = function(event, listener) {
                     if (isPrivate) {
                         bot.sendMessage(chatId, "🚫 *Acceso Denegado*\nTu usuario ha sido suspendido del sistema.", { parse_mode: 'Markdown' }).catch(() => {});
                     }
-                    return; // Detener ejecución
+                    return;
                 }
             }
             return listener.apply(this, args);
@@ -64,7 +71,7 @@ bot.onText = function(regexp, listener) {
                 if (msg.chat && msg.chat.type === 'private') {
                     bot.sendMessage(msg.chat.id, "🚫 *Acceso Denegado*\nTu usuario ha sido suspendido del sistema.", { parse_mode: 'Markdown' }).catch(() => {});
                 }
-                return; // Detener ejecución
+                return;
             }
         }
         return listener.apply(this, arguments);
@@ -72,10 +79,8 @@ bot.onText = function(regexp, listener) {
     return originalOnText(regexp, wrappedListener);
 };
 
-// Limpieza inicial silenciosa de Webhook
 bot.deleteWebHook({ drop_pending_updates: true }).catch(() => { });
 
-// Inicializar tabla de clientes en MySQL
 initDB()
     .then(() => logInfo('DB', '✅', 'Base de datos MySQL conectada y lista'))
     .catch((err) => logError('DB', '❌', 'Error conectando a MySQL — el sistema de créditos no funcionará', err));
@@ -84,7 +89,6 @@ const signatureService = require('./src/services/signatureService')(bot);
 const cardGenerator = require('./src/services/cardGenerator')(bot);
 
 const deps = {
-    isAuthorized,
     extraerConIA: ocrService.extraerConIA,
     generarTIVE: cardGenerator.generarTIVE,
     generarTIVE_FisicaPvc: cardGenerator.generarTIVE,
@@ -105,12 +109,10 @@ const deps = {
 const registerCommands = require('./src/commands/index');
 registerCommands(bot, state, deps);
 
-// Iniciar multi-userbot para consultas al grupo
 const { initializeMultiUserbot } = require('./src/services/multiUserbotService');
 initializeMultiUserbot()
     .then(() => logInfo('BOT', '✅', 'Multi-userbot iniciado correctamente'))
     .catch((err) => logError('BOT', '❌', 'Multi-userbot falló al iniciar', err));
-
 
 logInfo('BOT', '🤖', `Bot TIVE IA Online!`, { adminIDs: ADMIN_IDS.length, geminiKeys: API_KEYS.length, domain: DOMAIN });
 
@@ -132,7 +134,7 @@ process.on('SIGTERM', gracefulShutdown);
 
 bot.on('polling_error', (err) => {
     if (err.message && err.message.includes("409 Conflict")) {
-        logError('BOT', '⚠️', `Conflicto 409 detectado — hay otra instancia del bot corriendo. Verifica que solo hay 1 réplica activa.`);
+        logError('BOT', '⚠️', `Conflicto 409 — hay otra instancia del bot corriendo.`);
     } else {
         logError('BOT', '❌', `Error de polling de Telegram`, err);
     }

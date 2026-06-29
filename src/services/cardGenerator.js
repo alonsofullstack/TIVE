@@ -12,7 +12,7 @@ const config = require('../config');
 const {
     DOMAIN, QR_X, QR_Y, QR_X_ORIGINAL, QR_Y_ORIGINAL, QR_SIZE, COMPLETE_TEMPLATE_NAME,
     TIVE_COMPLETO_BODY_CODE, TIVE_COMPLETO_TECH_CODE,
-    uploadDir, FONT_BYTES
+    uploadDir, loadFontBytes
 } = config;
 
 const { logInfo, logError, logTimer } = require('../utils/logger');
@@ -32,7 +32,8 @@ const {
 const state = require('../state');
 const { chargeOnSuccess } = require('./creditGuard');
 const {
-    userState, userTiveCompletoData, userTiveCompletarData, userFisicaPvcCompletarData
+    userState, userTiveCompletoData, userTiveCompletarData, userFisicaPvcCompletarData,
+    touchChatState
 } = state;
 
 const C128_PATTERNS = { '0': '11011001100', '1': '11001101100', '2': '11001100110', '3': '10001101100', '4': '10001100110', '5': '10110001100', '6': '10110000110', '7': '10110110000', '8': '10110011011', '9': '11001011000', 'A': '11000101100', 'B': '11000100110', 'C': '11011000100', 'D': '11011000010', 'E': '11011011000', 'F': '11011001101', 'G': '11011011011', 'H': '11001101101', 'I': '11001101111', 'J': '11011110110', 'K': '11011111011', 'L': '11110110110', 'M': '11110110111', 'N': '11110111101', 'O': '11110111111', 'P': '11001101101', 'Q': '11001101111', 'R': '11011110110', 'S': '11011111011', 'T': '11110110110', 'U': '11110110111', 'V': '11110111101', 'W': '11110111111', 'X': '11001101101', 'Y': '11001101111', 'Z': '11011110110', '-': '11000111010', '.': '11011011110', ' ': '11011011011', ':': '11011111010' };
@@ -325,7 +326,7 @@ module.exports = function (bot) {
         pdfDoc.setAuthor('SUNARP - Sistema TIVE');
         pdfDoc.registerFontkit(fontkit);
 
-        const fontB = await pdfDoc.embedFont(FONT_BYTES);
+        const fontB = await pdfDoc.embedFont(loadFontBytes());
         const fontSerif = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
         const fontSerifNorm = await pdfDoc.embedFont(StandardFonts.TimesRoman);
         const fontFina = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -443,7 +444,7 @@ module.exports = function (bot) {
 
         const pdfAnt = await PDFDocument.load(fs.readFileSync(getTemplatePath(templates.anv)));
         pdfAnt.registerFontkit(fontkit);
-        const fontBAnt = await pdfAnt.embedFont(FONT_BYTES);
+        const fontBAnt = await pdfAnt.embedFont(loadFontBytes());
         const pageA = pdfAnt.getPages()[0];
         const { height: hA } = pageA.getSize();
 
@@ -485,7 +486,7 @@ module.exports = function (bot) {
 
         const pdfRev = await PDFDocument.load(fs.readFileSync(getTemplatePath(templates.rev)));
         pdfRev.registerFontkit(fontkit);
-        const fontBRev = await pdfRev.embedFont(FONT_BYTES);
+        const fontBRev = await pdfRev.embedFont(loadFontBytes());
         const pageR = pdfRev.getPages()[0];
         const { height: hR, width: wR } = pageR.getSize();
         const dR = (t, x, y, size = 4.5) => pageR.drawText(safe(t), { x, y: hR - y, size, font: fontBRev, color: negro });
@@ -868,6 +869,7 @@ module.exports = function (bot) {
 
         userTiveCompletoData.set(chatId, { datos: prepared, missingFields, index: 0, sourceHash });
         userState.set(chatId, 'awaiting_tive_completo_field');
+        touchChatState(chatId);
         const current = missingFields[0];
 
         // Si es placa y ya tiene un valor detectado, mostrarlo para confirmación
@@ -899,6 +901,7 @@ module.exports = function (bot) {
 
         userTiveCompletarData.set(chatId, { datos: prepared, missingFields, index: 0, sourceHash });
         userState.set(chatId, 'awaiting_tive_completar_field');
+        touchChatState(chatId);
         const current = missingFields[0];
 
         // Si es placa y ya tiene un valor detectado, mostrarlo para confirmación
@@ -942,6 +945,7 @@ module.exports = function (bot) {
 
         userFisicaPvcCompletarData.set(chatId, { datos: prepared, missingFields, index: 0, sourceBuffer });
         userState.set(chatId, 'awaiting_fisica_pvc_completar_field');
+        touchChatState(chatId);
         const current = missingFields[0];
 
         if (current.key === 'placa' && placaTieneValorDetectado(prepared.placaOriginal || prepared.placa)) {

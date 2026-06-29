@@ -1,5 +1,5 @@
 const { logError } = require('../utils/logger');
-const { verifyOperationCredits, clearPendingCharge } = require('../services/creditGuard');
+const { reserveOperationCredits, refundPendingCharge } = require('../services/creditGuard');
 
 module.exports = {
     async handleCallback(chatId, messageId, data, query, buffer, bot, state, deps) {
@@ -28,7 +28,7 @@ module.exports = {
                 const datos = await extraerConIA(buffer, userPdfNames.get(chatId));
                 await generarTIVE(chatId, datos, null, buffer);
             } catch (e) {
-                clearPendingCharge(state, chatId);
+                await refundPendingCharge(state, chatId);
                 bot.sendMessage(chatId, `❌ Error: ${e.message}\n_No se descontaron créditos._`, { parse_mode: 'Markdown' });
             }
             return true;
@@ -44,10 +44,8 @@ module.exports = {
             const customLink = msg.text;
             const userId = msg.from.id;
 
-            const allowed = await verifyOperationCredits(bot, chatId, userId, 'ask_qr');
+            const allowed = await reserveOperationCredits(bot, chatId, userId, 'ask_qr', state);
             if (!allowed) return true;
-
-            state.userPendingCharge.set(chatId, { userId, operation: 'ask_qr' });
             userState.delete(chatId);
             bot.sendMessage(chatId, `🧾 Procesando datos localmente...`);
             try {
@@ -55,7 +53,7 @@ module.exports = {
                 if (!datos.placa) bot.sendMessage(chatId, "⚠️ Advertencia: No se detectó placa.");
                 await generarTIVE(chatId, datos, customLink, buffer);
             } catch (e) {
-                clearPendingCharge(state, chatId);
+                await refundPendingCharge(state, chatId);
                 logError('BOT', '❌', 'Error en flujo custom', e);
                 bot.sendMessage(chatId, `❌ Error: ${escapeMarkdown(e.message)}\n_No se descontaron créditos._`, { parse_mode: 'Markdown' });
             }

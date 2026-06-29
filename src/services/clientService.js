@@ -7,22 +7,10 @@ require('dotenv').config();
 const mysql = require('mysql2/promise');
 const { logInfo, logError } = require('../utils/logger');
 
-// ── Costos por operación ────────────────────────────────────────────────────
-const CREDIT_COSTS = {
-    ask_qr:                           80,
-    use_official:                     80,
-    gen_tive_completo:                80,
-    tive_completo_con_anio:           80,
-    tive_completo_sin_anio:           80,
-    gen_tive_completar:               80,
-    tive_completar_con_anio:          80,
-    tive_completar_sin_anio:          80,
-    gen_tarjeta_fisica_pvc:           80,
-    gen_tarjeta_fisica_pvc_completar: 80,
-    gen_antigua:                      80,
-    insert_qr_only:                   80,
-    consulta_grupo:                   1,
-};
+const { IMPRENTA_COSTS } = require('../pricing');
+
+// ── Costos por operación (sincronizado con pricing.js) ─────────────────────
+const CREDIT_COSTS = { ...IMPRENTA_COSTS, consulta_grupo: 1 };
 
 // ── Pool de conexiones ──────────────────────────────────────────────────────
 let pool = null;
@@ -208,6 +196,18 @@ async function addCredits(userId, amount) {
 
     const [updated] = await db.execute('SELECT credits FROM clients WHERE user_id = ?', [id]);
     return { ok: true, credits: updated[0].credits };
+}
+
+/**
+ * Devuelve créditos a un cliente (reembolso tras fallo de operación).
+ */
+async function refundCredits(userId, amount) {
+    if (amount <= 0) return { ok: true, refunded: 0 };
+    const result = await addCredits(userId, amount);
+    if (result.ok) {
+        logInfo('DB', '↩️', 'Créditos reembolsados', { userId, amount, saldo: result.credits });
+    }
+    return result;
 }
 
 /**
@@ -412,6 +412,7 @@ module.exports = {
     getAllClients,
     findClientByRef,
     addCredits,
+    refundCredits,
     removeCredits,
     checkCredits,
     consumeCredits,

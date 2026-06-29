@@ -1,12 +1,9 @@
 const { logError } = require('../utils/logger');
-const { clearPendingCharge } = require('../services/creditGuard');
+const { refundPendingCharge } = require('../services/creditGuard');
 
 module.exports = {
     registerCommands(bot, state, deps) {
-        const { isAuthorized } = deps;
-
         bot.onText(/\/tive_completo/, (msg) => {
-            if (!isAuthorized(msg)) return;
             bot.sendMessage(msg.chat.id, "💡 Para usar *TIVE COMPLETO*, primero sube un archivo PDF de SUNARP y presiona el botón correspondiente en el menú.", { parse_mode: 'Markdown' });
         });
     },
@@ -46,7 +43,7 @@ module.exports = {
                 datos.sinAnioFabricacion = sinAnio;
                 await iniciarCapturaFaltantesTiveCompleto(chatId, datos, buffer);
             } catch (e) {
-                clearPendingCharge(state, chatId);
+                await refundPendingCharge(state, chatId);
                 bot.sendMessage(chatId, `❌ Error: ${e.message}\n_No se descontaron créditos._`, { parse_mode: 'Markdown' });
             }
             return true;
@@ -92,7 +89,7 @@ module.exports = {
                 try {
                     await generarTiveCompleto(chatId, pending.datos, null, pending.sourceHash);
                 } catch (e) {
-                    clearPendingCharge(state, chatId);
+                    await refundPendingCharge(state, chatId);
                     logError('BOT', '❌', 'Error generando TIVE COMPLETO', e);
                     bot.sendMessage(chatId, `❌ Error: ${e.message}\n_No se descontaron créditos._`, { parse_mode: 'Markdown' });
                 }

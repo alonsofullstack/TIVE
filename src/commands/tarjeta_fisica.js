@@ -1,5 +1,5 @@
 const { logError } = require('../utils/logger');
-const { clearPendingCharge } = require('../services/creditGuard');
+const { refundPendingCharge } = require('../services/creditGuard');
 
 module.exports = {
     async handleCallback(chatId, messageId, data, query, buffer, bot, state, deps) {
@@ -27,7 +27,7 @@ module.exports = {
                     cropRightRev:  45,
                 });
             } catch (e) {
-                clearPendingCharge(state, chatId);
+                await refundPendingCharge(state, chatId);
                 bot.sendMessage(chatId, `❌ Error: ${e.message}\n_No se descontaron créditos._`, { parse_mode: 'Markdown' });
             }
             return true;

@@ -9,8 +9,9 @@ const { StringSession } = require('telegram/sessions');
 const { NewMessage } = require('telegram/events');
 const { logInfo, logError } = require('../utils/logger');
 
-const API_ID   = 33222502;
-const API_HASH = 'b2f2a2532045bb4b928082ab7243d8a6';
+const { TELEGRAM_API_ID, TELEGRAM_API_HASH } = require('../config');
+const API_ID   = TELEGRAM_API_ID;
+const API_HASH = TELEGRAM_API_HASH;
 
 const TIMEOUT_MS   = 30000;
 const WAIT_MORE_MS = 4000;

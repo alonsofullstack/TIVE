@@ -2,7 +2,6 @@ const { logInfo, logError } = require('../utils/logger');
 const { getClient, touchClient } = require('../services/clientService');
 const {
     verifyOperationCredits,
-    VERIFY_OPERATIONS,
     getOperationCost,
 } = require('../services/creditGuard');
 
@@ -16,17 +15,14 @@ const ADMIN_ONLY_OPERATIONS = new Set([
 ]);
 
 module.exports = {
-    VERIFY_OPERATIONS,
     ADMIN_ONLY_OPERATIONS,
 
     registerCommands(bot, state, deps) {
-        const { isAuthorized } = deps;
         const { ADMIN_IDS } = require('../config');
 
         bot.onText(/\/start/, async (msg) => {
             const { id, username, first_name } = msg.from;
             logInfo('BOT', '📥', 'Comando /start recibido', { username: username || 'sin_username', id });
-            if (!isAuthorized(msg)) return;
 
             const isAdminUser = ADMIN_IDS.includes(String(id));
 
@@ -88,11 +84,16 @@ module.exports = {
 
     async handleDocument(msg, bot, state, deps) {
         const { userPdfNames, setUserPdf } = state;
-        const { isAuthorized } = deps;
-        const { ADMIN_IDS } = require('../config');
+        const { ADMIN_IDS, MAX_PDF_BYTES } = require('../config');
 
         logInfo('BOT', '📄', 'Documento recibido', { name: msg.document.file_name, size: msg.document.file_size });
-        if (!isAuthorized(msg)) return;
+
+        if (msg.document.file_size && msg.document.file_size > MAX_PDF_BYTES) {
+            return bot.sendMessage(msg.chat.id,
+                `❌ El archivo excede el límite de ${Math.round(MAX_PDF_BYTES / 1024 / 1024)} MB.`,
+                { parse_mode: 'Markdown' }
+            );
+        }
 
         const chatId      = msg.chat.id;
         const userId      = msg.from.id;

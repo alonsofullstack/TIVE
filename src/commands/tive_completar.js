@@ -2,10 +2,7 @@ const { logError } = require('../utils/logger');
 
 module.exports = {
     registerCommands(bot, state, deps) {
-        const { isAuthorized } = deps;
-
         bot.onText(/\/tive_completar/, (msg) => {
-            if (!isAuthorized(msg)) return;
             bot.sendMessage(msg.chat.id, "💡 Para usar *TIVE PARA COMPLETAR*, primero sube un archivo PDF de SUNARP y presiona el botón correspondiente en el menú.", { parse_mode: 'Markdown' });
         });
     },

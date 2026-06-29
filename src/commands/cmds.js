@@ -249,7 +249,7 @@ const categories = {
         title: "🎓 ESTUDIOS",
         cmds: [
             { name: "MINEDU NOTAS", type: "Standard", cmd: "/notas 45454545", price: 10, result: "Buscar Notas Minedu por Dni. [PDF]." },
-            { name: "MINEDU CONSTANCIA", type: "Standard", cmd: "/const 45454545", price: 15, result: "Buscar Constancia Minedu por Dni. [PDF]." },
+            { name: "MINEDU CONSTANCIA", type: "Standard", cmd: "/constedu 45454545", price: 15, result: "Buscar Constancia Minedu por Dni. [PDF]." },
             { name: "CERT. ADULTO :: MTPE", type: "Standard", cmd: "/cadult 45454545", price: 8, result: "Buscar Cert. Unico Laboral. [PDF]" },
         ]
     },
@@ -346,21 +346,24 @@ function getMainMenuKeyboard() {
 
 module.exports = {
     categories,
-    registerCommands(bot, state, deps) {
-        bot.on('message', (msg) => {
-            if (!msg.text) return;
-            const texto = msg.text.trim().toLowerCase();
-            if (texto !== '/cmds' && texto !== '/menu' && !texto.startsWith('/cmds ') && !texto.startsWith('/menu ')) return;
+    registerCommands() {},
 
-            logInfo('BOT', '📋', 'Comando /cmds recibido', { id: msg.from.id });
+    async handleCmdsMessage(msg, bot) {
+        if (!msg.text) return false;
+        const texto = msg.text.trim().toLowerCase();
+        if (texto !== '/cmds' && texto !== '/menu' && !texto.startsWith('/cmds ') && !texto.startsWith('/menu ')) {
+            return false;
+        }
 
-            bot.sendMessage(msg.chat.id, MAIN_MENU_TEXT, {
-                parse_mode: 'HTML',
-                reply_markup: { inline_keyboard: getMainMenuKeyboard() }
-            }).catch(() => {
-                bot.sendMessage(msg.chat.id, '❌ Error mostrando el menú. Intenta de nuevo.');
-            });
+        logInfo('BOT', '📋', 'Comando /cmds recibido', { id: msg.from.id });
+
+        await bot.sendMessage(msg.chat.id, MAIN_MENU_TEXT, {
+            parse_mode: 'HTML',
+            reply_markup: { inline_keyboard: getMainMenuKeyboard() }
+        }).catch(() => {
+            bot.sendMessage(msg.chat.id, '❌ Error mostrando el menú. Intenta de nuevo.');
         });
+        return true;
     },
 
     async handleCallback(chatId, messageId, data, query, buffer, bot, state, deps) {
