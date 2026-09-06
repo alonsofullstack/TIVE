@@ -26,7 +26,10 @@ module.exports = {
             bot.editMessageText(`🧾 *Procesando datos localmente...*`, { chat_id: chatId, message_id: messageId, parse_mode: 'Markdown' }).catch(handleEditError);
             try {
                 const datos = await extraerConIA(buffer, userPdfNames.get(chatId));
-                await generarTIVE(chatId, datos, null, buffer);
+                await generarTIVE(chatId, datos, null, buffer, {
+                    anv: 'TARJETA FISICA ADELANTE 2.pdf',
+                    rev: 'atrasxd.pdf'
+                });
             } catch (e) {
                 await refundPendingCharge(state, chatId);
                 bot.sendMessage(chatId, `❌ Error: ${e.message}\n_No se descontaron créditos._`, { parse_mode: 'Markdown' });
@@ -51,7 +54,10 @@ module.exports = {
             try {
                 const datos = await extraerConIA(buffer, userPdfNames.get(chatId));
                 if (!datos.placa) bot.sendMessage(chatId, "⚠️ Advertencia: No se detectó placa.");
-                await generarTIVE(chatId, datos, customLink, buffer);
+                await generarTIVE(chatId, datos, customLink, buffer, {
+                    anv: 'TARJETA FISICA ADELANTE 2.pdf',
+                    rev: 'atrasxd.pdf'
+                });
             } catch (e) {
                 await refundPendingCharge(state, chatId);
                 logError('BOT', '❌', 'Error en flujo custom', e);
