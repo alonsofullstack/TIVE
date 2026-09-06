@@ -3,6 +3,9 @@ node_modules/
 .env.local
 .env.*.local
 
+# Scripts y resultados de pruebas locales: nunca subir al repositorio
+scratch/
+
 # Ignorar PDFs temporales o de certificados, pero PERMITIR los de la carpeta tarjeta y la plantilla base
 *.pdf
 !tarjeta/*.pdf
