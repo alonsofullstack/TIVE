@@ -478,7 +478,7 @@ module.exports = function (bot) {
                 tituloNo: { x: 183, y: 134, size: 4.5, color: negro },
                 fechaFinal: { x: 177, y: 142.5, size: 4.5, color: negro },
                 barcode: { x: 10, y: 150, width: 82, height: 18 },
-                qr: { x: 99, y: 150, size: 52 }
+                qr: { x: 98, y: 154, width: 54, height: 52 }
             };
             fotosV2QrPos = pos.qr;
             const drawV2 = (value, p) => pageA.drawText(safe(value), {
@@ -521,7 +521,7 @@ module.exports = function (bot) {
             const qrImg = await pdfAnt.embedPng(await QRCode.toDataURL(finalQR, { margin: 1 }));
             if (options.anversoLayout === 'fotosV2') {
                 const p = fotosV2QrPos;
-                pageA.drawImage(qrImg, { x: p.x, y: hA - p.y, width: p.size, height: p.size });
+                pageA.drawImage(qrImg, { x: p.x, y: hA - p.y, width: p.width, height: p.height });
             } else {
                 pageA.drawImage(qrImg, { x: 100, y: hA - 170, width: 52, height: 52 });
             }
