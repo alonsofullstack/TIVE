@@ -478,7 +478,7 @@ module.exports = function (bot) {
                 tituloNo: { x: 183, y: 134, size: 4.5, color: negro },
                 fechaFinal: { x: 177, y: 142.5, size: 4.5, color: negro },
                 barcode: { x: 10, y: 150, width: 82, height: 18 },
-                qr: { x: 98, y: 154, width: 54, height: 52 }
+                qr: { x: 97.5, y: 151.5, width: 56, height: 50 }
             };
             fotosV2QrPos = pos.qr;
             const drawV2 = (value, p) => pageA.drawText(safe(value), {
