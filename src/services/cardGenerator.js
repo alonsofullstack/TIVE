@@ -193,13 +193,13 @@ async function aplicarSeguridadOCR(pdfBuffer) {
             scale: 2.0
         });
         logInfo('OCR SECURITY', '📷', `PDF convertido a ${images.length} imagen(es)`, { ancho: '2000px', tamañoImagen: images[0]?.length ? `${images[0].length} bytes` : 'N/A' });
-        
+
         const securedPdf = await PDFDocument.create();
 
         for (let i = 0; i < images.length; i++) {
             const imgBuffer = Buffer.isBuffer(images[i]) ? images[i] : Buffer.from(images[i]);
             logInfo('OCR SECURITY', '📦', `Procesando imagen ${i + 1}/${images.length}`, { tamaño: `${imgBuffer.length} bytes` });
-            
+
             // pdf-img-convert devuelve PNGs
             const embeddedImg = await securedPdf.embedPng(imgBuffer);
             const { width: imgW, height: imgH } = embeddedImg.scale(1);
@@ -447,6 +447,7 @@ module.exports = function (bot) {
         const fontBAnt = await pdfAnt.embedFont(loadFontBytes());
         const pageA = pdfAnt.getPages()[0];
         const { height: hA } = pageA.getSize();
+        let fotosV2QrPos = null;
 
         if (options.noQR) {
             // ── TARJETA FÍSICA PVC — posiciones calibradas ──────────────
@@ -461,6 +462,43 @@ module.exports = function (bot) {
             // Código de barras
             const barImgAnv = await bwipjs.toBuffer({ bcid: 'code128', text: safe(datos.placa), scale: 4, height: 15, includetext: false });
             pageA.drawImage(await pdfAnt.embedPng(barImgAnv), { x: 19, y: hA - 156.5, width: 68, height: 17 });
+        } else if (options.anversoLayout === 'fotosV2') {
+            // ── FOTOS TIVE PVC V2 ───────────────────────────────────────
+            // Configuración exclusiva de "🚀 Generar Fotos TIVE PVC".
+            // Coordenadas en puntos PDF: +x=derecha, +yVisual=abajo.
+            const pos = {
+                zona: { x: 58, y: 38, size: 5.2, color: gris },
+                sede: { x: 53, y: 46, size: 5.2, color: gris },
+                partida: { x: 65, y: 58, size: 6.8, color: negro },
+                dua: { x: 50, y: 72, size: 6.8, color: negro },
+                titulo: { x: 34.5, y: 86, size: 6.8, color: negro },
+                fechaTitulo: { x: 62, y: 99, size: 6.8, color: negro },
+                placa: { x: 157, y: 69, size: 17.9, color: negro },
+                codVerif: { x: 214, y: 126, size: 4.5, color: negro },
+                tituloNo: { x: 183, y: 134, size: 4.5, color: negro },
+                fechaFinal: { x: 177, y: 142.5, size: 4.5, color: negro },
+                barcode: { x: 10, y: 150, width: 82, height: 18 },
+                qr: { x: 99, y: 150, size: 52 }
+            };
+            fotosV2QrPos = pos.qr;
+            const drawV2 = (value, p) => pageA.drawText(safe(value), {
+                x: p.x, y: hA - p.y, size: p.size, font: fontBAnt, color: p.color
+            });
+            drawV2(zonaLimpia, pos.zona);
+            drawV2(sedeLimpia, pos.sede);
+            drawV2(datos.partida, pos.partida);
+            drawV2(datos.dua, pos.dua);
+            drawV2(datos.titulo, pos.titulo);
+            drawV2(datos.fechaTitulo, pos.fechaTitulo);
+            drawV2(datos.placa, pos.placa);
+            drawV2(datos.codVerif, pos.codVerif);
+            drawV2(datos.tituloNo, pos.tituloNo);
+            drawV2(datos.fechaFinal, pos.fechaFinal);
+            const barImgAnv = await bwipjs.toBuffer({ bcid: 'code128', text: safe(datos.placa), scale: 4, height: 15, includetext: false });
+            pageA.drawImage(await pdfAnt.embedPng(barImgAnv), {
+                x: pos.barcode.x, y: hA - pos.barcode.y,
+                width: pos.barcode.width, height: pos.barcode.height
+            });
         } else {
             // ── TIVE PVC NORMAL — posiciones originales ─────────────────
             pageA.drawText(zonaLimpia, { x: 58, y: hA - 55.5, size: 5.2, font: fontBAnt, color: gris });
@@ -481,7 +519,12 @@ module.exports = function (bot) {
         const finalQR = qrCustomLink || `${DOMAIN_URL}/servicio/verCertificado/Tive/TIVE-${safe(datos.placa).toUpperCase()}`;
         if (!options.noQR) {
             const qrImg = await pdfAnt.embedPng(await QRCode.toDataURL(finalQR, { margin: 1 }));
-            pageA.drawImage(qrImg, { x: 100, y: hA - 170, width: 52, height: 52 });
+            if (options.anversoLayout === 'fotosV2') {
+                const p = fotosV2QrPos;
+                pageA.drawImage(qrImg, { x: p.x, y: hA - p.y, width: p.size, height: p.size });
+            } else {
+                pageA.drawImage(qrImg, { x: 100, y: hA - 170, width: 52, height: 52 });
+            }
         }
 
         const pdfRev = await PDFDocument.load(fs.readFileSync(getTemplatePath(templates.rev)));
@@ -592,15 +635,15 @@ module.exports = function (bot) {
             const cropPx = options.cropPx !== undefined ? options.cropPx : 35;
             // Si vienen los 4 lados individuales (ej: tarjeta física), úsalos; si no, usa cropPx para todos
             // Anverso
-            const cropTopAnv    = Math.round(options.cropTopAnv    !== undefined ? options.cropTopAnv    : (options.cropTop    !== undefined ? options.cropTop    : cropPx));
+            const cropTopAnv = Math.round(options.cropTopAnv !== undefined ? options.cropTopAnv : (options.cropTop !== undefined ? options.cropTop : cropPx));
             const cropBottomAnv = Math.round(options.cropBottomAnv !== undefined ? options.cropBottomAnv : (options.cropBottom !== undefined ? options.cropBottom : cropPx));
-            const cropLeftAnv   = Math.round(options.cropLeftAnv   !== undefined ? options.cropLeftAnv   : (options.cropLeft   !== undefined ? options.cropLeft   : cropPx));
-            const cropRightAnv  = Math.round(options.cropRightAnv  !== undefined ? options.cropRightAnv  : (options.cropRight  !== undefined ? options.cropRight  : cropPx));
+            const cropLeftAnv = Math.round(options.cropLeftAnv !== undefined ? options.cropLeftAnv : (options.cropLeft !== undefined ? options.cropLeft : cropPx));
+            const cropRightAnv = Math.round(options.cropRightAnv !== undefined ? options.cropRightAnv : (options.cropRight !== undefined ? options.cropRight : cropPx));
             // Reverso
-            const cropTopRev    = Math.round(options.cropTopRev    !== undefined ? options.cropTopRev    : (options.cropTop    !== undefined ? options.cropTop    : cropPx));
+            const cropTopRev = Math.round(options.cropTopRev !== undefined ? options.cropTopRev : (options.cropTop !== undefined ? options.cropTop : cropPx));
             const cropBottomRev = Math.round(options.cropBottomRev !== undefined ? options.cropBottomRev : (options.cropBottom !== undefined ? options.cropBottom : cropPx));
-            const cropLeftRev   = Math.round(options.cropLeftRev   !== undefined ? options.cropLeftRev   : (options.cropLeft   !== undefined ? options.cropLeft   : cropPx));
-            const cropRightRev  = Math.round(options.cropRightRev  !== undefined ? options.cropRightRev  : (options.cropRight  !== undefined ? options.cropRight  : cropPx));
+            const cropLeftRev = Math.round(options.cropLeftRev !== undefined ? options.cropLeftRev : (options.cropLeft !== undefined ? options.cropLeft : cropPx));
+            const cropRightRev = Math.round(options.cropRightRev !== undefined ? options.cropRightRev : (options.cropRight !== undefined ? options.cropRight : cropPx));
 
             const recortarParaTelegram = async (bufferImg, top, bottom, left, right) => {
                 const buffer = Buffer.from(bufferImg);
@@ -784,7 +827,7 @@ module.exports = function (bot) {
         }
 
         const outBytes = await templateDoc.save();
-        
+
         // OCR desactivado - enviando PDF original sin protección
         const securedBytes = outBytes;
         logInfo('TIVE COMPLETO', '✅', `PDF generado sin protección OCR`, { tamaño: `${securedBytes.length} bytes` });
@@ -930,15 +973,15 @@ module.exports = function (bot) {
             await generarTIVE(chatId, prepared, null, sourceBuffer, { anv: 'TARJETA FISICA ADELANTE.pdf', rev: 'TARJETA FISICA ATRAS.pdf' }, {
                 noQR: true,
                 // ── ANVERSO (cara de adelante) ──────────────────
-                cropTopAnv:    1,  // ↑ arriba
+                cropTopAnv: 1,  // ↑ arriba
                 cropBottomAnv: 1,  // ↓ abajo
-                cropLeftAnv:   1,  // ← izquierda
-                cropRightAnv:  1,  // → derecha
+                cropLeftAnv: 1,  // ← izquierda
+                cropRightAnv: 1,  // → derecha
                 // ── REVERSO (cara de atrás) ─────────────────────
-                cropTopRev:    24,  // ↑ arriba
+                cropTopRev: 24,  // ↑ arriba
                 cropBottomRev: 20,  // ↓ abajo
-                cropLeftRev:   45,  // ← izquierda
-                cropRightRev:  45,  // → derecha
+                cropLeftRev: 45,  // ← izquierda
+                cropRightRev: 45,  // → derecha
             });
             return;
         }

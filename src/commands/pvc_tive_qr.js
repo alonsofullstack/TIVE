@@ -29,6 +29,12 @@ module.exports = {
                 await generarTIVE(chatId, datos, null, buffer, {
                     anv: 'TARJETA FISICA ADELANTE 2.pdf',
                     rev: 'atrasxd.pdf'
+                }, {
+                    anversoLayout: 'fotosV2',
+                    cropTopAnv: 0,
+                    cropBottomAnv: 0,
+                    cropLeftAnv: 0,
+                    cropRightAnv: 0
                 });
             } catch (e) {
                 await refundPendingCharge(state, chatId);
@@ -57,6 +63,12 @@ module.exports = {
                 await generarTIVE(chatId, datos, customLink, buffer, {
                     anv: 'TARJETA FISICA ADELANTE 2.pdf',
                     rev: 'atrasxd.pdf'
+                }, {
+                    anversoLayout: 'fotosV2',
+                    cropTopAnv: 0,
+                    cropBottomAnv: 0,
+                    cropLeftAnv: 0,
+                    cropRightAnv: 0
                 });
             } catch (e) {
                 await refundPendingCharge(state, chatId);
