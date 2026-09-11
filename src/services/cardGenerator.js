@@ -473,11 +473,11 @@ module.exports = function (bot) {
                 dua: { x: 50, y: 72, size: 6.8, color: negro },
                 titulo: { x: 34.5, y: 86, size: 6.8, color: negro },
                 fechaTitulo: { x: 62, y: 99, size: 6.8, color: negro },
-                placa: { x: 157, y: 69, size: 17.9, color: negro },
+                placa: { x: 158, y: 69, size: 17, color: negro },
                 codVerif: { x: 214, y: 126, size: 4.5, color: negro },
                 tituloNo: { x: 183, y: 134, size: 4.5, color: negro },
                 fechaFinal: { x: 177, y: 142.5, size: 4.5, color: negro },
-                barcode: { x: 10, y: 150, width: 82, height: 18 },
+                barcode: { x: 10.5, y: 149.8, width: 80, height: 18 },
                 qr: { x: 97.5, y: 151.5, width: 56, height: 50 }
             };
             fotosV2QrPos = pos.qr;
