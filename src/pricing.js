@@ -32,6 +32,8 @@ const COMMAND_PRICE_OVERRIDES = {
 const IMPRENTA_COSTS = {
     ask_qr:                           80,
     use_official:                     80,
+    ask_electronico_pvc_v2:           80,
+    use_official_electronico_pvc_v2:  80,
     gen_tive_completo:                80,
     tive_completo_con_anio:           80,
     tive_completo_sin_anio:           80,

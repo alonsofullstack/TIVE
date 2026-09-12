@@ -11,18 +11,23 @@ module.exports = {
             logError('BOT', '❌', 'Error editMessageText', err);
         };
 
-        if (data === "ask_qr" || data === "qr") {
-            userState.set(chatId, "awaiting_qr");
+        if (data === "ask_qr" || data === "qr" || data === "ask_electronico_pvc_v2") {
+            const isElectronicoV2 = data === "ask_electronico_pvc_v2";
+            userState.set(chatId, isElectronicoV2 ? "awaiting_electronico_pvc_v2_qr" : "awaiting_qr");
             bot.editMessageText(`🔗 *Configuración QR*\nEscribe el link personalizado o elige el oficial:`, {
                 chat_id: chatId,
                 message_id: messageId,
                 parse_mode: 'Markdown',
                 reply_markup: {
-                    inline_keyboard: [[{ text: "🏢 Usar Link Oficial SUNARP", callback_data: "use_official" }]]
+                    inline_keyboard: [[{
+                        text: "🏢 Usar Link Oficial SUNARP",
+                        callback_data: isElectronicoV2 ? "use_official_electronico_pvc_v2" : "use_official"
+                    }]]
                 }
             }).catch(handleEditError);
             return true;
-        } else if (data === "use_official") {
+        } else if (data === "use_official" || data === "use_official_electronico_pvc_v2") {
+            const isElectronicoV2 = data === "use_official_electronico_pvc_v2";
             bot.editMessageText(`🧾 *Procesando datos localmente...*`, { chat_id: chatId, message_id: messageId, parse_mode: 'Markdown' }).catch(handleEditError);
             try {
                 const datos = await extraerConIA(buffer, userPdfNames.get(chatId));
@@ -30,7 +35,7 @@ module.exports = {
                     anv: 'TARJETA FISICA ADELANTE 2.pdf',
                     rev: 'atrasxd.pdf'
                 }, {
-                    anversoLayout: 'fotosV2',
+                    anversoLayout: isElectronicoV2 ? 'electronicoPvcV2' : 'fotosV2',
                     cropTopAnv: 0,
                     cropBottomAnv: 0,
                     cropLeftAnv: 0,
@@ -49,11 +54,12 @@ module.exports = {
         const { userState, userPdfNames } = state;
         const { extraerConIA, generarTIVE, escapeMarkdown } = deps;
 
-        if (ustate === "awaiting_qr" && msg.text && !msg.text.startsWith('/')) {
+        if ((ustate === "awaiting_qr" || ustate === "awaiting_electronico_pvc_v2_qr") && msg.text && !msg.text.startsWith('/')) {
             const customLink = msg.text;
             const userId = msg.from.id;
+            const isElectronicoV2 = ustate === "awaiting_electronico_pvc_v2_qr";
 
-            const allowed = await reserveOperationCredits(bot, chatId, userId, 'ask_qr', state);
+            const allowed = await reserveOperationCredits(bot, chatId, userId, isElectronicoV2 ? 'ask_electronico_pvc_v2' : 'ask_qr', state);
             if (!allowed) return true;
             userState.delete(chatId);
             bot.sendMessage(chatId, `🧾 Procesando datos localmente...`);
@@ -64,7 +70,7 @@ module.exports = {
                     anv: 'TARJETA FISICA ADELANTE 2.pdf',
                     rev: 'atrasxd.pdf'
                 }, {
-                    anversoLayout: 'fotosV2',
+                    anversoLayout: isElectronicoV2 ? 'electronicoPvcV2' : 'fotosV2',
                     cropTopAnv: 0,
                     cropBottomAnv: 0,
                     cropLeftAnv: 0,

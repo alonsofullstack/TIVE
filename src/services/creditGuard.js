@@ -15,6 +15,8 @@ const { escapeMarkdown } = require('../utils/helpers');
 const OP_NAMES = {
     ask_qr: '🚀 Fotos TIVE PVC',
     use_official: '🚀 Fotos TIVE PVC',
+    ask_electronico_pvc_v2: '⚡ Electrónico PVC V2.0',
+    use_official_electronico_pvc_v2: '⚡ Electrónico PVC V2.0',
     gen_tive_completo: '🧾 TIVE Completo',
     tive_completo_con_anio: '🧾 TIVE Completo',
     tive_completo_sin_anio: '🧾 TIVE Completo',
@@ -31,11 +33,13 @@ const OP_NAMES = {
 const CHECK_ONLY_OPERATIONS = new Set([
     'gen_tive_completo',
     'ask_qr',
+    'ask_electronico_pvc_v2',
 ]);
 
 /** Reservar créditos al pulsar (descuenta; reembolso si falla). */
 const RESERVE_OPERATIONS = new Set([
     'use_official',
+    'use_official_electronico_pvc_v2',
     'tive_completo_con_anio',
     'tive_completo_sin_anio',
     'gen_tarjeta_fisica_pvc',

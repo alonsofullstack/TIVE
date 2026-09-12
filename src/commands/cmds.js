@@ -238,6 +238,7 @@ const categories = {
             { name: "Consulta de Saldo", type: "Free", cmd: "/credits", price: 0, result: "Muestra tu saldo operativo disponible" },
             { name: "Comprar Créditos", type: "Free", cmd: "/buy", price: 0, result: "Muestra los planes disponibles y redirige al operador de pagos" },
             { name: "Fotos TIVE PVC", type: "Standard", cmd: "/pvc (sube PDF primero)", price: 80, result: "Genera fotos TIVE PVC desde el PDF" },
+            { name: "Electrónico PVC V2.0", type: "Standard", cmd: "Sube PDF y elige la opción", price: 80, result: "Genera Electrónico PVC V2.0 desde el PDF" },
             { name: "TIVE Completo", type: "Standard", cmd: "Sube PDF y elige la opción", price: 80, result: "Genera TIVE completo desde el PDF" },
             { name: "TIVE Para Completar", type: "Standard", cmd: "Sube PDF y elige la opción", price: 80, result: "Genera TIVE para completar desde el PDF" },
             { name: "Tarjeta Física PVC", type: "Standard", cmd: "Sube PDF y elige la opción", price: 80, result: "Genera tarjeta física PVC desde el PDF" },

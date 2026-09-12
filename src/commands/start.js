@@ -128,6 +128,7 @@ module.exports = {
 
             const menuKeyboard = [
                 [{ text: "🚀 Generar Fotos TIVE PVC", callback_data: "ask_qr" }],
+                [{ text: "⚡ Electrónico PVC V2.0", callback_data: "ask_electronico_pvc_v2" }],
                 [{ text: "🧾 TIVE Completo",           callback_data: "gen_tive_completo" }],
                 ...(isAdminUser ? [
                     [{ text: "🧾 TIVE Para Completar",                callback_data: "gen_tive_completar" }],

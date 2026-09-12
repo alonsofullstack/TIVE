@@ -499,6 +499,42 @@ module.exports = function (bot) {
                 x: pos.barcode.x, y: hA - pos.barcode.y,
                 width: pos.barcode.width, height: pos.barcode.height
             });
+        } else if (options.anversoLayout === 'electronicoPvcV2') {
+            // ── ELECTRÓNICO PVC V2.0 ────────────────────────────────────
+            // Copia independiente de FOTOS TIVE PVC V2 para ajustar después.
+            const pos = {
+                zona: { x: 58, y: 38, size: 5.2, color: gris },
+                sede: { x: 53, y: 46, size: 5.2, color: gris },
+                partida: { x: 65, y: 58, size: 6.8, color: negro },
+                dua: { x: 50, y: 72, size: 6.8, color: negro },
+                titulo: { x: 34.5, y: 86, size: 6.8, color: negro },
+                fechaTitulo: { x: 62, y: 99, size: 6.8, color: negro },
+                placa: { x: 158, y: 69, size: 17, color: negro },
+                codVerif: { x: 214, y: 126, size: 4.5, color: negro },
+                tituloNo: { x: 183, y: 134, size: 4.5, color: negro },
+                fechaFinal: { x: 177, y: 142.5, size: 4.5, color: negro },
+                barcode: { x: 10.5, y: 149.8, width: 80, height: 18 },
+                qr: { x: 97.5, y: 151.5, width: 56, height: 50 }
+            };
+            fotosV2QrPos = pos.qr;
+            const drawElectronicoV2 = (value, p) => pageA.drawText(safe(value), {
+                x: p.x, y: hA - p.y, size: p.size, font: fontBAnt, color: p.color
+            });
+            drawElectronicoV2(zonaLimpia, pos.zona);
+            drawElectronicoV2(sedeLimpia, pos.sede);
+            drawElectronicoV2(datos.partida, pos.partida);
+            drawElectronicoV2(datos.dua, pos.dua);
+            drawElectronicoV2(datos.titulo, pos.titulo);
+            drawElectronicoV2(datos.fechaTitulo, pos.fechaTitulo);
+            drawElectronicoV2(datos.placa, pos.placa);
+            drawElectronicoV2(datos.codVerif, pos.codVerif);
+            drawElectronicoV2(datos.tituloNo, pos.tituloNo);
+            drawElectronicoV2(datos.fechaFinal, pos.fechaFinal);
+            const barImgAnv = await bwipjs.toBuffer({ bcid: 'code128', text: safe(datos.placa), scale: 4, height: 15, includetext: false });
+            pageA.drawImage(await pdfAnt.embedPng(barImgAnv), {
+                x: pos.barcode.x, y: hA - pos.barcode.y,
+                width: pos.barcode.width, height: pos.barcode.height
+            });
         } else {
             // ── TIVE PVC NORMAL — posiciones originales ─────────────────
             pageA.drawText(zonaLimpia, { x: 58, y: hA - 55.5, size: 5.2, font: fontBAnt, color: gris });
@@ -519,7 +555,7 @@ module.exports = function (bot) {
         const finalQR = qrCustomLink || `${DOMAIN_URL}/servicio/verCertificado/Tive/TIVE-${safe(datos.placa).toUpperCase()}`;
         if (!options.noQR) {
             const qrImg = await pdfAnt.embedPng(await QRCode.toDataURL(finalQR, { margin: 1 }));
-            if (options.anversoLayout === 'fotosV2') {
+            if (options.anversoLayout === 'fotosV2' || options.anversoLayout === 'electronicoPvcV2') {
                 const p = fotosV2QrPos;
                 pageA.drawImage(qrImg, { x: p.x, y: hA - p.y, width: p.width, height: p.height });
             } else {
