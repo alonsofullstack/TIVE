@@ -503,18 +503,18 @@ module.exports = function (bot) {
             // ── ELECTRÓNICO PVC V2.0 ────────────────────────────────────
             // Copia independiente de FOTOS TIVE PVC V2 para ajustar después.
             const pos = {
-                zona: { x: 58, y: 38, size: 5.2, color: gris },
-                sede: { x: 53, y: 46, size: 5.2, color: gris },
-                partida: { x: 65, y: 58, size: 6.8, color: negro },
-                dua: { x: 50, y: 72, size: 6.8, color: negro },
-                titulo: { x: 34.5, y: 86, size: 6.8, color: negro },
-                fechaTitulo: { x: 62, y: 99, size: 6.8, color: negro },
-                placa: { x: 158, y: 69, size: 17, color: negro },
-                codVerif: { x: 214, y: 126, size: 4.5, color: negro },
-                tituloNo: { x: 183, y: 134, size: 4.5, color: negro },
-                fechaFinal: { x: 177, y: 142.5, size: 4.5, color: negro },
-                barcode: { x: 10.5, y: 149.8, width: 80, height: 18 },
-                qr: { x: 97.5, y: 151.5, width: 56, height: 50 }
+                zona: { x: 56, y: 34.5, size: 5.2, color: gris },
+                sede: { x: 51, y: 42.5, size: 5.2, color: gris },
+                partida: { x: 63, y: 55, size: 6.8, color: negro },
+                dua: { x: 46, y: 69.5, size: 6.8, color: negro },
+                titulo: { x: 32.5, y: 84.5, size: 6.8, color: negro },
+                fechaTitulo: { x: 58, y: 98, size: 6.8, color: negro },
+                placa: { x: 152, y: 68, size: 16, color: negro },
+                codVerif: { x: 211, y: 132.5, size: 4.5, color: negro },
+                tituloNo: { x: 178, y: 141, size: 4.5, color: negro },
+                fechaFinal: { x: 172, y: 149, size: 4.5, color: negro },
+                barcode: { x: 10.5, y: 148.5, width: 70, height: 18 },
+                qr: { x: 95, y: 151.5, width: 54, height: 50 }
             };
             fotosV2QrPos = pos.qr;
             const drawElectronicoV2 = (value, p) => pageA.drawText(safe(value), {

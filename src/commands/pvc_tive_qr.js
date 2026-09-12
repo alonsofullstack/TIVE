@@ -32,7 +32,7 @@ module.exports = {
             try {
                 const datos = await extraerConIA(buffer, userPdfNames.get(chatId));
                 await generarTIVE(chatId, datos, null, buffer, {
-                    anv: 'TARJETA FISICA ADELANTE 2.pdf',
+                    anv: isElectronicoV2 ? 'ELECTRONICA PVC   v2.0.pdf' : 'TARJETA FISICA ADELANTE 2.pdf',
                     rev: 'atrasxd.pdf'
                 }, {
                     anversoLayout: isElectronicoV2 ? 'electronicoPvcV2' : 'fotosV2',
@@ -67,7 +67,7 @@ module.exports = {
                 const datos = await extraerConIA(buffer, userPdfNames.get(chatId));
                 if (!datos.placa) bot.sendMessage(chatId, "⚠️ Advertencia: No se detectó placa.");
                 await generarTIVE(chatId, datos, customLink, buffer, {
-                    anv: 'TARJETA FISICA ADELANTE 2.pdf',
+                    anv: isElectronicoV2 ? 'ELECTRONICA PVC   v2.0.pdf' : 'TARJETA FISICA ADELANTE 2.pdf',
                     rev: 'atrasxd.pdf'
                 }, {
                     anversoLayout: isElectronicoV2 ? 'electronicoPvcV2' : 'fotosV2',
