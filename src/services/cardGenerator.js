@@ -31,6 +31,7 @@ const {
 
 const state = require('../state');
 const { chargeOnSuccess } = require('./creditGuard');
+const electronicoPvcV2 = require('../layouts/electronicoPvcV2');
 const {
     userState, userTiveCompletoData, userTiveCompletarData, userFisicaPvcCompletarData,
     touchChatState
@@ -501,25 +502,12 @@ module.exports = function (bot) {
             });
         } else if (options.anversoLayout === 'electronicoPvcV2') {
             // ── ELECTRÓNICO PVC V2.0 ────────────────────────────────────
-            // Copia independiente de FOTOS TIVE PVC V2 para ajustar después.
-            const pos = {
-                zona: { x: 56, y: 34.5, size: 5.2, color: gris },
-                sede: { x: 51, y: 42.5, size: 5.2, color: gris },
-                partida: { x: 63, y: 55, size: 6.8, color: negro },
-                dua: { x: 46, y: 69.5, size: 6.8, color: negro },
-                titulo: { x: 32.5, y: 84.5, size: 6.8, color: negro },
-                fechaTitulo: { x: 58, y: 98, size: 6.8, color: negro },
-                placa: { x: 153, y: 68, size: 15, color: negro },
-                codVerif: { x: 211, y: 132.5, size: 4.5, color: negro },
-                tituloNo: { x: 178, y: 141, size: 4.5, color: negro },
-                fechaFinal: { x: 172, y: 149, size: 4.5, color: negro },
-                barcode: { x: 10.5, y: 148.5, width: 70, height: 18 },
-                qr: { x: 95, y: 151.5, width: 54, height: 50 }
-            };
+            const pos = electronicoPvcV2.anverso;
             fotosV2QrPos = pos.qr;
-            const drawElectronicoV2 = (value, p) => pageA.drawText(safe(value), {
-                x: p.x, y: hA - p.y, size: p.size, font: fontBAnt, color: p.color
-            });
+            const drawElectronicoV2 = (value, p) => {
+                const color = p.color === 'gris' ? gris : negro;
+                pageA.drawText(safe(value), { x: p.x, y: hA - p.y, size: p.size, font: fontBAnt, color });
+            };
             drawElectronicoV2(zonaLimpia, pos.zona);
             drawElectronicoV2(sedeLimpia, pos.sede);
             drawElectronicoV2(datos.partida, pos.partida);
@@ -532,8 +520,10 @@ module.exports = function (bot) {
             drawElectronicoV2(datos.fechaFinal, pos.fechaFinal);
             const barImgAnv = await bwipjs.toBuffer({ bcid: 'code128', text: safe(datos.placa), scale: 4, height: 15, includetext: false });
             pageA.drawImage(await pdfAnt.embedPng(barImgAnv), {
-                x: pos.barcode.x, y: hA - pos.barcode.y,
-                width: pos.barcode.width, height: pos.barcode.height
+                x: pos.codigoBarras.x,
+                y: hA - pos.codigoBarras.y - pos.codigoBarras.height,
+                width: pos.codigoBarras.width,
+                height: pos.codigoBarras.height
             });
         } else {
             // ── TIVE PVC NORMAL — posiciones originales ─────────────────
@@ -555,7 +545,15 @@ module.exports = function (bot) {
         const finalQR = qrCustomLink || `${DOMAIN_URL}/servicio/verCertificado/Tive/TIVE-${safe(datos.placa).toUpperCase()}`;
         if (!options.noQR) {
             const qrImg = await pdfAnt.embedPng(await QRCode.toDataURL(finalQR, { margin: 1 }));
-            if (options.anversoLayout === 'fotosV2' || options.anversoLayout === 'electronicoPvcV2') {
+            if (options.anversoLayout === 'electronicoPvcV2') {
+                const p = fotosV2QrPos;
+                pageA.drawImage(qrImg, {
+                    x: p.x,
+                    y: hA - p.y - p.height,
+                    width: p.width,
+                    height: p.height
+                });
+            } else if (options.anversoLayout === 'fotosV2') {
                 const p = fotosV2QrPos;
                 pageA.drawImage(qrImg, { x: p.x, y: hA - p.y, width: p.width, height: p.height });
             } else {
@@ -604,56 +602,13 @@ module.exports = function (bot) {
             pageR.drawImage(barImg, { x: 20, y: 21, width: 225, height: 35 });
         } else if (options.anversoLayout === 'electronicoPvcV2') {
             // ── ELECTRÓNICO PVC V2.0 — reverso independiente ────────────
-            // Texto: x aumenta hacia la derecha; y aumenta hacia abajo.
-            // size controla el tamaño de letra de cada campo.
-            const posicionesReversoElectronico = {
-                // Datos principales (columna izquierda)
-                categoria: { x: 37, y: 23.5, size: 4.5 },
-                marca: { x: 37, y: 30.5, size: 4.5 },
-                modelo: { x: 37, y: 37.5, size: 4.5 },
-                color: { x: 37, y: 45, size: 4.5 },
-                vin: { x: 59, y: 53, size: 4.5 },
-                serie: { x: 59, y: 60, size: 4.5 },
-                motor: { x: 61, y: 67, size: 4.5 },
-                carroceria: { x: 59, y: 74.5, size: 4.5 },
-                potencia: { x: 45, y: 81, size: 4.5 },
-                formRod: { x: 47, y: 88, size: 4.5 },
-                combustible: { x: 48, y: 95, size: 4.5 },
-
-                // Datos principales (columna derecha)
-                añoModelo: { x: 222, y: 22.5, size: 4.5 },
-                version: { x: 144, y: 83.7, size: 4.5 },
-
-                // Especificaciones inferiores
-                asientos: { x: 47, y: 103.4, size: 4.5 },
-                pasajeros: { x: 47, y: 110.4, size: 4.5 },
-                ruedas: { x: 47, y: 117.4, size: 4.5 },
-                ejes: { x: 47, y: 124.5, size: 4.5 },
-                cilindros: { x: 115, y: 103.8, size: 4.5 },
-                longitud: { x: 115, y: 110.7, size: 4.5 },
-                altura: { x: 115, y: 117.8, size: 4.5 },
-                ancho: { x: 115, y: 125, size: 4.5 },
-                cilindrada: { x: 203, y: 103.8, size: 4.5 },
-                pBruto: { x: 203, y: 110.7, size: 4.5 },
-                pNeto: { x: 203, y: 117.8, size: 4.5 },
-                cargaUtil: { x: 203, y: 125, size: 4.5 }
-            };
-
+            const { pdf417: posicionPdf417, ...posicionesTexto } = electronicoPvcV2.reverso;
             const dibujarDatoReverso = (valor, posicion) => {
                 dR(valor, posicion.x, posicion.y, posicion.size);
             };
-
-            Object.entries(posicionesReversoElectronico).forEach(([campo, posicion]) => {
+            Object.entries(posicionesTexto).forEach(([campo, posicion]) => {
                 dibujarDatoReverso(datos[campo], posicion);
             });
-
-            // Código PDF417 del reverso (x/y = esquina superior izquierda)
-            const posicionPdf417 = {
-                x: 10,
-                y: 131.7,
-                width: 170,
-                height: 22
-            };
             const barText = formatearPdf417TiveCompleto({ ...datos, zonaLimpia, sedeLimpia });
             const barImg = await pdfRev.embedPng(await bwipjs.toBuffer({ bcid: 'pdf417', text: barText, scale: 2, height: 12 }));
             pageR.drawImage(barImg, {

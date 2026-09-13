@@ -1,5 +1,39 @@
 const { logError } = require('../utils/logger');
 const { reserveOperationCredits, refundPendingCharge } = require('../services/creditGuard');
+const electronicoPvcV2 = require('../layouts/electronicoPvcV2');
+
+const fotosTivePvcV2 = {
+    templates: { anv: 'TARJETA FISICA ADELANTE 2.pdf', rev: 'atrasxd.pdf' },
+    options: {
+        anversoLayout: 'fotosV2',
+        cropTopAnv: 0,
+        cropBottomAnv: 0,
+        cropLeftAnv: 0,
+        cropRightAnv: 0
+    }
+};
+
+const electronicoPvcV2Generacion = {
+    templates: {
+        anv: electronicoPvcV2.plantillas.anverso,
+        rev: electronicoPvcV2.plantillas.reverso
+    },
+    options: {
+        anversoLayout: electronicoPvcV2.layout,
+        cropTopAnv: electronicoPvcV2.recorte.anverso.top,
+        cropBottomAnv: electronicoPvcV2.recorte.anverso.bottom,
+        cropLeftAnv: electronicoPvcV2.recorte.anverso.left,
+        cropRightAnv: electronicoPvcV2.recorte.anverso.right,
+        cropTopRev: electronicoPvcV2.recorte.reverso.top,
+        cropBottomRev: electronicoPvcV2.recorte.reverso.bottom,
+        cropLeftRev: electronicoPvcV2.recorte.reverso.left,
+        cropRightRev: electronicoPvcV2.recorte.reverso.right
+    }
+};
+
+function configuracionGeneracion(isElectronicoV2) {
+    return isElectronicoV2 ? electronicoPvcV2Generacion : fotosTivePvcV2;
+}
 
 module.exports = {
     async handleCallback(chatId, messageId, data, query, buffer, bot, state, deps) {
@@ -31,22 +65,8 @@ module.exports = {
             bot.editMessageText(`🧾 *Procesando datos localmente...*`, { chat_id: chatId, message_id: messageId, parse_mode: 'Markdown' }).catch(handleEditError);
             try {
                 const datos = await extraerConIA(buffer, userPdfNames.get(chatId));
-                await generarTIVE(chatId, datos, null, buffer, {
-                    anv: isElectronicoV2 ? 'ELECTRONICA PVC   v2.0.pdf' : 'TARJETA FISICA ADELANTE 2.pdf',
-                    rev: isElectronicoV2 ? 'PARTE POSTERIOS ELECTRONICA PVC   v2.0.pdf' : 'atrasxd.pdf'
-                }, {
-                    anversoLayout: isElectronicoV2 ? 'electronicoPvcV2' : 'fotosV2',
-                    cropTopAnv: 0,
-                    cropBottomAnv: 0,
-                    cropLeftAnv: 0,
-                    cropRightAnv: 0,
-                    ...(isElectronicoV2 ? {
-                        cropTopRev: 0,
-                        cropBottomRev: 0,
-                        cropLeftRev: 0,
-                        cropRightRev: 0
-                    } : {})
-                });
+                const generacion = configuracionGeneracion(isElectronicoV2);
+                await generarTIVE(chatId, datos, null, buffer, generacion.templates, generacion.options);
             } catch (e) {
                 await refundPendingCharge(state, chatId);
                 bot.sendMessage(chatId, `❌ Error: ${e.message}\n_No se descontaron créditos._`, { parse_mode: 'Markdown' });
@@ -72,22 +92,8 @@ module.exports = {
             try {
                 const datos = await extraerConIA(buffer, userPdfNames.get(chatId));
                 if (!datos.placa) bot.sendMessage(chatId, "⚠️ Advertencia: No se detectó placa.");
-                await generarTIVE(chatId, datos, customLink, buffer, {
-                    anv: isElectronicoV2 ? 'ELECTRONICA PVC   v2.0.pdf' : 'TARJETA FISICA ADELANTE 2.pdf',
-                    rev: isElectronicoV2 ? 'PARTE POSTERIOS ELECTRONICA PVC   v2.0.pdf' : 'atrasxd.pdf'
-                }, {
-                    anversoLayout: isElectronicoV2 ? 'electronicoPvcV2' : 'fotosV2',
-                    cropTopAnv: 0,
-                    cropBottomAnv: 0,
-                    cropLeftAnv: 0,
-                    cropRightAnv: 0,
-                    ...(isElectronicoV2 ? {
-                        cropTopRev: 0,
-                        cropBottomRev: 0,
-                        cropLeftRev: 0,
-                        cropRightRev: 0
-                    } : {})
-                });
+                const generacion = configuracionGeneracion(isElectronicoV2);
+                await generarTIVE(chatId, datos, customLink, buffer, generacion.templates, generacion.options);
             } catch (e) {
                 await refundPendingCharge(state, chatId);
                 logError('BOT', '❌', 'Error en flujo custom', e);
