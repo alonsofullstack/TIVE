@@ -509,7 +509,7 @@ module.exports = function (bot) {
                 dua: { x: 46, y: 69.5, size: 6.8, color: negro },
                 titulo: { x: 32.5, y: 84.5, size: 6.8, color: negro },
                 fechaTitulo: { x: 58, y: 98, size: 6.8, color: negro },
-                placa: { x: 152, y: 68, size: 16, color: negro },
+                placa: { x: 153, y: 68, size: 15, color: negro },
                 codVerif: { x: 211, y: 132.5, size: 4.5, color: negro },
                 tituloNo: { x: 178, y: 141, size: 4.5, color: negro },
                 fechaFinal: { x: 172, y: 149, size: 4.5, color: negro },
@@ -622,13 +622,13 @@ module.exports = function (bot) {
 
                 // Datos principales (columna derecha)
                 añoModelo: { x: 222, y: 22.5, size: 4.5 },
-                version: { x: 144, y: 84, size: 4.5 },
+                version: { x: 144, y: 83.7, size: 4.5 },
 
                 // Especificaciones inferiores
-                asientos: { x: 47, y: 103.8, size: 4.5 },
-                pasajeros: { x: 47, y: 110.7, size: 4.5 },
-                ruedas: { x: 47, y: 117.8, size: 4.5 },
-                ejes: { x: 47, y: 125, size: 4.5 },
+                asientos: { x: 47, y: 103.4, size: 4.5 },
+                pasajeros: { x: 47, y: 110.4, size: 4.5 },
+                ruedas: { x: 47, y: 117.4, size: 4.5 },
+                ejes: { x: 47, y: 124.5, size: 4.5 },
                 cilindros: { x: 115, y: 103.8, size: 4.5 },
                 longitud: { x: 115, y: 110.7, size: 4.5 },
                 altura: { x: 115, y: 117.8, size: 4.5 },
