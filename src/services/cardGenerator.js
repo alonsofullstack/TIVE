@@ -606,7 +606,8 @@ module.exports = function (bot) {
             // ── ELECTRÓNICO PVC V2.0 — reverso independiente ────────────
             // Texto: x aumenta hacia la derecha; y aumenta hacia abajo.
             // size controla el tamaño de letra de cada campo.
-            const posRev = {
+            const posicionesReversoElectronico = {
+                // Datos principales (columna izquierda)
                 categoria: { x: 37, y: 23.5, size: 4.5 },
                 marca: { x: 37, y: 30.5, size: 4.5 },
                 modelo: { x: 37, y: 37.5, size: 4.5 },
@@ -618,8 +619,12 @@ module.exports = function (bot) {
                 potencia: { x: 45, y: 81, size: 4.5 },
                 formRod: { x: 47, y: 88, size: 4.5 },
                 combustible: { x: 48, y: 95, size: 4.5 },
+
+                // Datos principales (columna derecha)
                 añoModelo: { x: 222, y: 22.5, size: 4.5 },
                 version: { x: 144, y: 84, size: 4.5 },
+
+                // Especificaciones inferiores
                 asientos: { x: 47, y: 103.8, size: 4.5 },
                 pasajeros: { x: 47, y: 110.7, size: 4.5 },
                 ruedas: { x: 47, y: 117.8, size: 4.5 },
@@ -631,32 +636,31 @@ module.exports = function (bot) {
                 cilindrada: { x: 203, y: 103.8, size: 4.5 },
                 pBruto: { x: 203, y: 110.7, size: 4.5 },
                 pNeto: { x: 203, y: 117.8, size: 4.5 },
-                cargaUtil: { x: 203, y: 125, size: 4.5 },
-                // Código del reverso: x/y indican la esquina superior izquierda.
-                pdf417: { x: (wR / 2) - (246 / 2), y: 131.7, width: 170, height: 22 }
+                cargaUtil: { x: 203, y: 125, size: 4.5 }
             };
 
-            const drawElectronicoRev = (campo) => {
-                const p = posRev[campo];
-                dR(datos[campo], p.x, p.y, p.size);
+            const dibujarDatoReverso = (valor, posicion) => {
+                dR(valor, posicion.x, posicion.y, posicion.size);
             };
 
-            [
-                'categoria', 'marca', 'modelo', 'color', 'vin', 'serie',
-                'motor', 'carroceria', 'potencia', 'formRod', 'combustible',
-                'añoModelo', 'version', 'asientos', 'pasajeros', 'ruedas',
-                'ejes', 'cilindros', 'longitud', 'altura', 'ancho',
-                'cilindrada', 'pBruto', 'pNeto', 'cargaUtil'
-            ].forEach(drawElectronicoRev);
+            Object.entries(posicionesReversoElectronico).forEach(([campo, posicion]) => {
+                dibujarDatoReverso(datos[campo], posicion);
+            });
 
+            // Código PDF417 del reverso (x/y = esquina superior izquierda)
+            const posicionPdf417 = {
+                x: 10,
+                y: 131.7,
+                width: 170,
+                height: 22
+            };
             const barText = formatearPdf417TiveCompleto({ ...datos, zonaLimpia, sedeLimpia });
             const barImg = await pdfRev.embedPng(await bwipjs.toBuffer({ bcid: 'pdf417', text: barText, scale: 2, height: 12 }));
-            const pPdf417 = posRev.pdf417;
             pageR.drawImage(barImg, {
-                x: pPdf417.x,
-                y: hR - pPdf417.y - pPdf417.height,
-                width: pPdf417.width,
-                height: pPdf417.height
+                x: posicionPdf417.x,
+                y: hR - posicionPdf417.y - posicionPdf417.height,
+                width: posicionPdf417.width,
+                height: posicionPdf417.height
             });
         } else {
             // ── TIVE PVC NORMAL — posiciones originales ─────────────────
