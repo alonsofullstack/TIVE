@@ -33,13 +33,19 @@ module.exports = {
                 const datos = await extraerConIA(buffer, userPdfNames.get(chatId));
                 await generarTIVE(chatId, datos, null, buffer, {
                     anv: isElectronicoV2 ? 'ELECTRONICA PVC   v2.0.pdf' : 'TARJETA FISICA ADELANTE 2.pdf',
-                    rev: 'atrasxd.pdf'
+                    rev: isElectronicoV2 ? 'PARTE POSTERIOS ELECTRONICA PVC   v2.0.pdf' : 'atrasxd.pdf'
                 }, {
                     anversoLayout: isElectronicoV2 ? 'electronicoPvcV2' : 'fotosV2',
                     cropTopAnv: 0,
                     cropBottomAnv: 0,
                     cropLeftAnv: 0,
-                    cropRightAnv: 0
+                    cropRightAnv: 0,
+                    ...(isElectronicoV2 ? {
+                        cropTopRev: 0,
+                        cropBottomRev: 0,
+                        cropLeftRev: 0,
+                        cropRightRev: 0
+                    } : {})
                 });
             } catch (e) {
                 await refundPendingCharge(state, chatId);
@@ -68,13 +74,19 @@ module.exports = {
                 if (!datos.placa) bot.sendMessage(chatId, "⚠️ Advertencia: No se detectó placa.");
                 await generarTIVE(chatId, datos, customLink, buffer, {
                     anv: isElectronicoV2 ? 'ELECTRONICA PVC   v2.0.pdf' : 'TARJETA FISICA ADELANTE 2.pdf',
-                    rev: 'atrasxd.pdf'
+                    rev: isElectronicoV2 ? 'PARTE POSTERIOS ELECTRONICA PVC   v2.0.pdf' : 'atrasxd.pdf'
                 }, {
                     anversoLayout: isElectronicoV2 ? 'electronicoPvcV2' : 'fotosV2',
                     cropTopAnv: 0,
                     cropBottomAnv: 0,
                     cropLeftAnv: 0,
-                    cropRightAnv: 0
+                    cropRightAnv: 0,
+                    ...(isElectronicoV2 ? {
+                        cropTopRev: 0,
+                        cropBottomRev: 0,
+                        cropLeftRev: 0,
+                        cropRightRev: 0
+                    } : {})
                 });
             } catch (e) {
                 await refundPendingCharge(state, chatId);

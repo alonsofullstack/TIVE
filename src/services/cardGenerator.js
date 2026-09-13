@@ -602,6 +602,62 @@ module.exports = function (bot) {
             const barText = formatearPdf417TiveCompleto({ ...datos, zonaLimpia, sedeLimpia });
             const barImg = await pdfRev.embedPng(await bwipjs.toBuffer({ bcid: 'pdf417', text: barText, scale: 2, height: 12 }));
             pageR.drawImage(barImg, { x: 20, y: 21, width: 225, height: 35 });
+        } else if (options.anversoLayout === 'electronicoPvcV2') {
+            // ── ELECTRÓNICO PVC V2.0 — reverso independiente ────────────
+            // Texto: x aumenta hacia la derecha; y aumenta hacia abajo.
+            // size controla el tamaño de letra de cada campo.
+            const posRev = {
+                categoria: { x: 37, y: 23.5, size: 4.5 },
+                marca: { x: 37, y: 30.5, size: 4.5 },
+                modelo: { x: 37, y: 37.5, size: 4.5 },
+                color: { x: 37, y: 45, size: 4.5 },
+                vin: { x: 59, y: 53, size: 4.5 },
+                serie: { x: 59, y: 60, size: 4.5 },
+                motor: { x: 61, y: 67, size: 4.5 },
+                carroceria: { x: 59, y: 74.5, size: 4.5 },
+                potencia: { x: 45, y: 81, size: 4.5 },
+                formRod: { x: 47, y: 88, size: 4.5 },
+                combustible: { x: 48, y: 95, size: 4.5 },
+                añoModelo: { x: 222, y: 22.5, size: 4.5 },
+                version: { x: 144, y: 84, size: 4.5 },
+                asientos: { x: 47, y: 103.8, size: 4.5 },
+                pasajeros: { x: 47, y: 110.7, size: 4.5 },
+                ruedas: { x: 47, y: 117.8, size: 4.5 },
+                ejes: { x: 47, y: 125, size: 4.5 },
+                cilindros: { x: 115, y: 103.8, size: 4.5 },
+                longitud: { x: 115, y: 110.7, size: 4.5 },
+                altura: { x: 115, y: 117.8, size: 4.5 },
+                ancho: { x: 115, y: 125, size: 4.5 },
+                cilindrada: { x: 203, y: 103.8, size: 4.5 },
+                pBruto: { x: 203, y: 110.7, size: 4.5 },
+                pNeto: { x: 203, y: 117.8, size: 4.5 },
+                cargaUtil: { x: 203, y: 125, size: 4.5 },
+                // Código del reverso: x/y indican la esquina superior izquierda.
+                pdf417: { x: (wR / 2) - (246 / 2), y: 131.7, width: 170, height: 22 }
+            };
+
+            const drawElectronicoRev = (campo) => {
+                const p = posRev[campo];
+                dR(datos[campo], p.x, p.y, p.size);
+            };
+
+            [
+                'categoria', 'marca', 'modelo', 'color', 'vin', 'serie',
+                'motor', 'carroceria', 'potencia', 'formRod', 'combustible',
+                'añoModelo', 'version', 'asientos', 'pasajeros', 'ruedas',
+                'ejes', 'cilindros', 'longitud', 'altura', 'ancho',
+                'cilindrada', 'pBruto', 'pNeto', 'cargaUtil'
+            ].forEach(drawElectronicoRev);
+
+            const barText = formatearPdf417TiveCompleto({ ...datos, zonaLimpia, sedeLimpia });
+            const barImg = await pdfRev.embedPng(await bwipjs.toBuffer({ bcid: 'pdf417', text: barText, scale: 2, height: 12 }));
+            const pPdf417 = posRev.pdf417;
+            pageR.drawImage(barImg, {
+                x: pPdf417.x,
+                y: hR - pPdf417.y - pPdf417.height,
+                width: pPdf417.width,
+                height: pPdf417.height
+            });
         } else {
             // ── TIVE PVC NORMAL — posiciones originales ─────────────────
             dR(datos.categoria, 37, 40.5); dR(datos.marca, 37, 47.5); dR(datos.modelo, 37, 54.5);
