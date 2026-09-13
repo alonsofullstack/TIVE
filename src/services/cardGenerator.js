@@ -604,7 +604,14 @@ module.exports = function (bot) {
             // ── ELECTRÓNICO PVC V2.0 — reverso independiente ────────────
             const { pdf417: posicionPdf417, ...posicionesTexto } = electronicoPvcV2.reverso;
             const dibujarDatoReverso = (valor, posicion) => {
-                dR(valor, posicion.x, posicion.y, posicion.size);
+                const color = posicion.color === 'gris' ? gris : negro;
+                pageR.drawText(safe(valor), {
+                    x: posicion.x,
+                    y: hR - posicion.y,
+                    size: posicion.size,
+                    font: fontBRev,
+                    color
+                });
             };
             Object.entries(posicionesTexto).forEach(([campo, posicion]) => {
                 dibujarDatoReverso(datos[campo], posicion);

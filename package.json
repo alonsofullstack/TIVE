@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "bot": "node bot.js",
+    "electronico2": "node scripts/electronico2.js",
     "dev": "node server.js",
     "all": "concurrently --kill-others \"node server.js\" \"node bot.js\""
   },

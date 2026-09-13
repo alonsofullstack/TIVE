@@ -194,13 +194,15 @@ Devuelve estrictamente un objeto JSON plano con estas llaves exactas (sin subobj
   "cargaUtil": "",
   "version": "",
   "añoModelo": "",
-  "tituloNo": ""
+  "tituloNo": "",
+  "numeroGris": ""
 }
 
 IMPORTANTE:
 - Usa solo valores encontrados en el documento. No inventes datos.
 - No incluyas unidades de medida (como kg, m, mt, etc.) en los campos numéricos como pesos y dimensiones.
 - El código de verificación es un código numérico (generalmente de 4 a 9 dígitos).
+- "numeroGris" es el número de control impreso en color gris claro, normalmente de 10 dígitos, ubicado encima o cerca del encabezado "Datos del Vehículo". No lo confundas con partida, título, VIN ni código de verificación.
 - La fechaFinal suele ser la fecha y hora que aparece debajo del código de verificación o al final del documento.
 - Asegúrate de extraer la Placa correctamente con su formato (por ejemplo: ABC-123 o 1234-AB).
 - Devuelve SOLO el JSON, sin texto adicional, sin markdown, sin bloques de código.`;

@@ -50,6 +50,8 @@ const reverso = {
     combustible: { x: 48, y: 95, size: 4.5 },
 
     // Datos principales — derecha
+    // Número de control gris. Ajusta x/y/size para calibrar su posición.
+    numeroGris: { x: 208, y: 14, size: 4.5, color: 'gris' },
     añoModelo: { x: 222, y: 22.5, size: 4.5 },
     version: { x: 144, y: 83.7, size: 4.5 },
 
